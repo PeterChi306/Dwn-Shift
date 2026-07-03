@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DWNSHIFT — Driving Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="obsidian">
+
+<div class="grain" aria-hidden="true"></div>
+<div class="keylight" aria-hidden="true"></div>
+
+<div class="stage" id="stage">
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+        <path d="M4 22 L14 6 L18 6 L11 17 L20 17 L28 6 L28 11 L18 26 L14 26 L20 17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-name">DWNSHIFT</span>
+      <span class="brand-sub">interface driving simulator</span>
+    </div>
+
+    <nav class="mode-switch" role="tablist" aria-label="Transmission mode">
+      <button class="mode-btn" data-mode="auto" role="tab">AUTO</button>
+      <button class="mode-btn" data-mode="manual" role="tab">MANUAL</button>
+      <button class="mode-btn" data-mode="clutch" role="tab">MANUAL + CLUTCH</button>
+      <span class="mode-glider" id="modeGlider"></span>
+    </nav>
+
+    <div class="top-right">
+      <div class="themes" aria-label="Theme">
+        <button class="swatch" data-t="obsidian" title="Obsidian"></button>
+        <button class="swatch" data-t="velocity" title="Velocity"></button>
+        <button class="swatch" data-t="heritage" title="Heritage"></button>
+        <button class="swatch" data-t="frost" title="Frost"></button>
+      </div>
+      <button class="chip-btn mono" id="flybyBtn" title="Trackside flyby mode">FLYBY</button>
+      <button class="chip-btn mono" id="tunnelBtn" title="Tunnel echo mode">TUNNEL</button>
+      <button class="chip-btn mono" id="unitsBtn" title="Toggle units">KM/H</button>
+      <button class="chip-btn" id="muteBtn" title="Toggle sound">
+        <svg id="volIcon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 5 6 9H2v6h4l5 4z"/><path class="vol-wave" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="vol-wave" d="M18.4 5.6a9 9 0 0 1 0 12.8"/>
+        </svg>
+      </button>
+      <button class="chip-btn" id="modBtn" title="Workshop">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ GARAGE ============ -->
+  <section class="garage" id="garage" aria-label="Car selection"></section>
+
+  <!-- ============ COCKPIT ============ -->
+  <main class="cockpit">
+
+    <!-- Gauge cluster -->
+    <section class="cluster panel" id="cluster">
+      <div class="warnrow">
+        <div class="lamp" id="lampStall"><i></i>STALL</div>
+        <div class="lamp" id="lampRev"><i></i>OVER-REV</div>
+        <div class="lamp" id="lampShift"><i></i>SHIFT</div>
+        <div class="lamp lamp-ok" id="lampRun"><i></i>ENGINE</div>
+      </div>
+
+      <div class="gauges">
+        <div class="gauge gauge-speed">
+          <div class="bezel"><canvas id="speedo"></canvas></div>
+          <div class="digital">
+            <span class="mono" id="speedNum">0</span>
+            <small class="mono" id="speedUnitLbl">km/h</small>
+          </div>
+        </div>
+
+        <div class="gauge gauge-tach">
+          <div class="shift-lights" id="shiftLights" aria-hidden="true"></div>
+          <div class="bezel bezel-lg"><canvas id="tach"></canvas></div>
+          <div class="gear-display">
+            <span id="gearChar">N</span>
+            <small id="gearSub">neutral</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="cluster-foot">
+        <button class="ignition" id="ignition" title="Start / stop engine (I)">
+          <span class="ign-ring"></span>
+          <span class="ign-face">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <path d="M12 3v8"/><path d="M6.6 6.2a8 8 0 1 0 10.8 0"/>
+            </svg>
+            <em>ENGINE<br>START</em>
+          </span>
+        </button>
+        <div class="foot-readout mono">
+          <div><label>RPM</label><span id="rpmNum">0</span></div>
+          <div><label>THR</label><span id="thrNum">0%</span></div>
+          <div><label>ODO</label><span id="odoNum">0.0</span></div>
+          <div id="boostWrap" class="hide"><label>BOOST PSI</label><span id="boostNum">0.0</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Shifter console -->
+    <aside class="console panel" id="console">
+      <div class="console-head">
+        <span id="consoleTitle">6-SPEED GATE</span>
+        <span class="console-hint" id="consoleHint">hold <kbd>SPACE</kbd> to clutch</span>
+      </div>
+
+      <!-- H-pattern gate (manual + clutch) -->
+      <div class="gate-wrap" id="gateWrap">
+        <div class="gate" id="gate">
+          <svg class="gate-slots" id="gateSvg" viewBox="0 0 260 300" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div class="gate-labels" id="gateLabels"></div>
+          <div class="boot-shadow" id="bootShadow"></div>
+          <div class="stick" id="stick">
+            <div class="stick-rod"></div>
+            <div class="knob">
+              <div class="knob-cap">
+                <svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true">
+                  <g stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round">
+                    <path d="M8 10v20M20 10v20M32 10v20M8 20h24"/>
+                  </g>
+                  <g font-size="7" fill="currentColor" font-family="inherit" text-anchor="middle">
+                    <text x="8" y="8">1</text><text x="20" y="8">3</text><text x="32" y="8">5</text>
+                    <text x="8" y="38">2</text><text x="20" y="38">4</text><text x="32" y="38">6</text>
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sequential hints (manual, no clutch) -->
+      <div class="seq-panel" id="seqPanel">
+        <div class="seq-viz" id="seqViz"></div>
+        <div class="seq-keys">
+          <div class="seq-key"><kbd>Q</kbd><span>shift down</span></div>
+          <div class="seq-key"><kbd>E</kbd><span>shift up</span></div>
+        </div>
+      </div>
+
+      <!-- PRND selector (auto) -->
+      <div class="auto-panel" id="autoPanel">
+        <div class="prnd" id="prnd">
+          <button data-sel="P">P</button>
+          <button data-sel="R">R</button>
+          <button data-sel="N">N</button>
+          <button data-sel="D">D</button>
+        </div>
+        <p class="auto-note">Select <b>D</b>, then throttle. The box handles the rest.</p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ============ PEDAL BAY ============ -->
+  <footer class="pedalbay panel">
+    <div class="pedal-group" id="pgClutch">
+      <div class="pedal pedal-clutch" id="pedClutch">
+        <div class="pedal-arm"></div>
+        <div class="pedal-pad"><i></i><i></i><i></i><i></i></div>
+        <div class="pedal-shadow"></div>
+      </div>
+      <div class="pedal-info"><kbd>SPACE</kbd><span>CLUTCH</span></div>
+    </div>
+
+    <div class="pedal-group">
+      <div class="pedal pedal-brake" id="pedBrake">
+        <div class="pedal-arm"></div>
+        <div class="pedal-pad"><i></i><i></i><i></i><i></i></div>
+        <div class="pedal-shadow"></div>
+      </div>
+      <div class="pedal-info"><kbd>S</kbd><span>BRAKE</span></div>
+    </div>
+
+    <div class="pedal-group">
+      <div class="pedal pedal-gas" id="pedGas">
+        <div class="pedal-arm"></div>
+        <div class="pedal-pad"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="pedal-shadow"></div>
+      </div>
+      <div class="pedal-info"><kbd>W</kbd><span>THROTTLE</span></div>
+    </div>
+
+    <div class="bay-note">
+      <p>Pedals also respond to click &amp; hold.</p>
+      <p id="bayModeNote"></p>
+    </div>
+
+    <div class="exhaust" id="exhaust" aria-hidden="true">
+      <div class="tip" id="tipL"><i></i></div>
+      <div class="tip" id="tipR"><i></i></div>
+    </div>
+  </footer>
+</div>
+
+<!-- Workshop (modifications) screen -->
+<div class="workshop" id="workshop">
+  <div class="ws-panel">
+    <div class="ws-head">
+      <div class="ws-titles">
+        <span class="ws-title">WORKSHOP</span>
+        <span class="ws-car" id="wsCar">—</span>
+      </div>
+      <button class="ws-close" id="wsClose" title="Back to cockpit">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <p class="ws-sub">Exhaust system for this car — fitted instantly, saved automatically.</p>
+    <div class="ws-exhausts" id="wsExhausts"></div>
+    <div class="ws-pitch">
+      <div class="ws-pitch-head">
+        <label for="wsPitch">EXHAUST PITCH</label>
+        <span class="mono" id="wsPitchVal">+0%</span>
+      </div>
+      <input type="range" id="wsPitch" min="0.7" max="1.3" step="0.01" value="1">
+      <div class="ws-pitch-scale"><span>deep</span><span>stock</span><span>shrill</span></div>
+    </div>
+    <div class="ws-pitch ws-gearing">
+      <div class="ws-pitch-head">
+        <label for="wsGear">FINAL DRIVE</label>
+        <span class="mono" id="wsGearVal">3.40</span>
+      </div>
+      <input type="range" id="wsGear" min="0.7" max="1.3" step="0.01" value="1">
+      <div class="ws-pitch-scale"><span>top speed</span><span>stock</span><span>acceleration</span></div>
+    </div>
+    <button class="ws-card ws-tune" id="wsTune">
+      <span class="ws-card-name">RACE TUNE</span>
+      <span class="ws-card-desc">ECU flash: +25% power, +400 rpm redline, needle buried past the paint.</span>
+    </button>
+  </div>
+</div>
+
+<div class="fireglow" id="fireglow" aria-hidden="true"></div>
+
+<!-- Stall overlay -->
+<div class="stall-overlay" id="stallOverlay">
+  <div class="stall-card">
+    <span class="stall-title">ENGINE STALLED</span>
+    <span class="stall-body">Clutch in, then hit <b>ENGINE START</b> — or press <kbd>I</kbd></span>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
