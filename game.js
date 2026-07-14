@@ -3984,7 +3984,7 @@ const MUS = {
    Site owner: paste your Spotify app's Client ID here (developer.spotify.com
    → create app → redirect URI = this site's URL). Players can also supply
    one at runtime via the in-deck setup screen; it's kept in localStorage. */
-const SPOTIFY_CLIENT_ID = "";
+const SPOTIFY_CLIENT_ID = "1997bc60896541669853b0249b9c98db";
 
 const SPA = {
   key: "dwnshift-spotify",
