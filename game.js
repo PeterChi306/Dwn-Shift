@@ -941,6 +941,13 @@ function initAudio() {
   AU.wGain = ctx.createGain(); AU.wGain.gain.value = 0;
   wsrc.connect(AU.wlp); AU.wlp.connect(AU.wGain); AU.wGain.connect(AU.master); wsrc.start();
 
+  // high-speed wind rush — the loud mid-band turbulence that takes over the
+  // cabin above ~60 mph; barely there below, unmistakable above
+  const wrushSrc = ctx.createBufferSource(); wrushSrc.buffer = nbuf; wrushSrc.loop = true; wrushSrc.playbackRate.value = 1.1;
+  AU.rushBp = ctx.createBiquadFilter(); AU.rushBp.type = "bandpass"; AU.rushBp.frequency.value = 700; AU.rushBp.Q.value = 0.5;
+  AU.rushG = ctx.createGain(); AU.rushG.gain.value = 0;
+  wrushSrc.connect(AU.rushBp); AU.rushBp.connect(AU.rushG); AU.rushG.connect(AU.master); wrushSrc.start();
+
   // --- tire screech (wheelspin / brake lockup) ---
   const ssrc = ctx.createBufferSource(); ssrc.buffer = nbuf; ssrc.loop = true; ssrc.playbackRate.value = 0.9;
   AU.scBp = ctx.createBiquadFilter(); AU.scBp.type = "bandpass"; AU.scBp.frequency.value = 950; AU.scBp.Q.value = 1.1;
@@ -978,12 +985,16 @@ function initAudio() {
   AU.sprayG = ctx.createGain(); AU.sprayG.gain.value = 0;
   sw.connect(swHp); swHp.connect(AU.sprayG); AU.sprayG.connect(AU.master); sw.start();
 
-  // --- echo mode: a big-space send off the master (music vibe toggle) ---
+  // --- echo mode: its OWN convolver at full wet (the shared tunnel one is
+  //     gated by AU.wet, which strangled the effect) + a big fed-back slap ---
   AU.echoSend = ctx.createGain(); AU.echoSend.gain.value = 0;
-  AU.master.connect(AU.echoSend); AU.echoSend.connect(AU.conv);
-  AU.echoSlap = ctx.createDelay(1.2); AU.echoSlap.delayTime.value = 0.34;
+  AU.echoConv = ctx.createConvolver(); AU.echoConv.buffer = AU.conv.buffer;
+  const eConvG = ctx.createGain(); eConvG.gain.value = 1;
+  AU.master.connect(AU.echoSend); AU.echoSend.connect(AU.echoConv);
+  AU.echoConv.connect(eConvG); eConvG.connect(AU.comp);
+  AU.echoSlap = ctx.createDelay(1.2); AU.echoSlap.delayTime.value = 0.4;
   AU.echoSlapG = ctx.createGain(); AU.echoSlapG.gain.value = 0;
-  const eFb = ctx.createGain(); eFb.gain.value = 0.38;
+  const eFb = ctx.createGain(); eFb.gain.value = 0.52;
   const eLp = ctx.createBiquadFilter(); eLp.type = "lowpass"; eLp.frequency.value = 2400;
   AU.master.connect(AU.echoSlapG); AU.echoSlapG.connect(AU.echoSlap);
   AU.echoSlap.connect(eLp); eLp.connect(eFb); eFb.connect(AU.echoSlap);
@@ -1224,8 +1235,13 @@ function audioTick() {
   AU.scG.gain.setTargetAtTime(scg, t, 0.05);
 
   const sp = Math.abs(S.v);
-  AU.wGain.gain.setTargetAtTime(Math.min(0.20, sp * 0.0035), t, 0.1);
+  // wind: gentle low rumble at town speeds, then the rush piles on hard past
+  // ~60 mph (27 m/s) the way real wind noise suddenly owns the cabin
+  const rush = clamp((sp - 24) / 28, 0, 1);
+  AU.wGain.gain.setTargetAtTime(Math.min(0.20, sp * 0.0035) + rush * 0.14, t, 0.1);
   AU.wlp.frequency.setTargetAtTime(220 + sp * 26, t, 0.1);
+  AU.rushG.gain.setTargetAtTime(Math.pow(rush, 1.5) * 0.5, t, 0.15);
+  AU.rushBp.frequency.setTargetAtTime(500 + sp * 14, t, 0.2);
 
   AU.grindGain.gain.setTargetAtTime(S.grinding ? 0.22 : 0, t, 0.02);
 
@@ -4360,8 +4376,8 @@ function toggleCassette(show) {
 function applyMusicEcho() {
   if (!AU.ready || !AU.echoSend) return;
   const t = AU.ctx.currentTime, on = MUS.echo;
-  AU.echoSend.gain.setTargetAtTime(on ? 0.7 : 0, t, 0.25);
-  AU.echoSlapG.gain.setTargetAtTime(on ? 0.5 : 0, t, 0.25);
+  AU.echoSend.gain.setTargetAtTime(on ? 1.1 : 0, t, 0.25);   // tunnel-grade wash
+  AU.echoSlapG.gain.setTargetAtTime(on ? 0.8 : 0, t, 0.25);
 }
 
 /* the one volume knob: mute × cabin music duck. With the windows up and a
@@ -4576,6 +4592,19 @@ function initInput() {
   });
 
   $("adBtn").addEventListener("click", toggleAutodrive);
+
+  $("fsBtn").addEventListener("click", () => {
+    const el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+    }
+  });
+  document.addEventListener("fullscreenchange", () =>
+    $("fsBtn").classList.toggle("on", !!document.fullscreenElement));
+  document.addEventListener("webkitfullscreenchange", () =>
+    $("fsBtn").classList.toggle("on", !!document.webkitFullscreenElement));
 
   $("muteBtn").addEventListener("click", () => {
     S.muted = !S.muted;
