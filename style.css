@@ -1401,3 +1401,5 @@ body.night.tunnel .pedalbay { filter: brightness(0.78) saturate(0.85); }
 .tp-vol label { font-size: 0.62rem; letter-spacing: 0.14em; color: var(--muted); }
 .tp-vol input[type="range"] { flex: 1; accent-color: var(--accent); min-width: 0; }
 #tpEcho.on { color: var(--accent); border-color: var(--accent); }
+.tp-keys { display: flex; gap: 8px; flex: none; }
+#tpWide.on { color: var(--accent); border-color: var(--accent); }

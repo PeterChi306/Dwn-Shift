@@ -260,15 +260,18 @@
       <span class="hu-status mono" id="spStatus">not connected — connect to load your playlists</span>
     </div>
 
-    <div class="hu-transport hide" id="huTransport">
-      <button class="chip-btn mono" id="tpPrev" title="Previous track">&#9198;</button>
-      <button class="chip-btn mono" id="tpPlay" title="Play / pause">PLAY</button>
-      <button class="chip-btn mono" id="tpNext" title="Next track">&#9197;</button>
+    <div class="hu-transport" id="huTransport">
+      <span class="tp-keys hide" id="tpKeys">
+        <button class="chip-btn mono" id="tpPrev" title="Previous track">&#9198;</button>
+        <button class="chip-btn mono" id="tpPlay" title="Play / pause">PLAY</button>
+        <button class="chip-btn mono" id="tpNext" title="Next track">&#9197;</button>
+      </span>
       <div class="tp-vol">
         <label for="tpVol" class="mono">VOL</label>
         <input type="range" id="tpVol" min="0" max="1" step="0.01" value="0.7">
       </div>
-      <button class="chip-btn mono" id="tpEcho" title="Echo — the whole cabin mix opens into a huge concrete space">ECHO</button>
+      <button class="chip-btn mono" id="tpEcho" title="Echo — the whole cabin opens into a huge concrete space">ECHO</button>
+      <button class="chip-btn mono" id="tpWide" title="Stereo — widens the cabin mix around the music">STEREO</button>
     </div>
 
     <div class="hu-setup hide" id="spSetup">

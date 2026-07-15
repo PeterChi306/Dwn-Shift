@@ -1001,6 +1001,17 @@ function initAudio() {
   eLp.connect(AU.comp);
   applyMusicEcho();
 
+  // --- stereo mode: parallel Haas pair off the master ---
+  AU.wideG = ctx.createGain(); AU.wideG.gain.value = 0;
+  const wHp = ctx.createBiquadFilter(); wHp.type = "highpass"; wHp.frequency.value = 300;
+  const wDel = ctx.createDelay(0.05); wDel.delayTime.value = 0.014;
+  const wPanL = ctx.createStereoPanner(); wPanL.pan.value = -0.9;
+  const wPanR = ctx.createStereoPanner(); wPanR.pan.value = 0.9;
+  AU.master.connect(AU.wideG); AU.wideG.connect(wHp);
+  wHp.connect(wPanL); wPanL.connect(AU.comp);
+  wHp.connect(wDel); wDel.connect(wPanR); wPanR.connect(AU.comp);
+  applyStereoWide();
+
   // --- gearbox grind (gated) ---
   const gsrc = ctx.createBufferSource(); gsrc.buffer = nbuf; gsrc.loop = true; gsrc.playbackRate.value = 1.7;
   const gbp = ctx.createBiquadFilter(); gbp.type = "bandpass"; gbp.frequency.value = 1300; gbp.Q.value = 2.2;
@@ -1019,6 +1030,7 @@ function initAudio() {
   applyCabin();
   updateMasterGain();
   applyMusicEcho();
+  applyStereoWide();
 }
 
 /* interior mode: windows-up filtering on the whole mix */
@@ -4031,7 +4043,7 @@ const MUS = {
   lib: null,        // the signed-in driver's own playlists [{uri, name}]
   // Web Playback SDK (Premium): in-page player with a real volume knob
   premium: false, player: null, dev: null, pendPlay: null, sdkLoading: false,
-  vol: 0.7, echo: false,
+  vol: 0.7, echo: false, wide: false,
 };
 
 /* ---- Spotify sign-in (Authorization Code + PKCE, fully client-side) ----
@@ -4193,10 +4205,12 @@ async function playOnDeck(uri) {
 }
 
 function updateTransportUi() {
-  const show = spConnected() && MUS.premium;
-  $("huTransport").classList.toggle("hide", !show);
+  // volume / echo / stereo are the app's own — always available. Only the
+  // track keys need Spotify's player (Premium), so only they are gated.
+  $("tpKeys").classList.toggle("hide", !(spConnected() && MUS.premium));
   $("tpVol").value = MUS.vol;
   $("tpEcho").classList.toggle("on", MUS.echo);
+  $("tpWide").classList.toggle("on", MUS.wide);
 }
 
 /* pull the whole shelf: every playlist on the signed-in account */
@@ -4380,11 +4394,20 @@ function applyMusicEcho() {
   AU.echoSlapG.gain.setTargetAtTime(on ? 0.8 : 0, t, 0.25);
 }
 
-/* the one volume knob: mute × cabin music duck. With the windows up and a
-   tape playing, the stereo wins and the engine drops back — like real life. */
+/* stereo mode: Haas widener on the cabin mix — a 14ms right-ear copy of
+   everything, highpassed so the bass stays anchored in the middle */
+function applyStereoWide() {
+  if (!AU.ready || !AU.wideG) return;
+  AU.wideG.gain.setTargetAtTime(MUS.wide ? 0.55 : 0, AU.ctx.currentTime, 0.2);
+}
+
+/* the one volume knob: mute × music balance. The VOL slider is the app's
+   own mix control — the higher it sits, the further the engine steps back
+   under a playing tape (hardest with the windows up); Premium accounts
+   additionally get true Spotify volume through the SDK player. */
 function updateMasterGain() {
   if (!AU.ready) return;
-  const duck = MUS.playing && S.cabin ? 0.4 : 1;
+  const duck = MUS.playing ? 1 - MUS.vol * (S.cabin ? 0.68 : 0.4) : 1;
   AU.master.gain.setTargetAtTime(S.muted ? 0 : 0.85 * duck, AU.ctx.currentTime, 0.25);
 }
 
@@ -4414,7 +4437,7 @@ function save() {
       traffic: S.traffic, rain: S.rain, lt: S.ltTgt, ltBest: LT.best,
       night: S.night, station: S.station,
       stations: MUS.saved, tapeNames: MUS.names,
-      musVol: MUS.vol, musEcho: MUS.echo,
+      musVol: MUS.vol, musEcho: MUS.echo, musWide: MUS.wide,
       padV2: true,                       // paddle remap migration done
     }));
   } catch (_) {}
@@ -4565,6 +4588,7 @@ function initInput() {
   $("tpVol").addEventListener("input", () => {
     MUS.vol = +$("tpVol").value;
     if (MUS.player) MUS.player.setVolume(MUS.vol);
+    updateMasterGain();                // balance shifts live, SDK or not
   });
   $("tpVol").addEventListener("change", save);
   $("tpEcho").addEventListener("click", () => {
@@ -4573,6 +4597,14 @@ function initInput() {
     MUS.echo = !MUS.echo;
     $("tpEcho").classList.toggle("on", MUS.echo);
     applyMusicEcho();
+    save();
+  });
+  $("tpWide").addEventListener("click", () => {
+    initAudio();
+    if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+    MUS.wide = !MUS.wide;
+    $("tpWide").classList.toggle("on", MUS.wide);
+    applyStereoWide();
     save();
   });
 
@@ -4834,6 +4866,8 @@ function frame(now) {
   $("tpVol").value = MUS.vol;
   MUS.echo = !!saved.musEcho;
   $("tpEcho").classList.toggle("on", MUS.echo);
+  MUS.wide = !!saved.musWide;
+  $("tpWide").classList.toggle("on", MUS.wide);
   S.station = saved.station || null;
   MUS.saved = Array.isArray(saved.stations) ? saved.stations : (S.station ? [S.station] : []);
   MUS.names = saved.tapeNames || {};
