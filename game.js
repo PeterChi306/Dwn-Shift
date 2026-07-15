@@ -761,7 +761,6 @@ const S = {
   traffic: false, rain: false, passT: 2, splashT: 2, wiperT: 0.7, wiperDir: 1,
   night: false, cricketT: 2, lampT: 1.5,
   cruise: { on: false, set: 0, i: 0 },
-  patrol: { on: false, kmh: 100, overT: 0, chase: false, dist: 1, sirT: 0 },
   station: null,
   sweep: -1,
   needle: { rpm: 0, rpmV: 0, spd: 0, spdV: 0 },
@@ -979,12 +978,17 @@ function initAudio() {
   AU.sprayG = ctx.createGain(); AU.sprayG.gain.value = 0;
   sw.connect(swHp); swHp.connect(AU.sprayG); AU.sprayG.connect(AU.master); sw.start();
 
-  // --- police siren (two-tone wail, rides the ambience bus so the cabin
-  //     muffles it and tunnels echo it) ---
-  AU.sirO = ctx.createOscillator(); AU.sirO.type = "triangle"; AU.sirO.frequency.value = 800;
-  const sirBp = ctx.createBiquadFilter(); sirBp.type = "bandpass"; sirBp.frequency.value = 1100; sirBp.Q.value = 0.7;
-  AU.sirG = ctx.createGain(); AU.sirG.gain.value = 0;
-  AU.sirO.connect(sirBp); sirBp.connect(AU.sirG); AU.sirG.connect(AU.amb); AU.sirO.start();
+  // --- echo mode: a big-space send off the master (music vibe toggle) ---
+  AU.echoSend = ctx.createGain(); AU.echoSend.gain.value = 0;
+  AU.master.connect(AU.echoSend); AU.echoSend.connect(AU.conv);
+  AU.echoSlap = ctx.createDelay(1.2); AU.echoSlap.delayTime.value = 0.34;
+  AU.echoSlapG = ctx.createGain(); AU.echoSlapG.gain.value = 0;
+  const eFb = ctx.createGain(); eFb.gain.value = 0.38;
+  const eLp = ctx.createBiquadFilter(); eLp.type = "lowpass"; eLp.frequency.value = 2400;
+  AU.master.connect(AU.echoSlapG); AU.echoSlapG.connect(AU.echoSlap);
+  AU.echoSlap.connect(eLp); eLp.connect(eFb); eFb.connect(AU.echoSlap);
+  eLp.connect(AU.comp);
+  applyMusicEcho();
 
   // --- gearbox grind (gated) ---
   const gsrc = ctx.createBufferSource(); gsrc.buffer = nbuf; gsrc.loop = true; gsrc.playbackRate.value = 1.7;
@@ -1003,6 +1007,7 @@ function initAudio() {
   applyTunnel();
   applyCabin();
   updateMasterGain();
+  applyMusicEcho();
 }
 
 /* interior mode: windows-up filtering on the whole mix */
@@ -1386,8 +1391,12 @@ function sfxPaddleReal(strength = 1) {
     const ctx = AU.ctx;
     const s = ctx.createBufferSource(); s.buffer = AU.pshiftBuf;
     s.playbackRate.value = 0.97 + Math.random() * 0.06;  // never twice identical
-    const g = ctx.createGain(); g.gain.value = 1.5 * strength;
-    s.connect(g); g.connect(AU.master); s.start();
+    // the paddle lives INSIDE the cabin: windows up brings it closer and
+    // louder, so in cabin mode it skips the windows-up filter entirely and
+    // gains presence; outside, it's just one more sound in the open air
+    const g = ctx.createGain();
+    g.gain.value = (S.cabin ? 2.4 : 1.3) * strength;
+    s.connect(g); g.connect(S.cabin ? AU.comp : AU.master); s.start();
     return;
   }
   if (!AU.pshiftEls)                     // engine not running / audio not booted
@@ -1395,7 +1404,7 @@ function sfxPaddleReal(strength = 1) {
       const a = new Audio("Sound/Pshift.wav"); a.preload = "auto"; return a;
     });
   const a = AU.pshiftEls.find(x => x.paused) || AU.pshiftEls[0];
-  a.volume = Math.min(1, 1.2 * strength);
+  a.volume = Math.min(1, (S.cabin ? 1.4 : 0.9) * strength);
   a.currentTime = 0;
   a.play().catch(() => {});
 }
@@ -1860,10 +1869,10 @@ function stepPhysics(dt) {
   // pedal smoothing (keyboard is binary; ramps make it analog)
   S.throttle += clamp(S.in.gas - S.throttle, -RATES.thrDn * dt, RATES.thrUp * dt);
   S.brake += clamp(S.in.brake - S.brake, -RATES.brkDn * dt, RATES.brkUp * dt);
-  // pulled over: the car is braked to a stop for you
-  if (S._bustBrake) {
-    S.brake = Math.max(S.brake, 1); S.throttle = 0;
-    if (Math.abs(S.v) < 0.3) S._bustBrake = false;
+  // auto drive: blend the chauffeur's feet in under the player's
+  if (AD.on) {
+    S.throttle = Math.max(S.throttle, AD.gas);
+    S.brake = Math.max(S.brake, AD.brake);
   }
   // clutch release is auto-feathered like a real driver's foot: fast through
   // the dead travel, then it holds the pedal at the engagement the ENGINE can
@@ -3813,98 +3822,124 @@ function ltTick(dt) {
   }
 }
 
-/* ---------------- highway patrol (speed-limit mode) ----------------
-   Arm a limit, and holding above it for a few seconds puts a patrol car
-   far behind you. Slow down and it closes in — to zero, and you're pulled
-   over. Keep it pinned (the cruiser tops out just under 200 mph) and the
-   lights shrink in the mirror until they give up. */
+/* ---------------- AUTO DRIVE — the chauffeur ----------------
+   The car drives itself: pulls away, works the box up through the gears,
+   surges, backs off, brakes hard into a phantom corner, downshifts with
+   rev-match blips, and goes again. Touch a pedal and it hands straight
+   back to you. */
 
-const PATROL_LIMITS = [60, 100, 140];      // km/h presets the chip cycles through
-const COP_TOP = 88;                        // m/s ≈ 317 km/h / 197 mph — outrun THIS
+const AD = {
+  on: false,
+  phase: "idle", t: 0,          // current behaviour + time left in it
+  target: 0,                    // speed it's driving toward (m/s)
+  gas: 0, brake: 0,             // the chauffeur's feet (blended in physics)
+  shiftT: 0, startT: 0,
+};
 
-function togglePatrol() {
-  const p = S.patrol;
-  if (!p.on) { p.on = true; p.kmh = PATROL_LIMITS[0]; }
-  else {
-    const i = PATROL_LIMITS.indexOf(p.kmh);
-    if (i >= 0 && i < PATROL_LIMITS.length - 1) p.kmh = PATROL_LIMITS[i + 1];
-    else { p.on = false; endChase(); }
-  }
-  p.overT = 0;
-  updatePatrolUi();
-  save();
+function adVmax() {              // the pace it's willing to drive this car at
+  return (CC.kmhMax / 3.6) * 0.82;
 }
 
-function updatePatrolUi() {
-  const p = S.patrol;
-  $("patrolBtn").classList.toggle("on", p.on);
-  $("patrolBtn").textContent = p.on
-    ? "LIMIT " + (S.units === "kmh" ? p.kmh : Math.round(p.kmh / 1.609)) : "LIMIT";
-}
-
-function endChase() {
-  const p = S.patrol;
-  if (!p.chase && !p.overT) { $("coplights").style.opacity = 0; return; }
-  p.chase = false; p.overT = 0; p.dist = 1;
-  $("lampPolice").classList.remove("lit");
-  $("coplights").style.opacity = 0;
-  if (AU.ready && AU.sirG) AU.sirG.gain.setTargetAtTime(0, AU.ctx.currentTime, 0.6);
-}
-
-function bust() {
-  const p = S.patrol;
-  $("bustSpeed").textContent = Math.round(Math.abs(S.v) * (S.units === "kmh" ? 3.6 : 2.237)) +
-    (S.units === "kmh" ? " km/h" : " mph");
-  $("bustLimit").textContent = (S.units === "kmh" ? p.kmh : Math.round(p.kmh / 1.609)) +
-    (S.units === "kmh" ? " km/h" : " mph");
-  $("bustedOverlay").classList.add("show");
-  setTimeout(() => $("bustedOverlay").classList.remove("show"), 6000);
-  S._bustBrake = true;                     // the officer walks up; you stop
-  S.engineOn = false; S.cranking = false;
+function toggleAutodrive() {
+  if (AD.on) { autodriveOff(); return; }
+  if (S.mode === "clutch") setMode("auto");   // the chauffeur takes the automatic
   cruiseOff();
-  updateRunLamp();
-  sfxClunk(1.2);
-  endChase();
+  AD.on = true;
+  AD.phase = "pull"; AD.t = 0; AD.gas = 0; AD.brake = 0; AD.startT = 0;
+  AD.target = adVmax() * (0.35 + Math.random() * 0.3);
+  $("adBtn").classList.add("on");
+  $("lampAuto").classList.add("lit");
 }
 
-/* per-frame chase logic: spawn, close/fall back, siren wail, mirror lights */
-function patrolTick(dt) {
-  const p = S.patrol;
-  const v = Math.abs(S.v);
-  if (!p.on) return;
+function autodriveOff() {
+  if (!AD.on) return;
+  AD.on = false; AD.gas = 0; AD.brake = 0;
+  $("adBtn").classList.remove("on");
+  $("lampAuto").classList.remove("lit");
+}
 
-  const over = v * 3.6 > p.kmh;
-  $("patrolBtn").classList.toggle("over", over);
+/* per-frame chauffeur brain */
+function autodriveTick(dt) {
+  if (!AD.on) return;
 
-  if (!p.chase) {
-    if (over) {
-      p.overT += dt;
-      if (p.overT > 6) {                   // they've clocked you
-        p.chase = true; p.dist = 1; p.sirT = 0;
-        $("lampPolice").classList.add("lit");
-      }
-    } else p.overT = Math.max(0, p.overT - dt * 2);
+  // the driver touched a pedal — instant handover
+  if (S.in.gas > 0.04 || S.in.brake > 0.04 || S.in.clutch > 0.3) { autodriveOff(); return; }
+
+  // fire the engine if it isn't running (with a beat between attempts)
+  AD.startT -= dt;
+  if ((!S.engineOn || S.stalled) && !S.cranking) {
+    AD.gas = 0; AD.brake = 0;
+    if (AD.startT <= 0) { AD.startT = 2.5; toggleIgnition(); }
+    return;
+  }
+  if (S.cranking) return;
+
+  // get it into a forward gear
+  if (S.mode === "auto") {
+    if (S.autoSel !== "D" && Math.abs(S.v) < 2) {
+      S.autoSel = "D"; S.autoGear = 1; S.gear = 1; S.locked = false;
+      sfxClunk(0.5); flashGear();
+      document.querySelectorAll(".prnd button").forEach(b =>
+        b.classList.toggle("on", b.dataset.sel === "D"));
+    }
+  } else if (S.gear === 0 || S.gear === "R") {
+    AD.shiftT -= dt;
+    if (AD.shiftT <= 0) { AD.shiftT = 0.5; seqShift(1); }
     return;
   }
 
-  // gap dynamics: the cruiser holds ~1.7× the limit, floor 180 km/h, cap COP_TOP
-  const copV = clamp(Math.max((p.kmh / 3.6) * 1.7, 50), 0, COP_TOP);
-  const gap = v - copV;
-  p.dist += (gap / (gap > 0 ? 150 : 300)) * dt;   // easier to lose than to gain
-  if (p.dist >= 1.3) { endChase(); return; }      // taillights won — they gave up
-  if (p.dist <= 0) { bust(); return; }
+  const v = Math.abs(S.v), vmax = adVmax();
 
-  // mirror strobes brighten as they close in (stronger at night)
-  const close = clamp(1 - p.dist, 0, 1);
-  $("coplights").style.opacity = (close * (S.night ? 0.95 : 0.6)).toFixed(3);
+  // behaviour phases
+  AD.t -= dt;
+  if (AD.phase === "pull" && v > AD.target * 0.96) { AD.phase = "hold"; AD.t = 2.5 + Math.random() * 5; }
+  if (AD.t <= 0) {
+    const r = Math.random();
+    if (AD.phase === "hold" || AD.phase === "pull") {
+      if (r < 0.30) {                     // brake for the corner ahead
+        AD.phase = "brake";
+        AD.target = Math.max(6, v * (0.3 + Math.random() * 0.3));
+      } else if (r < 0.55) {              // full send
+        AD.phase = "pull";
+        AD.target = vmax * (0.85 + Math.random() * 0.15);
+      } else {                            // ease to a new cruising pace
+        AD.phase = "pull";
+        AD.target = vmax * (0.35 + Math.random() * 0.45);
+      }
+      AD.t = 4 + Math.random() * 6;
+    } else if (AD.phase === "brake") {
+      AD.phase = "hold"; AD.t = 1.5 + Math.random() * 3;
+    }
+  }
+  if (AD.phase === "brake" && v <= AD.target + 0.5) { AD.phase = "hold"; AD.t = 1.5 + Math.random() * 3; }
 
-  // siren: long wail far away, frantic yelp on your bumper
-  if (AU.ready && AU.sirO) {
-    p.sirT += dt;
-    const per = p.dist < 0.35 ? 0.32 : 1.7;
-    const ph = (p.sirT % per) / per;
-    AU.sirO.frequency.setTargetAtTime(640 + 560 * Math.sin(ph * Math.PI), AU.ctx.currentTime, 0.03);
-    AU.sirG.gain.setTargetAtTime(0.001 + close * close * 0.3, AU.ctx.currentTime, 0.15);
+  // feet: smooth, human pedal movements toward what the phase wants
+  let wantGas = 0, wantBrake = 0;
+  const err = AD.target - v;
+  if (AD.phase === "brake") {
+    wantBrake = clamp(0.35 + (v - AD.target) * 0.05, 0.3, 0.85);
+  } else {
+    // proportional throttle with a spirited right foot on big gaps
+    wantGas = clamp(err * 0.16, 0, 1);
+    if (AD.phase === "pull" && err > vmax * 0.25) wantGas = 1;
+    if (err < -1.5) { wantGas = 0; wantBrake = clamp(-err * 0.04, 0, 0.3); }
+  }
+  AD.gas += clamp(wantGas - AD.gas, -3.2 * dt, 2.2 * dt);
+  AD.brake += clamp(wantBrake - AD.brake, -4 * dt, 3 * dt);
+
+  // gearwork in sequential mode: short-shift when cruising, wring it out on
+  // a send, drop gears with rev-match blips under braking
+  if (S.mode === "manual") {
+    AD.shiftT -= dt;
+    if (AD.shiftT <= 0 && typeof S.gear === "number" && S.gear >= 1) {
+      const sendIt = AD.phase === "pull" && AD.target > vmax * 0.7;
+      const upAt = ENG.max * (sendIt ? 0.96 : 0.62 + AD.gas * 0.2);
+      if (S.rpm > upAt && S.gear < CAR.top && AD.gas > 0.25) {
+        seqShift(1); AD.shiftT = 0.45;
+      } else if (S.rpm < ENG.idle * 1.85 && S.gear > 1 && v > 3) {
+        seqShift(-1); AD.shiftT = 0.55;   // blip. bark. lovely.
+      }
+    }
   }
 }
 
@@ -3978,6 +4013,9 @@ const MUS = {
   saved: [],        // recently played tapes (fallback shelf when not connected)
   names: {},        // uri → human title
   lib: null,        // the signed-in driver's own playlists [{uri, name}]
+  // Web Playback SDK (Premium): in-page player with a real volume knob
+  premium: false, player: null, dev: null, pendPlay: null, sdkLoading: false,
+  vol: 0.7, echo: false,
 };
 
 /* ---- Spotify sign-in (Authorization Code + PKCE, fully client-side) ----
@@ -3993,7 +4031,16 @@ const SPA = {
 };
 function spCid() { return SPOTIFY_CLIENT_ID || SPA.read().cid || ""; }
 function spRedirectUri() { return location.origin + location.pathname; }
-function spConnected() { return !!SPA.read().refresh; }
+/* scopeV gates the grant: bumping SP_SCOPE_V forces one reconnect so old
+   sessions pick up newly required scopes (v2 added streaming/playback) */
+const SP_SCOPE_V = 2;
+const SP_SCOPES = "playlist-read-private playlist-read-collaborative " +
+  "streaming user-read-email user-read-private " +
+  "user-read-playback-state user-modify-playback-state";
+function spConnected() {
+  const st = SPA.read();
+  return !!st.refresh && st.scopeV === SP_SCOPE_V;
+}
 
 function b64url(buf) {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))
@@ -4013,7 +4060,7 @@ async function spConnect() {
   location.href = "https://accounts.spotify.com/authorize?" + new URLSearchParams({
     client_id: spCid(), response_type: "code",
     redirect_uri: spRedirectUri(),
-    scope: "playlist-read-private playlist-read-collaborative",
+    scope: SP_SCOPES,
     code_challenge_method: "S256", code_challenge: challenge,
   });
 }
@@ -4032,6 +4079,7 @@ async function spExchange(code) {
   const j = await r.json();
   st.token = j.access_token; st.refresh = j.refresh_token;
   st.exp = Date.now() + (j.expires_in - 60) * 1000;
+  st.scopeV = SP_SCOPE_V;
   delete st.verifier;
   SPA.write(st);
 }
@@ -4061,26 +4109,86 @@ async function spToken() {
   }
 }
 
-async function spApi(path) {
+async function spApi(path, method, body) {
+  const call = async (tok) => fetch("https://api.spotify.com/v1" + path, {
+    method: method || "GET",
+    headers: {
+      Authorization: "Bearer " + tok,
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
   const tok = await spToken();
   if (!tok) return null;
-  const r = await fetch("https://api.spotify.com/v1" + path,
-    { headers: { Authorization: "Bearer " + tok } });
+  let r = await call(tok);
   if (r.status === 401) {             // token died early — force one refresh
     const st = SPA.read(); delete st.token; SPA.write(st);
     const t2 = await spToken();
     if (!t2) return null;
-    const r2 = await fetch("https://api.spotify.com/v1" + path,
-      { headers: { Authorization: "Bearer " + t2 } });
-    return r2.ok ? r2.json() : null;
+    r = await call(t2);
   }
-  return r.ok ? r.json() : null;
+  if (!r.ok) return null;
+  return r.status === 204 ? true : r.json();
+}
+
+/* ---- Web Playback SDK: the deck becomes a real Spotify device (Premium),
+   which is what makes an actual VOLUME knob possible ---- */
+function ensureSdk() {
+  if (MUS.player || MUS.sdkLoading || !spConnected() || !MUS.premium) return;
+  MUS.sdkLoading = true;
+  window.onSpotifyWebPlaybackSDKReady = () => {
+    const p = new Spotify.Player({
+      name: "DWNSHIFT tape deck",
+      getOAuthToken: (cb) => { spToken().then(t => { if (t) cb(t); }); },
+      volume: MUS.vol,
+    });
+    p.addListener("ready", ({ device_id }) => {
+      MUS.dev = device_id;
+      updateTransportUi();
+      if (MUS.pendPlay) { const u = MUS.pendPlay; MUS.pendPlay = null; playOnDeck(u); }
+    });
+    p.addListener("not_ready", () => { MUS.dev = null; });
+    p.addListener("player_state_changed", (st) => {
+      if (!st) return;
+      setPlaying(!st.paused);
+      $("tpPlay").textContent = st.paused ? "PLAY" : "PAUSE";
+      const tr = st.track_window && st.track_window.current_track;
+      if (tr) $("casState").textContent =
+        tr.name + " — " + tr.artists.map(a => a.name).join(", ");
+    });
+    // account_error = not actually Premium — fall back to the plain embed
+    p.addListener("account_error", () => { MUS.premium = false; MUS.dev = null; updateTransportUi(); });
+    p.addListener("initialization_error", () => { MUS.premium = false; updateTransportUi(); });
+    p.addListener("authentication_error", () => {});
+    p.connect();
+    MUS.player = p;
+  };
+  const s = document.createElement("script");
+  s.src = "https://sdk.scdn.co/spotify-player.js";
+  s.async = true;
+  document.head.appendChild(s);
+}
+
+/* tell Spotify to start this playlist on the deck's own device */
+async function playOnDeck(uri) {
+  const ok = await spApi("/me/player/play?device_id=" + MUS.dev, "PUT",
+    { context_uri: "spotify:" + uri.replace("/", ":") });
+  updateCasFace(ok ? "starting…" : "couldn't start — open any track once in Spotify, then retry");
+}
+
+function updateTransportUi() {
+  const show = spConnected() && MUS.premium;
+  $("huTransport").classList.toggle("hide", !show);
+  $("tpVol").value = MUS.vol;
+  $("tpEcho").classList.toggle("on", MUS.echo);
 }
 
 /* pull the whole shelf: every playlist on the signed-in account */
 async function spLoadLibrary() {
   $("spStatus").textContent = "loading your playlists…";
   const me = await spApi("/me");
+  MUS.premium = !!(me && me.product === "premium");
+  ensureSdk();
   let items = [], url = "/me/playlists?limit=50";
   while (url && items.length < 250) {
     const j = await spApi(url);
@@ -4092,6 +4200,7 @@ async function spLoadLibrary() {
   for (const p of MUS.lib) MUS.names[p.uri] = p.name;
   renderStations();
   spUpdateAuthUi(me && me.display_name);
+  updateTransportUi();
   save();
 }
 
@@ -4198,6 +4307,14 @@ function loadStation(uri) {
   updateCasFace("loading tape…");
   save();
 
+  // Premium + SDK: play straight on the deck's own device — real volume knob
+  if (MUS.premium && spConnected()) {
+    if (MUS.dev) { playOnDeck(uri); return; }
+    MUS.pendPlay = uri;
+    ensureSdk();
+    return;
+  }
+
   const spUri = "spotify:" + uri.replace("/", ":");
   if (MUS.ctrl) { MUS.ctrl.loadUri(spUri); return; }
   if (MUS.api) {
@@ -4237,6 +4354,16 @@ function toggleCassette(show) {
   }
 }
 
+/* echo mode: opens the whole cabin mix into a huge concrete space — long
+   reverb tail plus a fed-back slap delay. (Spotify's own stream is DRM-boxed,
+   so the space is built around the music rather than on it.) */
+function applyMusicEcho() {
+  if (!AU.ready || !AU.echoSend) return;
+  const t = AU.ctx.currentTime, on = MUS.echo;
+  AU.echoSend.gain.setTargetAtTime(on ? 0.7 : 0, t, 0.25);
+  AU.echoSlapG.gain.setTargetAtTime(on ? 0.5 : 0, t, 0.25);
+}
+
 /* the one volume knob: mute × cabin music duck. With the windows up and a
    tape playing, the stereo wins and the engine drops back — like real life. */
 function updateMasterGain() {
@@ -4259,7 +4386,6 @@ function setUnits(u) {
   speedG.rebuild();
   refreshWorkshop();
   updateCruiseUi();
-  updatePatrolUi();
   if (LT.phase !== "off") { $("ltTarget").textContent = ltLabel(); ltShowBest(); }
   save();
 }
@@ -4272,7 +4398,7 @@ function save() {
       traffic: S.traffic, rain: S.rain, lt: S.ltTgt, ltBest: LT.best,
       night: S.night, station: S.station,
       stations: MUS.saved, tapeNames: MUS.names,
-      patrol: { on: S.patrol.on, kmh: S.patrol.kmh },
+      musVol: MUS.vol, musEcho: MUS.echo,
       padV2: true,                       // paddle remap migration done
     }));
   } catch (_) {}
@@ -4310,6 +4436,7 @@ function initInput() {
       case "KeyF": if (down && !e.repeat) $("flybyBtn").click(); return true;
       case "KeyN": if (down && !e.repeat) setNight(!S.night); return true;
       case "KeyK": if (down && !e.repeat) toggleCruise(); return true;
+      case "KeyA": if (down && !e.repeat) toggleAutodrive(); return true;
       case "KeyM": if (down && !e.repeat) toggleCassette(); return true;
       case "KeyV": if (down && !e.repeat) $("cabinBtn").click(); return true;
       case "Space": case "KeyC":
@@ -4415,6 +4542,24 @@ function initInput() {
     spConnect();                       // straight into the sign-in dance
   });
 
+  // tape transport (Premium — the deck is its own Spotify device)
+  $("tpPlay").addEventListener("click", () => { if (MUS.player) MUS.player.togglePlay(); });
+  $("tpPrev").addEventListener("click", () => { if (MUS.player) MUS.player.previousTrack(); });
+  $("tpNext").addEventListener("click", () => { if (MUS.player) MUS.player.nextTrack(); });
+  $("tpVol").addEventListener("input", () => {
+    MUS.vol = +$("tpVol").value;
+    if (MUS.player) MUS.player.setVolume(MUS.vol);
+  });
+  $("tpVol").addEventListener("change", save);
+  $("tpEcho").addEventListener("click", () => {
+    initAudio();
+    if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+    MUS.echo = !MUS.echo;
+    $("tpEcho").classList.toggle("on", MUS.echo);
+    applyMusicEcho();
+    save();
+  });
+
   $("flybyBtn").addEventListener("click", () => {
     S.flyby = !S.flyby;
     S.flyX = -380;
@@ -4430,7 +4575,7 @@ function initInput() {
     save();
   });
 
-  $("patrolBtn").addEventListener("click", togglePatrol);
+  $("adBtn").addEventListener("click", toggleAutodrive);
 
   $("muteBtn").addEventListener("click", () => {
     S.muted = !S.muted;
@@ -4535,8 +4680,8 @@ function frame(now) {
     }
   }
 
-  /* --- highway patrol --- */
-  patrolTick(dt);
+  /* --- auto drive --- */
+  autodriveTick(dt);
 
   /* --- night streetlights sweep past at speed; in a tunnel the ceiling
          lights come in a strict rhythm instead of scattered posts --- */
@@ -4656,11 +4801,10 @@ function frame(now) {
   S.night = !!saved.night;
   document.body.classList.toggle("night", S.night);
   $("nightBtn").classList.toggle("on", S.night);
-  if (saved.patrol) {
-    S.patrol.on = !!saved.patrol.on;
-    if (PATROL_LIMITS.includes(saved.patrol.kmh)) S.patrol.kmh = saved.patrol.kmh;
-  }
-  updatePatrolUi();
+  if (typeof saved.musVol === "number") MUS.vol = clamp(saved.musVol, 0, 1);
+  $("tpVol").value = MUS.vol;
+  MUS.echo = !!saved.musEcho;
+  $("tpEcho").classList.toggle("on", MUS.echo);
   S.station = saved.station || null;
   MUS.saved = Array.isArray(saved.stations) ? saved.stations : (S.station ? [S.station] : []);
   MUS.names = saved.tapeNames || {};

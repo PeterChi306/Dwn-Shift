@@ -1394,34 +1394,10 @@ body.night.tunnel .garage,
 body.night.tunnel .console,
 body.night.tunnel .pedalbay { filter: brightness(0.78) saturate(0.85); }
 
-/* ---------------- highway patrol ---------------- */
+/* ---------------- tape transport (Premium) ---------------- */
 
-/* red/blue strobing up from the bottom of the screen — the mirror */
-.coplights { position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0; }
-.coplights i { position: absolute; bottom: -18vh; width: 60vw; height: 46vh; mix-blend-mode: screen; opacity: 0; }
-.coplights .cop-red {
-  left: -12vw;
-  background: radial-gradient(50% 50% at 50% 60%, rgba(255,54,54,0.5), transparent 70%);
-  animation: copstrobe 0.44s steps(1) infinite;
-}
-.coplights .cop-blue {
-  right: -12vw;
-  background: radial-gradient(50% 50% at 50% 60%, rgba(64,110,255,0.55), transparent 70%);
-  animation: copstrobe 0.44s steps(1) infinite 0.22s;
-}
-@keyframes copstrobe { 0% { opacity: 1; } 50% { opacity: 0.08; } 100% { opacity: 1; } }
-
-/* the POLICE lamp flicks red/blue while they're behind you */
-.lamp-police.lit { animation: coptext 0.44s steps(1) infinite; }
-.lamp-police.lit i { animation: copdot 0.44s steps(1) infinite; }
-@keyframes coptext { 0% { color: #ff4a4a; } 50% { color: #5f8dff; } 100% { color: #ff4a4a; } }
-@keyframes copdot {
-  0%   { background: #ff4a4a; box-shadow: 0 0 8px #ff4a4a; }
-  50%  { background: #5f8dff; box-shadow: 0 0 8px #5f8dff; }
-  100% { background: #ff4a4a; box-shadow: 0 0 8px #ff4a4a; }
-}
-
-/* LIMIT chip goes hot while you're over the posted speed */
-#patrolBtn.over { color: var(--redline); border-color: var(--redline); }
-
-.busted .stall-title { letter-spacing: 0.3em; }
+.hu-transport { display: flex; align-items: center; gap: 8px; }
+.tp-vol { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tp-vol label { font-size: 0.62rem; letter-spacing: 0.14em; color: var(--muted); }
+.tp-vol input[type="range"] { flex: 1; accent-color: var(--accent); min-width: 0; }
+#tpEcho.on { color: var(--accent); border-color: var(--accent); }
