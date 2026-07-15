@@ -992,24 +992,39 @@ function initAudio() {
   const eConvG = ctx.createGain(); eConvG.gain.value = 1;
   AU.master.connect(AU.echoSend); AU.echoSend.connect(AU.echoConv);
   AU.echoConv.connect(eConvG); eConvG.connect(AU.comp);
-  AU.echoSlap = ctx.createDelay(1.2); AU.echoSlap.delayTime.value = 0.4;
+  // ping-pong slap: each repeat bounces to the other wall of the tunnel —
+  // unmistakably an echo, not just a wash
   AU.echoSlapG = ctx.createGain(); AU.echoSlapG.gain.value = 0;
-  const eFb = ctx.createGain(); eFb.gain.value = 0.52;
-  const eLp = ctx.createBiquadFilter(); eLp.type = "lowpass"; eLp.frequency.value = 2400;
-  AU.master.connect(AU.echoSlapG); AU.echoSlapG.connect(AU.echoSlap);
-  AU.echoSlap.connect(eLp); eLp.connect(eFb); eFb.connect(AU.echoSlap);
-  eLp.connect(AU.comp);
+  const dL = ctx.createDelay(1.5); dL.delayTime.value = 0.42;
+  const dR = ctx.createDelay(1.5); dR.delayTime.value = 0.42;
+  const eLpL = ctx.createBiquadFilter(); eLpL.type = "lowpass"; eLpL.frequency.value = 2600;
+  const eLpR = ctx.createBiquadFilter(); eLpR.type = "lowpass"; eLpR.frequency.value = 2600;
+  const fbL = ctx.createGain(); fbL.gain.value = 0.58;
+  const fbR = ctx.createGain(); fbR.gain.value = 0.58;
+  const ePanL = ctx.createStereoPanner(); ePanL.pan.value = -0.8;
+  const ePanR = ctx.createStereoPanner(); ePanR.pan.value = 0.8;
+  AU.master.connect(AU.echoSlapG); AU.echoSlapG.connect(dL);
+  dL.connect(eLpL); eLpL.connect(ePanL); ePanL.connect(AU.comp);
+  eLpL.connect(fbL); fbL.connect(dR);
+  dR.connect(eLpR); eLpR.connect(ePanR); ePanR.connect(AU.comp);
+  eLpR.connect(fbR); fbR.connect(dL);
   applyMusicEcho();
 
-  // --- stereo mode: parallel Haas pair off the master ---
+  // --- stereo mode: double Haas pair off the master — a hard-left dry
+  //     image, an 18ms right-ear copy, and a softer 31ms left return for
+  //     depth. Wide enough that you can't miss it on headphones. ---
   AU.wideG = ctx.createGain(); AU.wideG.gain.value = 0;
-  const wHp = ctx.createBiquadFilter(); wHp.type = "highpass"; wHp.frequency.value = 300;
-  const wDel = ctx.createDelay(0.05); wDel.delayTime.value = 0.014;
-  const wPanL = ctx.createStereoPanner(); wPanL.pan.value = -0.9;
-  const wPanR = ctx.createStereoPanner(); wPanR.pan.value = 0.9;
+  const wHp = ctx.createBiquadFilter(); wHp.type = "highpass"; wHp.frequency.value = 250;
+  const wDel = ctx.createDelay(0.08); wDel.delayTime.value = 0.018;
+  const wDel2 = ctx.createDelay(0.08); wDel2.delayTime.value = 0.031;
+  const wDel2G = ctx.createGain(); wDel2G.gain.value = 0.6;
+  const wPanL = ctx.createStereoPanner(); wPanL.pan.value = -1;
+  const wPanR = ctx.createStereoPanner(); wPanR.pan.value = 1;
+  const wPanL2 = ctx.createStereoPanner(); wPanL2.pan.value = -1;
   AU.master.connect(AU.wideG); AU.wideG.connect(wHp);
   wHp.connect(wPanL); wPanL.connect(AU.comp);
   wHp.connect(wDel); wDel.connect(wPanR); wPanR.connect(AU.comp);
+  wDel.connect(wDel2); wDel2.connect(wDel2G); wDel2G.connect(wPanL2); wPanL2.connect(AU.comp);
   applyStereoWide();
 
   // --- gearbox grind (gated) ---
@@ -4390,15 +4405,15 @@ function toggleCassette(show) {
 function applyMusicEcho() {
   if (!AU.ready || !AU.echoSend) return;
   const t = AU.ctx.currentTime, on = MUS.echo;
-  AU.echoSend.gain.setTargetAtTime(on ? 1.1 : 0, t, 0.25);   // tunnel-grade wash
-  AU.echoSlapG.gain.setTargetAtTime(on ? 0.8 : 0, t, 0.25);
+  AU.echoSend.gain.setTargetAtTime(on ? 1.9 : 0, t, 0.25);   // wetter than dry
+  AU.echoSlapG.gain.setTargetAtTime(on ? 1.15 : 0, t, 0.25); // loud wall-to-wall repeats
 }
 
 /* stereo mode: Haas widener on the cabin mix — a 14ms right-ear copy of
    everything, highpassed so the bass stays anchored in the middle */
 function applyStereoWide() {
   if (!AU.ready || !AU.wideG) return;
-  AU.wideG.gain.setTargetAtTime(MUS.wide ? 0.55 : 0, AU.ctx.currentTime, 0.2);
+  AU.wideG.gain.setTargetAtTime(MUS.wide ? 0.95 : 0, AU.ctx.currentTime, 0.2);
 }
 
 /* the one volume knob: mute × music balance. The VOL slider is the app's
