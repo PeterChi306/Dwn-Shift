@@ -992,39 +992,24 @@ function initAudio() {
   const eConvG = ctx.createGain(); eConvG.gain.value = 1;
   AU.master.connect(AU.echoSend); AU.echoSend.connect(AU.echoConv);
   AU.echoConv.connect(eConvG); eConvG.connect(AU.comp);
-  // ping-pong slap: each repeat bounces to the other wall of the tunnel —
-  // unmistakably an echo, not just a wash
+  AU.echoSlap = ctx.createDelay(1.2); AU.echoSlap.delayTime.value = 0.4;
   AU.echoSlapG = ctx.createGain(); AU.echoSlapG.gain.value = 0;
-  const dL = ctx.createDelay(1.5); dL.delayTime.value = 0.42;
-  const dR = ctx.createDelay(1.5); dR.delayTime.value = 0.42;
-  const eLpL = ctx.createBiquadFilter(); eLpL.type = "lowpass"; eLpL.frequency.value = 2600;
-  const eLpR = ctx.createBiquadFilter(); eLpR.type = "lowpass"; eLpR.frequency.value = 2600;
-  const fbL = ctx.createGain(); fbL.gain.value = 0.58;
-  const fbR = ctx.createGain(); fbR.gain.value = 0.58;
-  const ePanL = ctx.createStereoPanner(); ePanL.pan.value = -0.8;
-  const ePanR = ctx.createStereoPanner(); ePanR.pan.value = 0.8;
-  AU.master.connect(AU.echoSlapG); AU.echoSlapG.connect(dL);
-  dL.connect(eLpL); eLpL.connect(ePanL); ePanL.connect(AU.comp);
-  eLpL.connect(fbL); fbL.connect(dR);
-  dR.connect(eLpR); eLpR.connect(ePanR); ePanR.connect(AU.comp);
-  eLpR.connect(fbR); fbR.connect(dL);
+  const eFb = ctx.createGain(); eFb.gain.value = 0.52;
+  const eLp = ctx.createBiquadFilter(); eLp.type = "lowpass"; eLp.frequency.value = 2400;
+  AU.master.connect(AU.echoSlapG); AU.echoSlapG.connect(AU.echoSlap);
+  AU.echoSlap.connect(eLp); eLp.connect(eFb); eFb.connect(AU.echoSlap);
+  eLp.connect(AU.comp);
   applyMusicEcho();
 
-  // --- stereo mode: double Haas pair off the master — a hard-left dry
-  //     image, an 18ms right-ear copy, and a softer 31ms left return for
-  //     depth. Wide enough that you can't miss it on headphones. ---
+  // --- stereo mode: parallel Haas pair off the master ---
   AU.wideG = ctx.createGain(); AU.wideG.gain.value = 0;
-  const wHp = ctx.createBiquadFilter(); wHp.type = "highpass"; wHp.frequency.value = 250;
-  const wDel = ctx.createDelay(0.08); wDel.delayTime.value = 0.018;
-  const wDel2 = ctx.createDelay(0.08); wDel2.delayTime.value = 0.031;
-  const wDel2G = ctx.createGain(); wDel2G.gain.value = 0.6;
-  const wPanL = ctx.createStereoPanner(); wPanL.pan.value = -1;
-  const wPanR = ctx.createStereoPanner(); wPanR.pan.value = 1;
-  const wPanL2 = ctx.createStereoPanner(); wPanL2.pan.value = -1;
+  const wHp = ctx.createBiquadFilter(); wHp.type = "highpass"; wHp.frequency.value = 300;
+  const wDel = ctx.createDelay(0.05); wDel.delayTime.value = 0.014;
+  const wPanL = ctx.createStereoPanner(); wPanL.pan.value = -0.9;
+  const wPanR = ctx.createStereoPanner(); wPanR.pan.value = 0.9;
   AU.master.connect(AU.wideG); AU.wideG.connect(wHp);
   wHp.connect(wPanL); wPanL.connect(AU.comp);
   wHp.connect(wDel); wDel.connect(wPanR); wPanR.connect(AU.comp);
-  wDel.connect(wDel2); wDel2.connect(wDel2G); wDel2G.connect(wPanL2); wPanL2.connect(AU.comp);
   applyStereoWide();
 
   // --- gearbox grind (gated) ---
@@ -1896,6 +1881,16 @@ function currentRatio() {
   return CAR.ratios[g] * CAR.finalDrive;
 }
 
+/* the engine-speed-equivalent (rpm) the driveline would sit at for gear `g`
+   at the car's current road speed — used to rev-match a downshift instead
+   of just stabbing full throttle and hoping it lands near the right note */
+function matchRpm(g) {
+  const ratio = (CAR.ratios[g] || 0) * CAR.finalDrive;
+  if (!ratio) return ENG.idle;
+  const rpm = (Math.abs(S.v) / CAR.wheelR) * Math.abs(ratio) * (60 / (2 * Math.PI));
+  return clamp(rpm, ENG.idle, ENG.max * 0.98);
+}
+
 function computeEngage() {
   if (S.gear === 0) return 0;
   if (S.mode === "clutch") {
@@ -1904,8 +1899,13 @@ function computeEngage() {
   }
   if (S.shiftCut > 0) return 0;
   if (CC.ev) return 1;                       // direct drive — torque from zero rpm
-  // manual / auto: centrifugal-style auto clutch — cannot stall
-  return clamp((S.rpm - ENG.idle * 1.1) / (ENG.idle * 0.9), 0, 1);
+  // manual / auto: centrifugal-style auto clutch — cannot stall. A wide,
+  // eased ramp (rather than a narrow linear one) spreads the bite over a
+  // longer stretch of rpm so a gas-pedal launch builds speed continuously
+  // instead of crawling, then snapping to full power once revs cross a
+  // threshold.
+  const raw = clamp((S.rpm - ENG.idle * 1.05) / (ENG.idle * 1.6), 0, 1);
+  return raw * raw * (3 - 2 * raw);          // smoothstep
 }
 
 function stepPhysics(dt) {
@@ -1985,8 +1985,15 @@ function stepPhysics(dt) {
       S.gear !== 0 && S.engage > 0.03 && !S.locked)
     gov = Math.max(gov, clamp((ENG.idle * 1.45 - S.rpm) / (ENG.idle * 0.6), 0, 0.85));
   let eff = Math.max(S.throttle, gov);
-  // downshift rev-match: full-throttle stab while the box is between gears
-  if (S.blip > 0) eff = Math.max(eff, Math.min(1, S.blip / 0.12));
+  // downshift rev-match: blip just hard enough to catch the new gear's synced
+  // rpm, easing off as it arrives — a real heel-toe stab, not a pinned throttle
+  // that overshoots to redline and has to snap back down to match the wheels.
+  if (S.blip > 0 && S.blipTarget != null) {
+    const band = (ENG.max - ENG.idle) * 0.14;
+    eff = Math.max(eff, clamp((S.blipTarget - S.rpm) / band, 0, 1));
+  } else if (S.blip > 0) {
+    eff = Math.max(eff, Math.min(1, S.blip / 0.12));
+  }
   // startup flare — first fires push the revs up before the idle settles
   S.catchT = Math.max(0, S.catchT - dt);
   if (S.catchT > 0) eff = Math.max(eff, 0.55 * Math.min(1, S.catchT / 0.4));
@@ -2108,7 +2115,7 @@ function stepPhysics(dt) {
       S.rpm = wheelRpm;
       driveF = (Te * ratio * CAR.eff) / CAR.wheelR;
     } else {
-      const Tc = cap * Math.sign(slip) * clamp(Math.abs(slip) / 30, 0.35, 1);
+      const Tc = cap * Math.sign(slip) * clamp(Math.abs(slip) / 90, 0.2, 1);
       S.rpm += ((Te - Tc) / ENG.inertia) * omegaToRpm * dt;
       driveF = (Tc * ratio * CAR.eff) / CAR.wheelR;
     }
@@ -2216,7 +2223,7 @@ function autoShift(g) {
   S.autoGear = g; S.gear = g;
   S.shiftCut = 0.22; S.shiftCool = 0.55;
   if (down && S.engineOn && Math.abs(S.v) > 3) {
-    S.blip = 0.18; S.shiftCut = 0.26;    // rev-match blip between gears
+    S.blip = 0.28; S.blipTarget = matchRpm(g); S.shiftCut = 0.26;    // rev-match blip between gears
     if (popsRating() >= 1) {             // the bark as the throttle stabs open
       sfxPop(0.45);
       if (popsRating() >= 2) popFlame(true);
@@ -2923,7 +2930,7 @@ function seqShift(dir) {
 function seqEngage(target, dir, silent) {
   setGear(target, silent);
   if (dir < 0 && target !== 0 && target !== "R" && S.engineOn && Math.abs(S.v) > 3) {
-    S.blip = 0.22; S.shiftCut = 0.26;    // heel-toe blip on the way down
+    S.blip = 0.32; S.blipTarget = matchRpm(target); S.shiftCut = 0.26;    // heel-toe blip on the way down
     if (popsRating() >= 1) {             // the bark as the throttle stabs open
       sfxPop(0.5);
       if (popsRating() >= 2) popFlame(true);
@@ -4405,15 +4412,15 @@ function toggleCassette(show) {
 function applyMusicEcho() {
   if (!AU.ready || !AU.echoSend) return;
   const t = AU.ctx.currentTime, on = MUS.echo;
-  AU.echoSend.gain.setTargetAtTime(on ? 1.9 : 0, t, 0.25);   // wetter than dry
-  AU.echoSlapG.gain.setTargetAtTime(on ? 1.15 : 0, t, 0.25); // loud wall-to-wall repeats
+  AU.echoSend.gain.setTargetAtTime(on ? 1.1 : 0, t, 0.25);   // tunnel-grade wash
+  AU.echoSlapG.gain.setTargetAtTime(on ? 0.8 : 0, t, 0.25);
 }
 
 /* stereo mode: Haas widener on the cabin mix — a 14ms right-ear copy of
    everything, highpassed so the bass stays anchored in the middle */
 function applyStereoWide() {
   if (!AU.ready || !AU.wideG) return;
-  AU.wideG.gain.setTargetAtTime(MUS.wide ? 0.95 : 0, AU.ctx.currentTime, 0.2);
+  AU.wideG.gain.setTargetAtTime(MUS.wide ? 0.55 : 0, AU.ctx.currentTime, 0.2);
 }
 
 /* the one volume knob: mute × music balance. The VOL slider is the app's
@@ -4683,6 +4690,64 @@ function initInput() {
     positionGlider();
     tachG.rebuild(); speedG.rebuild();
   });
+
+  initGamepad();
+}
+
+/* ================================================================
+   CONTROLLER (Gamepad API) — Forza-style trigger throttle/brake,
+   bumper paddle shifting. There's no steering axis anywhere in this
+   sim (it's a stationary rig, not an open track), so the pad only
+   drives the pedals and the shifter.
+   ================================================================ */
+
+const GP = { index: null, prevButtons: [] };
+
+function initGamepad() {
+  window.addEventListener("gamepadconnected", (e) => { GP.index = e.gamepad.index; });
+  window.addEventListener("gamepaddisconnected", (e) => {
+    if (GP.index === e.gamepad.index) GP.index = null;
+  });
+}
+
+/* edge-triggered button: fires the callback once on press, not every
+   frame it's held */
+function gpPressed(gp, i, prev) {
+  const now = !!(gp.buttons[i] && gp.buttons[i].pressed);
+  const was = !!prev[i];
+  prev[i] = now;
+  return now && !was;
+}
+
+function pollGamepad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let gp = GP.index != null ? pads[GP.index] : null;
+  if (!gp) gp = Array.from(pads).find(p => p) || null;
+  if (!gp) return;
+  GP.index = gp.index;
+
+  // triggers: analog buttons 7 (RT/gas) & 6 (LT/brake) on the standard
+  // mapping, with an axis fallback for pads that report them as axes
+  const rt = gp.buttons[7] ? gp.buttons[7].value : Math.max(0, gp.axes[5] || 0);
+  const lt = gp.buttons[6] ? gp.buttons[6].value : Math.max(0, gp.axes[4] || 0);
+  S.in.gas = rt;
+  S.in.brake = lt;
+  if (S.mode === "clutch")
+    S.in.clutch = (gp.buttons[0] && gp.buttons[0].pressed) ? 1 : 0;  // A held = clutch pedal
+
+  const prev = GP.prevButtons;
+  // RB / LB = paddle shifters, exactly like a Forza-style sequential box
+  if (gpPressed(gp, 5, prev)) {
+    if (S.mode === "manual") seqShift(1);
+    else if (S.mode === "clutch") kbSeqGate(1);
+  }
+  if (gpPressed(gp, 4, prev)) {
+    if (S.mode === "manual") seqShift(-1);
+    else if (S.mode === "clutch") kbSeqGate(-1);
+  }
+  if (gpPressed(gp, 9, prev)) toggleIgnition();          // Start/Menu
+  if (gpPressed(gp, 3, prev)) toggleEdrive();            // Y — eDrive cars only
+  if (gpPressed(gp, 1, prev)) toggleCruise();            // B
 }
 
 /* ================================================================
@@ -4705,6 +4770,8 @@ function frame(now) {
   if (!lastT) { lastT = now; return; }
   let dt = Math.min((now - lastT) / 1000, 0.05);
   lastT = now;
+
+  pollGamepad();
 
   acc += dt;
   while (acc >= STEP) { stepPhysics(STEP); acc -= STEP; }
