@@ -737,11 +737,6 @@ body[data-theme="frost"] .pedal-pad {
     inset 0 2px 3px rgba(255,255,255,0.4),
     var(--heat);
 }
-.tip .mouth::before {         /* the deep bore inside the cut */
-  content: ""; position: absolute; inset: 5px 6px; border-radius: 50%;
-  background: var(--bore);
-  box-shadow: inset 4px 3px 9px rgba(0,0,0,0.92), inset -2px -1px 4px rgba(255,255,255,0.06);
-}
 /* flame flash: the mouth glows and a jet blasts out the back */
 .tip.fire .mouth {
   box-shadow:
