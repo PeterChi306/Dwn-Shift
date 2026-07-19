@@ -616,6 +616,59 @@ const CARS = [
       formants: [[55, 0.8, 6], [340, 1.3, 5], [1200, 1.8, 2.5]], loadDrive: 0.45,
     },
   },
+  {
+    id: "jesko", name: "Ängelholm Jesko", tag: "twin-turbo top-speed missile · 0-400-0", layout: "V8 · 5.0L flat-plane twin turbo",
+    cyl: 8, idle: 820, max: 8500, cut: 8700, inertia: 0.15,   // flat crank, feathery response
+    curve: [[0, 300], [1500, 660], [3000, 940], [4500, 1020], [6000, 985], [7200, 890],
+            [8500, 720], [9000, 480]],
+    mass: 1420, finalDrive: 2.35, clutchCap: 2400, cdA: 0.42, brakeMax: 16500, grip: 1.9,
+    asp: "turbo", pops: 2.2, boostMax: 0.68, spool: 2500, spoolRate: 2.3, psiMax: 25,
+    flutter: true, whistleMul: 0.7, whistleFreqMul: 1.05, turboBreath: 1.3, breathHz: 1550,
+    tachMax: 9, redK: 8.5, kmhMax: 540, mphMax: 330, shiftLights: true,
+    dash: { accent: "#cfe0ee" },
+    /* the 5.0 flat-plane twin-turbo built to chase 330 mph: a hard, flinty,
+       industrial V8 with the 2nd order dominant up top and a constant turbo
+       breath underneath — a rocket that flatters no one. */
+    sound: {
+      layers: [
+        ["square",   0.5,   0.24, 0.08],
+        ["sine",     0.5,   0.16, 0.05],
+        ["sawtooth", 0.996, 0.18, 0.26],
+        ["sawtooth", 1,     0.46, 0.50],
+        ["sawtooth", 1.006, 0.20, 0.28],
+        ["sawtooth", 2.01,  0.16, 0.50],
+        ["sawtooth", 3.02,  0.05, 0.34],
+        ["sawtooth", 4.03,  0.0,  0.20],
+        ["triangle", 5.04,  0.0,  0.12],
+      ],
+      formants: [[240, 1.1, 4], [1400, 2.0, 5.5], [3300, 2.5, 6.5]],
+      loadDrive: 0.5, noiseMul: 1.25, volTrim: 1.2, scream: 3600,
+      drive: 0.72, pulseDepth: 0.18, raspMul: 1.5, jitter: 1.1,
+    },
+  },
+  {
+    id: "nitro", name: "Pomona Nitro TF", tag: "world-record top fuel · 0-100 in a blink", layout: "V8 · 8.2L nitro supercharged · 1 gear",
+    cyl: 8, idle: 1000, max: 8400, cut: 8700, inertia: 0.5,
+    // eleven thousand horsepower of supercharged nitromethane. A savage grip-
+    // limited launch off the line, then the pull tapers so it takes ~5s to reach
+    // 500 km/h — no gears to speak of, one direct-drive ratio and a slipper clutch.
+    curve: [[0, 12000], [1500, 13000], [2500, 11000], [4000, 7000], [6000, 4500],
+            [7500, 3200], [8700, 2200]],
+    mass: 1000, finalDrive: 1.98, clutchCap: 6000, cdA: 0.95, brakeMax: 26000, grip: 10,
+    ratios: { R: -2.2, 1: 1 },                    // direct drive — one gear, that's all there is
+    asp: "super", pops: 3, boostMax: 0.25, whineMult: 5, psiMax: 45,
+    tachMax: 9, redK: 8.4, kmhMax: 540, mphMax: 340, dial: "gear", shiftLights: true,
+    dash: { accent: "#ff5a1e" },
+    /* a lopey, earth-shaking supercharged nitro V8: rough high idle blat,
+       blower whine over the top, and a wall of noise the instant it launches. */
+    sound: {
+      layers: [["square", 0.5, 0.5, 0.22], ["sine", 0.5, 0.34, 0.14], ["sawtooth", 1, 0.42, 0.5],
+               ["sawtooth", 1.49, 0.2, 0.24], ["sawtooth", 2.01, 0.1, 0.3], ["triangle", 3.02, 0.05, 0.16]],
+      noiseMul: 1.7, drive: 0.8, pulseDepth: 0.5, pulseDiv: 2, pulseType: "square",
+      raspMul: 1.7, hunt: 1.8, idleBlat: 2.6, idleVol: 0.3, scream: 1400, volTrim: 1.4,
+      formants: [[110, 1, 5], [700, 1.7, 4.5], [1800, 1.6, 3]], loadDrive: 0.55,
+    },
+  },
 ];
 
 let CC = CARS[1];                      // current car (Shirakawa by default)
@@ -683,7 +736,15 @@ function hexA(hex, a) {
   return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
 }
 
-const RATES = { thrUp: 4.6, thrDn: 5.6, brkUp: 7.5, brkDn: 6.0, cltUp: 9.0, cltDn: 2.0 };
+const RATES = { thrUp: 4.6, thrDn: 5.6, brkUp: 5.2, brkDn: 6.0, cltUp: 9.0, cltDn: 2.0 };
+
+/* flyby pass speed: below 200 km/h the trackside car sweeps by at its true
+   speed; above 200 the pass snaps past dramatically faster. Only the excess
+   over 200 is amplified, so nothing at or below 200 km/h changes. */
+function flybyV() {
+  const raw = Math.abs(S.v), th = 200 / 3.6;      // 55.6 m/s
+  return raw <= th ? raw : th + (raw - th) * 3.6;
+}
 
 /* ---------------- workshop modifications ---------------- */
 
@@ -1112,7 +1173,7 @@ function audioTick() {
   let dop = 1, flyG = 1, flyP = 0, flyLp = 1;
   if (S.flyby) {
     const d = 14, x = S.flyX, r = Math.hypot(x, d);
-    const vr = Math.abs(S.v) * (-x) / r;           // closing speed toward listener
+    const vr = flybyV() * (-x) / r;                // closing speed toward listener (boosted past 200)
     dop = 343 / Math.max(80, 343 - vr);
     flyG = clamp(22 / r, 0.12, 1.5);
     flyP = clamp(x / 70, -0.95, 0.95);
@@ -1257,11 +1318,12 @@ function audioTick() {
 
   AU.grindGain.gain.setTargetAtTime(S.grinding ? 0.22 : 0, t, 0.02);
 
-  // tire screech — spinning rubber or locked wheels
-  const scAmt = clamp(S.spinV / 9, 0, 1) + (S.lockup ? 0.55 : 0);
+  // tire screech — spinning rubber or locked wheels. Louder and squealier now,
+  // so lit-up rubber (aids off) really howls, and a lockup barks under braking.
+  const scAmt = clamp(S.spinV / 7, 0, 1) + (S.lockup ? 0.7 : 0);
   const scAudible = Math.abs(S.v) > 2 || S.spinV > 1 ? 1 : 0;
-  AU.scG.gain.setTargetAtTime(Math.min(0.3, scAmt * 0.26) * scAudible, t, 0.05);
-  AU.scBp.frequency.setTargetAtTime(800 + S.spinV * 35 + Math.random() * 120, t, 0.05);
+  AU.scG.gain.setTargetAtTime(Math.min(0.44, scAmt * 0.36) * scAudible, t, 0.04);
+  AU.scBp.frequency.setTargetAtTime(760 + S.spinV * 40 + Math.random() * 150, t, 0.05);
 
   // ambience beds
   AU.trHumG.gain.setTargetAtTime(S.traffic ? 0.06 : 0, t, 0.3);
@@ -2077,9 +2139,13 @@ function stepPhysics(dt) {
 
   // driver aids: with them off, hard braking locks the wheels
   const aidsOff = curMod().abs === false;
-  S.lockup = aidsOff && S.brake > 0.85 && Math.abs(S.v) > 6;
-  let braking = S.brake * CAR.brakeMax + (S.mode === "auto" && S.autoSel === "P" ? 20000 : 0);
-  if (S.lockup) braking *= 0.72;             // locked rubber stops worse
+  S.lockup = aidsOff && S.brake > 0.9 && Math.abs(S.v) > 6;
+  // brake pedal isn't grabby off the top: a soft-shaped curve means light
+  // pressure trails the car gently and only a firm push delivers full stopping
+  // power (real pedal feel, not an on/off switch)
+  const brakeForce = Math.pow(S.brake, 1.7);
+  let braking = brakeForce * CAR.brakeMax + (S.mode === "auto" && S.autoSel === "P" ? 20000 : 0);
+  if (S.lockup) braking *= 0.68;             // locked rubber stops worse
 
   const omegaToRpm = 60 / (2 * Math.PI);
   let driveF = 0;
@@ -2121,18 +2187,22 @@ function stepPhysics(dt) {
     }
   }
 
-  // tire grip: aids on = quiet traction-control clamp; aids off = wheelspin,
-  // flaring revs and screeching rubber
-  const gripMax = CAR.mass * 9.81 * 0.52 * (CC.grip || (CC.awd ? 1.8 : 1));
+  // tire grip: aids on = quiet traction-control clamp; aids off = the tires
+  // light up for real — the rears break away sooner, the revs flare, and the
+  // rubber keeps spinning and screeching long after you'd expect it to hook up
+  const gripCoef = aidsOff ? 0.43 : 0.52;    // no TC modulation → less usable grip
+  const gripMax = CAR.mass * 9.81 * gripCoef * (CC.grip || (CC.awd ? 1.8 : 1));
   if ((evNow || (S.gear !== 0 && S.gear !== "R")) && driveF > gripMax) {
     if (aidsOff) {
-      S.spinV = Math.min(28, S.spinV + ((driveF - gripMax) / (CAR.mass * 0.055)) * dt);
-      driveF = gripMax * 0.72;               // spinning rubber pushes less
+      S.spinV = Math.min(36, S.spinV + ((driveF - gripMax) / (CAR.mass * 0.04)) * dt);
+      driveF = gripMax * 0.58;               // lit-up rubber pushes far less
     } else {
       driveF = gripMax * 1.15;               // TC lets it slip just a little
     }
   }
-  S.spinV = Math.max(0, S.spinV - (6 + S.spinV * 1.5) * dt * (driveF >= gripMax * 0.7 ? 0.35 : 1.6));
+  // aids off, spinning rubber is slow to recover; aids on it hooks up quickly
+  const spinDecay = aidsOff ? (3 + S.spinV * 0.85) : (6 + S.spinV * 1.5);
+  S.spinV = Math.max(0, S.spinV - spinDecay * dt * (driveF >= gripMax * 0.7 ? 0.3 : 1.6));
   F += driveF;
 
   // creep for the automatic's torque converter feel
@@ -2202,17 +2272,21 @@ function stepPhysics(dt) {
   // flyby spectator: the car sweeps past a trackside listener over and over
   if (S.flyby) {
     const prevX = S.flyX;
-    S.flyX += Math.abs(S.v) * dt;
+    S.flyX += flybyV() * dt;
     if (prevX < 0 && S.flyX >= 0 && Math.abs(S.v) > 12)
       sfxWhoosh(Math.min(0.75, Math.abs(S.v) * 0.007));
     if (S.flyX > 380) S.flyX = -380;
   }
 
-  // automatic gearbox logic
+  // automatic gearbox logic — a comfort auto, not a sport one: it short-shifts
+  // early and lives in the tall gears for a smooth, quiet ride. It isn't chasing
+  // acceleration, just convenience, so even flat-out it upshifts well before the
+  // redline (a hard rev limit keeps it off the cut).
   if (S.mode === "auto" && S.autoSel === "D" && S.engineOn && S.shiftCool <= 0 && !CC.ev) {
     const span = ENG.max - ENG.idle;
-    const up = ENG.idle + span * (0.24 + S.throttle * 0.60);
-    const dn = ENG.idle + span * (0.08 + S.throttle * 0.18);
+    const revLimit = ENG.idle + span * 0.68;             // never revs past ~2/3 in D
+    const up = Math.min(revLimit, ENG.idle + span * (0.11 + S.throttle * 0.30));
+    const dn = ENG.idle + span * (0.045 + S.throttle * 0.10);
     if (S.rpm > up && S.autoGear < CAR.top) autoShift(S.autoGear + 1);
     else if (S.rpm < dn && S.autoGear > 1) autoShift(S.autoGear - 1);
   }
@@ -2221,17 +2295,17 @@ function stepPhysics(dt) {
 function autoShift(g) {
   const down = g < S.autoGear;
   S.autoGear = g; S.gear = g;
-  S.shiftCut = 0.22; S.shiftCool = 0.55;
+  // comfort auto: gentle, well-damped upshifts — a soft torque hand-off, not a
+  // sporty bang. Downshifts still rev-match so the ride never lurches.
+  S.shiftCut = down ? 0.24 : 0.14; S.shiftCool = 0.7;
   if (down && S.engineOn && Math.abs(S.v) > 3) {
-    S.blip = 0.28; S.blipTarget = matchRpm(g); S.shiftCut = 0.26;    // rev-match blip between gears
-    if (popsRating() >= 1) {             // the bark as the throttle stabs open
-      sfxPop(0.45);
-      if (popsRating() >= 2) popFlame(true);
-    }
+    S.blip = 0.24; S.blipTarget = matchRpm(g);       // smooth rev-match, no throttle stab
+  } else if (!down && S.engineOn) {
+    S.blip = 0.10; S.blipTarget = matchRpm(g);        // ease revs down onto the new gear
   }
-  if (curEx().burble && S.engineOn && S.rpm > ENG.idle * 2)
-    sfxCrackle(1.2);                     // anti-lag bang on every shift
-  sfxClunk(0.35);
+  if (curEx().burble && S.engineOn && S.rpm > ENG.idle * 2.4 && down)
+    sfxCrackle(0.7);                     // only a faint tick, and only downshifting
+  sfxClunk(down ? 0.22 : 0.12);          // muted — a modern auto barely thunks
   flashGear();
 }
 

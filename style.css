@@ -687,42 +687,68 @@ body[data-theme="frost"] .pedal-pad {
 
 /* ---------------- EXHAUST & FLAMES ---------------- */
 
-.exhaust { display: flex; gap: 14px; align-self: center; margin-left: 4px; }
+/* side-exit exhaust: two pipe mouths facing outward (left + right), the flames
+   shoot sideways out of them. Big gap so each plume has clear air to blast into. */
+.exhaust {
+  display: flex; justify-content: center; align-items: center;
+  gap: 90px; align-self: center; margin: 0 4px; overflow: visible;
+}
 .tip {
   position: relative;
-  width: 46px; height: 46px; border-radius: 50%;
+  width: 62px; height: 50px; border-radius: 50%;
+  /* clearer mouth: bright chrome rim, deep open bore you can actually see into */
   background:
-    radial-gradient(circle at 50% 50%,
-      #060607 0 44%, #33363d 48%, #101216 62%, #3d4048 70%, #1a1c21 78%, #2c2f36 100%);
-  border: 1px solid rgba(255,255,255,0.10);
+    radial-gradient(ellipse 60% 60% at 50% 48%,
+      #000000 0 30%, #0b0c0f 40%, #4a4e57 52%, #1a1c21 60%, #6b7079 70%, #34373e 82%, #14161a 100%);
+  border: 1.5px solid rgba(255,255,255,0.16);
   box-shadow:
-    inset 0 3px 6px rgba(0,0,0,0.7),
+    inset 0 2px 7px rgba(0,0,0,0.85),
+    inset 0 0 10px rgba(0,0,0,0.6),
     0 8px 16px -6px var(--shadow-tint);
   transition: box-shadow 0.25s ease;
 }
+/* short pipe body mounted on the inner side, so the mouths read as facing out */
+.tip::before {
+  content: ""; position: absolute; top: 50%; width: 40px; height: 34px;
+  transform: translateY(-50%); z-index: -1; border-radius: 6px;
+  background: linear-gradient(#3a3d44, #17191d 60%, #26282e);
+  box-shadow: inset 0 2px 3px rgba(0,0,0,0.6);
+}
+#tipL::before { left: 58%; }
+#tipR::before { right: 58%; }
 .tip.fire {
   box-shadow:
-    inset 0 3px 6px rgba(0,0,0,0.7),
-    0 0 44px 9px rgba(255,118,36,0.8),
-    0 0 90px 18px rgba(255,80,20,0.4);
+    inset 0 2px 7px rgba(0,0,0,0.85),
+    0 0 40px 8px rgba(255,118,36,0.85),
+    0 0 90px 20px rgba(255,80,20,0.42);
   transition: none;
 }
 .tip.fire.big {
   box-shadow:
-    inset 0 3px 6px rgba(0,0,0,0.7),
-    0 0 64px 16px rgba(255,140,44,0.92),
-    0 0 130px 32px rgba(255,70,16,0.5);
+    inset 0 2px 7px rgba(0,0,0,0.85),
+    0 0 60px 15px rgba(255,150,50,0.95),
+    0 0 140px 36px rgba(255,70,16,0.55);
 }
+/* the flame plume — an elongated horizontal jet fired OUT the side of the pipe */
 .tip i {
-  position: absolute; inset: -2px; border-radius: 50%;
-  opacity: 0; transform: scale(0.3);
-  background: radial-gradient(circle,
-    #ffffff 0%, #fff2c4 18%, #ffc94d 40%, #ff7222 64%, rgba(255,60,16,0) 80%);
-  pointer-events: none;
-  filter: blur(0.4px);
+  position: absolute; top: 50%; height: 46px; width: 165px;
+  border-radius: 50%;
+  opacity: 0; pointer-events: none;
+  filter: blur(1.1px); mix-blend-mode: screen;
+  transform: translateY(-50%) scaleX(0.2);
 }
-.tip.fire i { animation: flameburst 0.26s ease-out; }
-.tip.fire.big i { animation: flameburstBig 0.3s ease-out; }
+#tipL i {
+  right: 60%; transform-origin: right center;
+  background: linear-gradient(to left,
+    #ffffff 0%, #fff2c4 15%, #ffd24d 34%, #ff8a24 56%, #ff4c12 74%, rgba(255,52,12,0) 100%);
+}
+#tipR i {
+  left: 60%; transform-origin: left center;
+  background: linear-gradient(to right,
+    #ffffff 0%, #fff2c4 15%, #ffd24d 34%, #ff8a24 56%, #ff4c12 74%, rgba(255,52,12,0) 100%);
+}
+.tip.fire i { animation: flameShoot 0.28s ease-out; }
+.tip.fire.big i { animation: flameShootBig 0.34s ease-out; }
 
 /* ---- exhaust looks per fitted system (data-look set from the workshop) ---- */
 /* Touring: small polished chrome ovals, discreet */
@@ -773,15 +799,19 @@ body[data-theme="frost"] .pedal-pad {
     0 0 14px -2px rgba(255,90,20,0.25);
 }
 
-@keyframes flameburst {
-  0%   { opacity: 1; transform: scale(0.45); }
-  45%  { opacity: 1; transform: scale(1.7); }
-  100% { opacity: 0; transform: scale(2.5); }
+/* transform-origin (set per side) makes scaleX grow OUTWARD, so the plume
+   blasts left out of the left pipe and right out of the right pipe */
+@keyframes flameShoot {
+  0%   { opacity: 0.3; transform: translateY(-50%) scaleX(0.2) scaleY(0.6); }
+  30%  { opacity: 1;   transform: translateY(-50%) scaleX(0.8) scaleY(1.05); }
+  60%  { opacity: 0.9; transform: translateY(-50%) scaleX(1.08) scaleY(0.9); }
+  100% { opacity: 0;   transform: translateY(-50%) scaleX(1.4) scaleY(0.7); }
 }
-@keyframes flameburstBig {
-  0%   { opacity: 1; transform: scale(0.5); }
-  40%  { opacity: 1; transform: scale(2.4); }
-  100% { opacity: 0; transform: scale(3.4); }
+@keyframes flameShootBig {
+  0%   { opacity: 0.4; transform: translateY(-50%) scaleX(0.25) scaleY(0.7); }
+  28%  { opacity: 1;   transform: translateY(-50%) scaleX(1.05) scaleY(1.25); }
+  60%  { opacity: 0.92;transform: translateY(-50%) scaleX(1.5)  scaleY(1.0); }
+  100% { opacity: 0;   transform: translateY(-50%) scaleX(1.95) scaleY(0.75); }
 }
 
 .fireglow {
