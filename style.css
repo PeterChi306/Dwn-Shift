@@ -687,62 +687,77 @@ body[data-theme="frost"] .pedal-pad {
 
 /* ---------------- EXHAUST & FLAMES ---------------- */
 
-/* single side-view exhaust: you're looking at the car from the side, so the
-   tailpipe is one horizontal barrel with a polished tip (bright rim, dark bore)
-   at the right end. Flames blast straight out the back. Every fitted system
-   sets its own shape + colour through the --pipe/--rim/--bore/size variables. */
+/* single side-view exhaust drawn like a real polished tip: a horizontal barrel
+   with an ANGLED SLASH-CUT mouth (tilted ellipse) at the right end, mirror
+   reflections down the pipe, dark bore, flames out the back. Every fitted
+   system sets its own shape + colour through the variables below. */
 .exhaust {
   display: flex; justify-content: center; align-items: center;
-  align-self: center; margin: 0 4px; min-height: 68px; overflow: visible;
+  align-self: center; margin: 0 4px; min-height: 84px; overflow: visible;
 }
-/* .tip = the pipe MOUTH (right end): a polished metal rim ring you look into.
-   Defaults below = the Stock system; data-look overrides swap the variables. */
+/* Defaults = the Stock system (polished chrome). data-look swaps the variables. */
 .tip {
-  --mouthW: 34px; --mouthH: 56px; --boreInset: 5px;
-  --barrelW: 116px; --barrelH: 48px; --barrelR: 5px;
-  --pipe: linear-gradient(to bottom, #0d0f12 0%, #363a42 22%, #787d87 46%, #33373e 64%, #0f1114 100%);
-  --rim: linear-gradient(150deg, #7f848e 0%, #ced2d9 24%, #656a74 50%, #b2b7bf 74%, #43474f 100%);
-  --bore: radial-gradient(ellipse 72% 76% at 50% 50%, #000 0 48%, #0a0b0d 68%, #191b1f 100%);
-  --rimBorder: rgba(255,255,255,0.30);
-  --heat: 0 0 0 rgba(0,0,0,0);            /* systems that glow when cold override this */
+  --barrelW: 132px; --barrelH: 54px;
+  --cutTop: 66%;                 /* top edge ends here; slashes down to the corner */
+  --tilt: -30deg;                /* mouth ellipse tilt, matching the slash */
+  --mouthW: 42px; --mouthH: 70px;
+  --mouthX: 8px;                 /* mouth offset from the right edge */
+  /* polished chrome: two bright specular bands = a mirror finish */
+  --pipe: linear-gradient(to bottom,
+    #5c616a 0%, #b4b9c1 10%, #eef1f5 19%, #c0c5cd 29%, #7a808a 41%,
+    #474c54 52%, #6e747d 60%, #c2c7cf 73%, #eaeef2 82%, #8c919b 90%, #4a4f57 100%);
+  --rim: linear-gradient(125deg, #868b95 0%, #eef1f5 24%, #6c717b 50%, #c6cbd3 74%, #4a4e56 100%);
+  --bore: radial-gradient(ellipse 64% 78% at 54% 46%, #000 0 44%, #08090b 66%, #191b20 100%);
+  --rimBorder: rgba(255,255,255,0.34);
+  --heat: 0 0 0 rgba(0,0,0,0);   /* systems that glow when cold override this */
+  --pipeShade: linear-gradient(transparent, transparent);   /* ti overlays heat here */
 
   position: relative;
-  width: var(--mouthW); height: var(--mouthH); border-radius: 50%;
-  margin-left: 96px;                       /* leave room for the barrel to the left */
+  width: 150px; height: 78px;
+  transition: filter 0.25s ease;
+}
+/* the barrel — a chrome cylinder whose right end is cut off at an angle */
+.tip .barrel {
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: var(--barrelW); height: var(--barrelH); border-radius: 3px;
+  background: var(--pipeShade), var(--pipe);
+  box-shadow: inset 0 3px 5px rgba(255,255,255,0.22), inset 0 -7px 10px rgba(0,0,0,0.65);
+  clip-path: polygon(0 0, var(--cutTop) 0, 100% 100%, 0 100%);
+}
+/* the slash-cut face at the end: a tilted ellipse — chrome rim around a dark bore */
+.tip .mouth {
+  position: absolute; right: var(--mouthX); top: 50%;
+  width: var(--mouthW); height: var(--mouthH);
+  transform: translateY(-50%) rotate(var(--tilt));
+  border-radius: 50%;
   background: var(--rim);
   border: 1.5px solid var(--rimBorder);
-  box-shadow: 0 9px 18px -7px var(--shadow-tint), inset 0 1px 2px rgba(255,255,255,0.32), var(--heat);
-  transition: box-shadow 0.25s ease;
+  box-shadow:
+    0 8px 15px -7px var(--shadow-tint),
+    inset 0 2px 3px rgba(255,255,255,0.4),
+    var(--heat);
 }
-/* the deep bore drilled into the mouth */
-.tip::before {
-  content: ""; position: absolute; inset: var(--boreInset); border-radius: 50%;
+.tip .mouth::before {         /* the deep bore inside the cut */
+  content: ""; position: absolute; inset: 5px 6px; border-radius: 50%;
   background: var(--bore);
-  box-shadow: inset 3px 0 7px rgba(0,0,0,0.9), inset -1px 0 3px rgba(255,255,255,0.06);
+  box-shadow: inset 4px 3px 9px rgba(0,0,0,0.92), inset -2px -1px 4px rgba(255,255,255,0.06);
 }
-/* the barrel — a horizontal cylinder running left, tucked under the mouth */
-.tip .barrel {
-  position: absolute; right: 50%; top: 50%; transform: translateY(-50%);
-  width: var(--barrelW); height: var(--barrelH); border-radius: var(--barrelR);
-  z-index: -1; background: var(--pipe);
-  box-shadow: inset 0 4px 6px rgba(255,255,255,0.15), inset 0 -6px 9px rgba(0,0,0,0.72);
-}
-.tip.fire {
+/* flame flash: the mouth glows and a jet blasts out the back */
+.tip.fire .mouth {
   box-shadow:
-    inset 0 1px 2px rgba(255,255,255,0.2),
-    0 0 44px 9px rgba(255,118,36,0.88),
+    inset 0 2px 3px rgba(255,255,255,0.25),
+    0 0 44px 9px rgba(255,118,36,0.9),
     0 0 100px 24px rgba(255,80,20,0.46);
-  transition: none;
 }
-.tip.fire.big {
+.tip.fire.big .mouth {
   box-shadow:
-    inset 0 1px 2px rgba(255,255,255,0.2),
+    inset 0 2px 3px rgba(255,255,255,0.25),
     0 0 66px 17px rgba(255,150,50,0.96),
     0 0 155px 40px rgba(255,70,16,0.56);
 }
 /* the flame plume — an elongated horizontal jet fired straight OUT the mouth */
 .tip i {
-  position: absolute; left: 52%; top: 50%; height: 42px; width: 182px;
+  position: absolute; left: 74%; top: 50%; height: 42px; width: 180px;
   border-radius: 50%; transform-origin: left center;
   opacity: 0; pointer-events: none;
   filter: blur(1.1px); mix-blend-mode: screen;
@@ -753,61 +768,80 @@ body[data-theme="frost"] .pedal-pad {
 .tip.fire i { animation: flameShoot 0.28s ease-out; }
 .tip.fire.big i { animation: flameShootBig 0.34s ease-out; }
 
-/* ---- exhaust looks per fitted system: each is a different shape AND colour ---- */
-/* Touring: small, discreet, bright polished chrome — the quiet one */
+/* ---- exhaust looks per fitted system: each a different shape AND colour ---- */
+/* Touring: small, discreet, bright polished chrome, gentle cut — the quiet one */
 .exhaust[data-look="touring"] .tip {
-  --mouthW: 28px; --mouthH: 46px; --boreInset: 5px;
-  --barrelW: 104px; --barrelH: 40px;
-  --pipe: linear-gradient(to bottom, #23262c 0%, #6d727c 22%, #d3d7dd 47%, #656a73 64%, #23262c 100%);
-  --rim: linear-gradient(150deg, #b8bcc4 0%, #f2f4f7 24%, #9096a0 50%, #e0e3e8 74%, #767b84 100%);
-  --bore: radial-gradient(ellipse 72% 76% at 50% 50%, #05060a 0 48%, #14161b 70%, #262a31 100%);
-  --rimBorder: rgba(255,255,255,0.42);
-}
-/* Open Pipe: fat bare-steel cannon, big sooty bore — the loud one */
-.exhaust[data-look="open"] .tip {
-  --mouthW: 40px; --mouthH: 66px; --boreInset: 3px;
-  --barrelW: 126px; --barrelH: 58px; --barrelR: 4px;
-  --pipe: linear-gradient(to bottom, #050607 0%, #24262b 24%, #4b4e55 47%, #202227 64%, #050607 100%);
-  --rim: linear-gradient(150deg, #3a3d43 0%, #6a6e75 26%, #2b2d32 52%, #545860 76%, #202227 100%);
-  --bore: radial-gradient(ellipse 76% 80% at 50% 50%, #000 0 60%, #0b0c0e 80%, #151619 100%);
-  --rimBorder: rgba(255,255,255,0.10);
-}
-/* Full Titanium: heat-tinted blue→purple→bronze burnt tip, thick polished rim */
-.exhaust[data-look="ti"] .tip {
-  --mouthW: 36px; --mouthH: 58px; --boreInset: 7px;
-  --barrelW: 118px; --barrelH: 46px;
-  --pipe: linear-gradient(to bottom, #14161b 0%, #3a4658 22%, #7b8390 46%, #34404f 64%, #14161b 100%);
-  --rim: conic-gradient(from 210deg, #2b4a66, #6e4a7a, #b06a3c, #c9a15a, #35597a, #2b4a66);
-  --bore: radial-gradient(ellipse 72% 76% at 50% 50%, #030407 0 48%, #101722 70%, #24303f 100%);
-  --rimBorder: rgba(150,195,240,0.42);
-}
-/* Screamer: thin-wall polished stainless, tall bright ring, long slim pipe */
-.exhaust[data-look="screamer"] .tip {
-  --mouthW: 30px; --mouthH: 60px; --boreInset: 7px;
-  --barrelW: 128px; --barrelH: 42px;
-  --pipe: linear-gradient(to bottom, #1a1c20 0%, #7f858f 22%, #eef1f5 47%, #767c86 64%, #1a1c20 100%);
-  --rim: linear-gradient(150deg, #cfd4db 0%, #ffffff 24%, #a4aab4 50%, #eef1f5 74%, #878d97 100%);
-  --bore: radial-gradient(ellipse 70% 74% at 50% 50%, #04050a 0 48%, #14161c 70%, #2a2e36 100%);
+  --barrelW: 116px; --barrelH: 44px; --cutTop: 74%; --tilt: -24deg;
+  --mouthW: 34px; --mouthH: 58px; --mouthX: 6px;
+  --pipe: linear-gradient(to bottom,
+    #6a6f78 0%, #c5cad1 11%, #f4f6f9 21%, #ccd1d8 31%, #868b95 43%,
+    #565b63 53%, #7d838c 62%, #ccd1d8 74%, #f0f3f6 83%, #9aa0a9 91%, #5b606a 100%);
+  --rim: linear-gradient(125deg, #b7bcc4 0%, #ffffff 24%, #9096a0 50%, #dfe2e8 74%, #767b85 100%);
+  --bore: radial-gradient(ellipse 64% 78% at 54% 46%, #05060a 0 44%, #14161b 68%, #262a31 100%);
   --rimBorder: rgba(255,255,255,0.5);
 }
-/* De-Cat: rusty, sooted, seen better days — warm oxidised steel */
+/* Open Pipe: fat bare-steel cannon, aggressive cut, big sooty bore — the loud one */
+.exhaust[data-look="open"] .tip {
+  --barrelW: 140px; --barrelH: 62px; --cutTop: 62%; --tilt: -34deg;
+  --mouthW: 48px; --mouthH: 80px; --mouthX: 8px;
+  --pipe: linear-gradient(to bottom,
+    #050607 0%, #1c1e23 16%, #3f434b 30%, #55595f 44%, #2a2d33 54%,
+    #16181c 64%, #3a3d43 76%, #202227 90%, #050607 100%);
+  --rim: linear-gradient(125deg, #35383e 0%, #6a6e75 26%, #26282d 52%, #545860 76%, #1c1e22 100%);
+  --bore: radial-gradient(ellipse 76% 82% at 52% 48%, #000 0 58%, #0a0b0d 80%, #151619 100%);
+  --rimBorder: rgba(255,255,255,0.12);
+}
+/* Full Titanium: raw brushed-Ti body that BURNS into blue→purple→gold at the
+   tip, exactly like a real heat-anodised titanium exhaust */
+.exhaust[data-look="ti"] .tip {
+  --barrelW: 128px; --barrelH: 50px; --cutTop: 66%; --tilt: -30deg;
+  --mouthW: 40px; --mouthH: 66px; --mouthX: 7px;
+  /* satin titanium cylinder shading… */
+  --pipe: linear-gradient(to bottom,
+    #35393f 0%, #656a72 16%, #9a9fa7 29%, #7b8088 44%, #4c5058 55%,
+    #62666e 68%, #8b9098 82%, #565a62 100%);
+  /* …with the heat colours washing in from the tip end (right) */
+  --pipeShade: linear-gradient(to right,
+    transparent 22%, rgba(198,150,70,0.28) 48%, rgba(150,84,150,0.42) 70%,
+    rgba(52,96,176,0.52) 88%, rgba(40,74,150,0.6) 100%);
+  --rim: conic-gradient(from 190deg at 50% 50%,
+    #2f5488, #4a3f86, #7d4f7a, #b0703e, #d0a850, #9a5f80, #35609a, #2f5488);
+  --bore: radial-gradient(ellipse 68% 80% at 52% 46%, #030509 0 44%, #14202f 68%, #2a3d52 100%);
+  --rimBorder: rgba(150,195,240,0.5);
+}
+/* Screamer: mirror-polished stainless, long slim pipe, tall bright cut */
+.exhaust[data-look="screamer"] .tip {
+  --barrelW: 142px; --barrelH: 44px; --cutTop: 70%; --tilt: -32deg;
+  --mouthW: 36px; --mouthH: 66px; --mouthX: 6px;
+  --pipe: linear-gradient(to bottom,
+    #4a4f57 0%, #b9bec6 10%, #fbfdff 20%, #c9ced6 30%, #838892 42%,
+    #4a4f57 52%, #7f858e 61%, #cfd4dc 74%, #f6f8fb 83%, #969ba5 91%, #4a4f57 100%);
+  --rim: linear-gradient(125deg, #d5dae1 0%, #ffffff 22%, #a9afb9 50%, #f2f5f9 74%, #888e98 100%);
+  --bore: radial-gradient(ellipse 62% 78% at 54% 46%, #04050a 0 44%, #14161c 68%, #2a2e36 100%);
+  --rimBorder: rgba(255,255,255,0.58);
+}
+/* De-Cat: rusty, sooted, oxidised warm steel — seen better days */
 .exhaust[data-look="decat"] .tip {
-  --mouthW: 36px; --mouthH: 56px; --boreInset: 4px;
-  --barrelW: 118px; --barrelH: 48px;
-  --pipe: linear-gradient(to bottom, #150f0a 0%, #4a3221 24%, #7c5836 47%, #3a2717 64%, #140e08 100%);
-  --rim: linear-gradient(150deg, #4a3826 0%, #8a6438 26%, #4d3820 52%, #6b4a2a 76%, #2a1f14 100%);
-  --bore: radial-gradient(ellipse 74% 78% at 50% 50%, #000 0 52%, #150d07 72%, #2a1c11 100%);
-  --rimBorder: rgba(180,120,60,0.30);
+  --barrelW: 128px; --barrelH: 54px; --cutTop: 66%; --tilt: -28deg;
+  --mouthW: 42px; --mouthH: 68px; --mouthX: 8px;
+  --pipe: linear-gradient(to bottom,
+    #150f0a 0%, #3d2a1b 16%, #6e4f31 30%, #8a6438 44%, #4a3320 54%,
+    #2a1d12 64%, #5a4026 76%, #33230f 90%, #140d07 100%);
+  --rim: linear-gradient(125deg, #4a3826 0%, #916a3c 26%, #4d3820 52%, #7a5530 76%, #2a1f14 100%);
+  --bore: radial-gradient(ellipse 74% 80% at 52% 48%, #000 0 50%, #150d07 72%, #2a1c11 100%);
+  --rimBorder: rgba(190,130,70,0.34);
 }
 /* Anti-Lag: scorched black, glowing red-hot around the bore even cold */
 .exhaust[data-look="antilag"] .tip {
-  --mouthW: 36px; --mouthH: 58px; --boreInset: 4px;
-  --barrelW: 118px; --barrelH: 48px;
-  --pipe: linear-gradient(to bottom, #0a0708 0%, #2a1410 24%, #3d1c14 47%, #1a0d0a 64%, #070405 100%);
-  --rim: linear-gradient(150deg, #2a1512 0%, #5a2416 26%, #23100c 52%, #45201a 76%, #140a08 100%);
-  --bore: radial-gradient(ellipse 74% 78% at 50% 50%, #1a0603 0 44%, #3a0e04 62%, #631705 82%, #180a06 100%);
-  --rimBorder: rgba(255,110,40,0.34);
-  --heat: 0 0 18px 1px rgba(255,70,16,0.34);
+  --barrelW: 128px; --barrelH: 54px; --cutTop: 64%; --tilt: -30deg;
+  --mouthW: 42px; --mouthH: 68px; --mouthX: 8px;
+  --pipe: linear-gradient(to bottom,
+    #0a0708 0%, #241210 16%, #3f1d15 30%, #4a2218 44%, #2a1410 54%,
+    #180d0a 64%, #341813 76%, #1a0d0a 90%, #070405 100%);
+  --rim: linear-gradient(125deg, #2c1613 0%, #5f2617 26%, #23100c 52%, #48211a 76%, #140a08 100%);
+  --bore: radial-gradient(ellipse 74% 80% at 52% 48%, #240804 0 42%, #4a1105 62%, #7a1c06 82%, #1a0a06 100%);
+  --rimBorder: rgba(255,110,40,0.4);
+  --heat: 0 0 20px 2px rgba(255,70,16,0.4);
 }
 
 /* transform-origin (set per side) makes scaleX grow OUTWARD, so the plume
