@@ -687,65 +687,62 @@ body[data-theme="frost"] .pedal-pad {
 
 /* ---------------- EXHAUST & FLAMES ---------------- */
 
-/* side-exit exhaust: two pipe mouths facing outward (left + right), the flames
-   shoot sideways out of them. Big gap so each plume has clear air to blast into. */
+/* single side-view exhaust: you're looking at the car from the side, so the
+   tailpipe is one horizontal barrel with the mouth at the right end. Flames
+   blast straight out the back (to the right). */
 .exhaust {
   display: flex; justify-content: center; align-items: center;
-  gap: 90px; align-self: center; margin: 0 4px; overflow: visible;
+  align-self: center; margin: 0 4px; min-height: 62px; overflow: visible;
 }
+/* .tip = the pipe MOUTH (right end), a tall narrow oval bore you look into from
+   the side. data-look overrides recolour this per fitted system. */
 .tip {
   position: relative;
-  width: 62px; height: 50px; border-radius: 50%;
-  /* clearer mouth: bright chrome rim, deep open bore you can actually see into */
+  width: 34px; height: 52px; border-radius: 50%;
+  margin-left: 92px;                       /* leave room for the barrel to the left */
   background:
-    radial-gradient(ellipse 60% 60% at 50% 48%,
-      #000000 0 30%, #0b0c0f 40%, #4a4e57 52%, #1a1c21 60%, #6b7079 70%, #34373e 82%, #14161a 100%);
-  border: 1.5px solid rgba(255,255,255,0.16);
+    radial-gradient(ellipse 60% 66% at 44% 48%,
+      #000000 0 38%, #0b0c0f 50%, #4a4e57 62%, #16181c 72%, #6b7079 86%, #2a2d33 100%);
+  border: 1.5px solid rgba(255,255,255,0.18);
   box-shadow:
-    inset 0 2px 7px rgba(0,0,0,0.85),
-    inset 0 0 10px rgba(0,0,0,0.6),
+    inset -3px 0 7px rgba(0,0,0,0.85),
+    inset 2px 0 5px rgba(255,255,255,0.06),
     0 8px 16px -6px var(--shadow-tint);
   transition: box-shadow 0.25s ease;
 }
-/* short pipe body mounted on the inner side, so the mouths read as facing out */
-.tip::before {
-  content: ""; position: absolute; top: 50%; width: 40px; height: 34px;
-  transform: translateY(-50%); z-index: -1; border-radius: 6px;
-  background: linear-gradient(#3a3d44, #17191d 60%, #26282e);
-  box-shadow: inset 0 2px 3px rgba(0,0,0,0.6);
+/* the barrel — a horizontal cylinder running left from the mouth, shaded so it
+   reads as a round pipe seen side-on */
+.tip .barrel {
+  position: absolute; right: 46%; top: 50%; transform: translateY(-50%);
+  width: 108px; height: 44px; border-radius: 6px 3px 3px 6px; z-index: -1;
+  background: linear-gradient(to bottom,
+    #101216 0%, #3d414a 24%, #70757f 46%, #383b42 62%, #131519 100%);
+  box-shadow:
+    inset 0 3px 5px rgba(255,255,255,0.16),
+    inset 0 -5px 8px rgba(0,0,0,0.7);
 }
-#tipL::before { left: 58%; }
-#tipR::before { right: 58%; }
 .tip.fire {
   box-shadow:
-    inset 0 2px 7px rgba(0,0,0,0.85),
-    0 0 40px 8px rgba(255,118,36,0.85),
-    0 0 90px 20px rgba(255,80,20,0.42);
+    inset -3px 0 7px rgba(0,0,0,0.85),
+    0 0 42px 9px rgba(255,118,36,0.85),
+    0 0 95px 22px rgba(255,80,20,0.44);
   transition: none;
 }
 .tip.fire.big {
   box-shadow:
-    inset 0 2px 7px rgba(0,0,0,0.85),
-    0 0 60px 15px rgba(255,150,50,0.95),
-    0 0 140px 36px rgba(255,70,16,0.55);
+    inset -3px 0 7px rgba(0,0,0,0.85),
+    0 0 64px 16px rgba(255,150,50,0.95),
+    0 0 150px 38px rgba(255,70,16,0.55);
 }
-/* the flame plume — an elongated horizontal jet fired OUT the side of the pipe */
+/* the flame plume — an elongated horizontal jet fired straight OUT the mouth */
 .tip i {
-  position: absolute; top: 50%; height: 46px; width: 165px;
-  border-radius: 50%;
+  position: absolute; left: 52%; top: 50%; height: 42px; width: 178px;
+  border-radius: 50%; transform-origin: left center;
   opacity: 0; pointer-events: none;
   filter: blur(1.1px); mix-blend-mode: screen;
   transform: translateY(-50%) scaleX(0.2);
-}
-#tipL i {
-  right: 60%; transform-origin: right center;
-  background: linear-gradient(to left,
-    #ffffff 0%, #fff2c4 15%, #ffd24d 34%, #ff8a24 56%, #ff4c12 74%, rgba(255,52,12,0) 100%);
-}
-#tipR i {
-  left: 60%; transform-origin: left center;
   background: linear-gradient(to right,
-    #ffffff 0%, #fff2c4 15%, #ffd24d 34%, #ff8a24 56%, #ff4c12 74%, rgba(255,52,12,0) 100%);
+    #ffffff 0%, #fff2c4 14%, #ffd24d 32%, #ff8a24 54%, #ff4c12 74%, rgba(255,52,12,0) 100%);
 }
 .tip.fire i { animation: flameShoot 0.28s ease-out; }
 .tip.fire.big i { animation: flameShootBig 0.34s ease-out; }

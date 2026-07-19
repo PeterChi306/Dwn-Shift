@@ -3032,12 +3032,11 @@ function flashSeqKey(dir) {
 /* exhaust flame flash, synced to pops */
 function popFlame(big) {
   if (!(popsRating() > 0)) return;
-  const ids = big ? ["tipL", "tipR"] : [Math.random() < 0.5 ? "tipL" : "tipR"];
-  for (const id of ids) {
-    const el = $(id);
+  const el = $("tipL");                    // one side-exit pipe now
+  if (el) {
     el.classList.toggle("big", big);
     el.classList.remove("fire"); void el.offsetWidth; el.classList.add("fire");
-    setTimeout(() => el.classList.remove("fire"), 280);
+    setTimeout(() => el.classList.remove("fire"), 300);
   }
   if (big || Math.random() < 0.55) {
     const gl = $("fireglow");
