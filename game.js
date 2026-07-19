@@ -273,7 +273,7 @@ const CARS = [
   {
     id: "kaminari", name: "Kaminari 13R", tag: "twin-rotor screamer", layout: "2-rotor · 1.3L",
     cyl: 4, idle: 850, max: 9000, cut: 9300, inertia: 0.13,  // near-zero rotating mass: revs instantly
-    twoStage: true,          // old rotary: key to ON, wait for the pump, then crank
+    twoStage: true, ignKey: true,   // old rotary: key to ON, wait for the pump, then crank
     curve: [[0, 60], [1000, 105], [3000, 150], [5000, 175], [7000, 190], [8500, 196],
             [9000, 188], [9700, 130]],
     mass: 1180, finalDrive: 4.3, clutchCap: 260, cdA: 0.60, brakeMax: 10500,
@@ -289,7 +289,7 @@ const CARS = [
   {
     id: "kodiak", name: "Kodiak TD", tag: "workhorse truck", layout: "I4 diesel",
     cyl: 4, idle: 750, max: 4400, cut: 4550, inertia: 0.55, noPop: true,
-    twoStage: true,          // diesel: glow plugs have to warm before it will fire
+    twoStage: true, ignKey: true,   // diesel: glow plugs have to warm before it will fire
     curve: [[0, 120], [700, 195], [1300, 255], [1900, 278], [2800, 258], [3600, 214],
             [4400, 150], [4800, 80]],
     mass: 1980, finalDrive: 3.9, clutchCap: 650, cdA: 0.75, brakeMax: 11000,
@@ -301,7 +301,7 @@ const CARS = [
   {
     id: "tempest", name: "Tempest MkIV", tag: "single big turbo", layout: "I6",
     cyl: 6, idle: 850, max: 7600, cut: 7800, inertia: 0.33,
-    twoStage: true,          // 90s ECU + fuel pump prime before the starter
+    twoStage: true, ignKey: true,   // 90s ECU + fuel pump prime before the starter
     curve: [[0, 80], [1000, 148], [2500, 208], [4000, 238], [5500, 248], [6800, 236],
             [7600, 208], [8200, 130]],
     mass: 1450, finalDrive: 3.7, clutchCap: 700, cdA: 0.64, brakeMax: 12000,
@@ -332,7 +332,7 @@ const CARS = [
   {
     id: "hellion", name: "Hellion 6.2 SC", tag: "supercharged muscle", layout: "V8",
     cyl: 8, idle: 680, max: 6400, cut: 6550, inertia: 0.44,
-    twoStage: true,          // ignition on, let the pump build, then crank
+    twoStage: true, ignKey: true,   // ignition on, let the pump build, then crank
     curve: [[0, 150], [700, 318], [2000, 415], [3500, 468], [4800, 478], [5800, 452],
             [6400, 408], [6900, 280]],
     mass: 1760, finalDrive: 3.3, clutchCap: 820, cdA: 0.68, brakeMax: 12000,
@@ -415,7 +415,7 @@ const CARS = [
   {
     id: "falkner", name: "Falkner S6", tag: "howling straight-six", layout: "I6 NA",
     cyl: 6, idle: 850, max: 8000, cut: 8250, inertia: 0.26,
-    twoStage: true,
+    twoStage: true, ignKey: true,
     curve: [[0, 80], [900, 160], [2500, 220], [4500, 262], [6000, 270], [7200, 258],
             [8000, 235], [8600, 150]],
     mass: 1360, finalDrive: 4.05, clutchCap: 340, cdA: 0.61, brakeMax: 11500,
@@ -430,6 +430,7 @@ const CARS = [
   {
     id: "bavaria", name: "Bavaria M58", tag: "twin-turbo six · check engine soon", layout: "I6 · twin turbo",
     cyl: 6, idle: 750, max: 7200, cut: 7400, inertia: 0.3, cel: true,
+    twoStage: true, ignKey: true,   // old barrel lock — key to ON, then hold it over
     curve: [[0, 120], [800, 260], [2000, 480], [3500, 520], [5500, 500], [6500, 470],
             [7200, 420], [7700, 280]],
     mass: 1720, finalDrive: 3.46, clutchCap: 1000, cdA: 0.63, brakeMax: 13000, grip: 1.45,
@@ -674,12 +675,15 @@ function applyCar(c) {
   const ign = $("ignition");
   if (ign) {
     ign.classList.toggle("has-cap", !!c.startCap);
+    ign.classList.toggle("has-key", !!c.ignKey);
     ign.classList.toggle("cap-open", !!(c.startCap && S && S.capOpen));
-    ign.title = c.startCap
-      ? "Flip the cover, then start (I)"
-      : c.twoStage
-        ? "Press for electronics, again to start (I)"
-        : "Start / stop engine (I)";
+    ign.title = c.ignKey
+      ? "Key to ON, then over to START (I)"
+      : c.startCap
+        ? "Flip the cover, then start (I)"
+        : c.twoStage
+          ? "Press for electronics, again to start (I)"
+          : "Start / stop engine (I)";
   }
   const tuned = !!m.tune;
   ENG.idle = c.idle;
@@ -1702,6 +1706,50 @@ function sfxIgnClick(amp = 1) {
   k.connect(kg); kg.connect(AU.master); k.start(t); k.stop(t + 0.09);
 }
 
+/* an old barrel lock instead of a button: the wafers dragging round as the
+   key turns, then the detent dropping into the next position with a solid,
+   slightly loose clunk. Springing back from START is quicker and lighter. */
+function sfxKeyTurn(dir = 1) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const back = dir < 0;
+  // wafers dragging through the barrel — a short gritty scrape
+  const s = ctx.createBufferSource(); s.buffer = AU.noiseBuf;
+  s.playbackRate.value = back ? 0.8 : 0.55;
+  const sf = ctx.createBiquadFilter(); sf.type = "bandpass";
+  sf.frequency.setValueAtTime(1500, t);
+  sf.frequency.linearRampToValueAtTime(2600, t + 0.07);
+  sf.Q.value = 2.6;
+  const sg = ctx.createGain();
+  sg.gain.setValueAtTime(0.001, t);
+  sg.gain.linearRampToValueAtTime(0.16, t + 0.015);
+  sg.gain.exponentialRampToValueAtTime(0.001, t + (back ? 0.05 : 0.08));
+  s.connect(sf); sf.connect(sg); sg.connect(AU.master); s.start(t); s.stop(t + 0.12);
+  // the detent dropping home
+  const dt = back ? 0.05 : 0.08;
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.8;
+  const nf = ctx.createBiquadFilter(); nf.type = "bandpass"; nf.frequency.value = 1900; nf.Q.value = 1.1;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.4, t + dt);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.03);
+  n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(t + dt); n.stop(t + dt + 0.05);
+  // the lump of the mechanism landing — cheap, heavy, mechanical
+  const k = ctx.createOscillator(); k.type = "sine";
+  k.frequency.setValueAtTime(380, t + dt);
+  k.frequency.exponentialRampToValueAtTime(120, t + dt + 0.05);
+  const kg = ctx.createGain();
+  kg.gain.setValueAtTime(0.3, t + dt);
+  kg.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.08);
+  k.connect(kg); kg.connect(AU.master); k.start(t + dt); k.stop(t + dt + 0.1);
+  // a little steel ring off the barrel
+  const o = ctx.createOscillator(); o.type = "triangle";
+  o.frequency.value = back ? 1420 : 1180;
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.05, t + dt + 0.004);
+  og.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.09);
+  o.connect(og); og.connect(AU.master); o.start(t + dt + 0.004); o.stop(t + dt + 0.11);
+}
+
 /* the red cover: a sprung aluminium lid on a machined hinge. Flipping it up
    is a latch release, a light spring twang and the lid slapping its stop. */
 function sfxCapFlip(open = true) {
@@ -2468,7 +2516,11 @@ function ignitionPress() {
     sfxCapFlip(true);
     return;
   }
-  if (!S.cranking) sfxIgnClick();
+  // key cars turn a barrel; everything else is a switch under your thumb
+  if (!S.cranking) {
+    if (CC.ignKey) sfxKeyTurn(S.engineOn ? -1 : 1);
+    else sfxIgnClick();
+  }
   toggleIgnition();
 }
 
@@ -2554,6 +2606,7 @@ function toggleIgnition() {
     if (S.crankSeq !== seq || !S.cranking) return;   // car was swapped mid-crank
     S.cranking = false;
     btn.classList.remove("cranking");
+    if (CC.ignKey) sfxKeyTurn(-1);      // sprung out of START, back to ON
     S.engineOn = true;
     armCel();                           // restart clears the code… for now
     S.rpm = 260;                        // catches from cranking speed…
