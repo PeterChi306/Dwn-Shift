@@ -2256,14 +2256,14 @@ function stepPhysics(dt) {
   }
 
   // automatic gearbox logic — a comfort auto, not a sport one: it short-shifts
-  // early and lives in the tall gears for a smooth, quiet ride. It isn't chasing
-  // acceleration, just convenience, so even flat-out it upshifts well before the
-  // redline (a hard rev limit keeps it off the cut).
+  // early and lives in the tall gears for a smooth, quiet ride. A hard rev
+  // ceiling (~4.5-5k) means it upshifts well before then no matter how hard you
+  // push, so the revs stay low and civil like a real automatic.
   if (S.mode === "auto" && S.autoSel === "D" && S.engineOn && S.shiftCool <= 0 && !CC.ev) {
     const span = ENG.max - ENG.idle;
-    const revLimit = ENG.idle + span * 0.68;             // never revs past ~2/3 in D
-    const up = Math.min(revLimit, ENG.idle + span * (0.11 + S.throttle * 0.30));
-    const dn = ENG.idle + span * (0.045 + S.throttle * 0.10);
+    const ceiling = Math.min(4800, ENG.idle + span * 0.5);   // never revs past ~4.5-5k
+    const up = Math.min(ceiling, ENG.idle + span * (0.13 + S.throttle * 0.26));
+    const dn = ENG.idle + span * (0.05 + S.throttle * 0.08);
     if (S.rpm > up && S.autoGear < CAR.top) autoShift(S.autoGear + 1);
     else if (S.rpm < dn && S.autoGear > 1) autoShift(S.autoGear - 1);
   }
@@ -2272,17 +2272,14 @@ function stepPhysics(dt) {
 function autoShift(g) {
   const down = g < S.autoGear;
   S.autoGear = g; S.gear = g;
-  // comfort auto: gentle, well-damped upshifts — a soft torque hand-off, not a
-  // sporty bang. Downshifts still rev-match so the ride never lurches.
-  S.shiftCut = down ? 0.24 : 0.14; S.shiftCool = 0.7;
-  if (down && S.engineOn && Math.abs(S.v) > 3) {
-    S.blip = 0.24; S.blipTarget = matchRpm(g);       // smooth rev-match, no throttle stab
-  } else if (!down && S.engineOn) {
-    S.blip = 0.10; S.blipTarget = matchRpm(g);        // ease revs down onto the new gear
-  }
-  if (curEx().burble && S.engineOn && S.rpm > ENG.idle * 2.4 && down)
-    sfxCrackle(0.7);                     // only a faint tick, and only downshifting
-  sfxClunk(down ? 0.22 : 0.12);          // muted — a modern auto barely thunks
+  // torque-converter smooth: a brief torque interruption and NOTHING else. No
+  // throttle blip — a blip keeps the throttle alive while the clutch is open
+  // during the shift, which free-revs the engine (the "sudden high revs" bug).
+  // With the blip gone, shiftCut cleanly cuts drive and the revs simply flow
+  // onto the new gear's ratio, exactly like a real automatic.
+  S.shiftCut = down ? 0.16 : 0.12; S.shiftCool = 0.7;
+  S.blip = 0; S.blipTarget = null;
+  sfxClunk(0.1);                          // barely-there thunk
   flashGear();
 }
 
