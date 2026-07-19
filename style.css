@@ -716,39 +716,24 @@ body[data-theme="frost"] .pedal-pad {
   width: 150px; height: 78px;
   transition: filter 0.25s ease;
 }
-/* the barrel — a chrome cylinder whose right end is cut off at an angle */
+/* the barrel — a chrome cylinder whose right end is cut off at an angle. This
+   IS the whole exhaust now (no separate mouth disc): just the side-on pipe. */
 .tip .barrel {
   position: absolute; left: 0; top: 50%; transform: translateY(-50%);
   width: var(--barrelW); height: var(--barrelH); border-radius: 3px;
   background: var(--pipeShade), var(--pipe);
   box-shadow: inset 0 3px 5px rgba(255,255,255,0.22), inset 0 -7px 10px rgba(0,0,0,0.65);
   clip-path: polygon(0 0, var(--cutTop) 0, 100% 100%, 0 100%);
+  /* filter follows the clipped pipe shape, so heat/flame glow hugs the pipe */
+  filter: var(--heatFilter, none);
+  transition: filter 0.2s ease;
 }
-/* the slash-cut face at the end: a tilted ellipse — chrome rim around a dark bore */
-.tip .mouth {
-  position: absolute; right: var(--mouthX); top: 50%;
-  width: var(--mouthW); height: var(--mouthH);
-  transform: translateY(-50%) rotate(var(--tilt));
-  border-radius: 50%;
-  background: var(--rim);
-  border: 1.5px solid var(--rimBorder);
-  box-shadow:
-    0 8px 15px -7px var(--shadow-tint),
-    inset 0 2px 3px rgba(255,255,255,0.4),
-    var(--heat);
+/* flame flash: the whole pipe glows and a jet blasts out the back */
+.tip.fire .barrel {
+  filter: drop-shadow(0 0 22px rgba(255,120,40,0.9)) drop-shadow(0 0 52px rgba(255,80,20,0.5));
 }
-/* flame flash: the mouth glows and a jet blasts out the back */
-.tip.fire .mouth {
-  box-shadow:
-    inset 0 2px 3px rgba(255,255,255,0.25),
-    0 0 44px 9px rgba(255,118,36,0.9),
-    0 0 100px 24px rgba(255,80,20,0.46);
-}
-.tip.fire.big .mouth {
-  box-shadow:
-    inset 0 2px 3px rgba(255,255,255,0.25),
-    0 0 66px 17px rgba(255,150,50,0.96),
-    0 0 155px 40px rgba(255,70,16,0.56);
+.tip.fire.big .barrel {
+  filter: drop-shadow(0 0 34px rgba(255,150,50,0.95)) drop-shadow(0 0 80px rgba(255,70,16,0.6));
 }
 /* the flame plume — an elongated horizontal jet fired straight OUT the mouth */
 .tip i {
@@ -836,7 +821,7 @@ body[data-theme="frost"] .pedal-pad {
   --rim: linear-gradient(125deg, #2c1613 0%, #5f2617 26%, #23100c 52%, #48211a 76%, #140a08 100%);
   --bore: radial-gradient(ellipse 74% 80% at 52% 48%, #240804 0 42%, #4a1105 62%, #7a1c06 82%, #1a0a06 100%);
   --rimBorder: rgba(255,110,40,0.4);
-  --heat: 0 0 20px 2px rgba(255,70,16,0.4);
+  --heatFilter: drop-shadow(0 0 9px rgba(255,70,16,0.55));   /* glows red-hot even cold */
 }
 
 /* transform-origin (set per side) makes scaleX grow OUTWARD, so the plume
