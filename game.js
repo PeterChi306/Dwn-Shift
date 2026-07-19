@@ -559,6 +559,7 @@ const CARS = [
     id: "f458", name: "Maranello 458 Spider", tag: "the last pure NA V8 · top down", layout: "V8 · 4.5L flat-plane",
     cyl: 8, idle: 900, max: 9000, cut: 9250, inertia: 0.17, shiftLights: true,
     bootRich: true,          // full supercar dash boot on the key
+    twoStage: true,          // press once to wake it, again to fire the V8
     start: { rpm: 265, dur: 0.68, fires: 4, flare: 0.95, flareT: 0.85 },
     curve: [[0, 170], [1000, 300], [3000, 430], [5000, 505], [6000, 540], [7500, 532],
             [8500, 508], [9000, 485], [9700, 330]],
@@ -848,7 +849,7 @@ const S = {
   in: { gas: 0, brake: 0, clutch: 0 }, // key/pointer targets
   throttle: 0, brake: 0, clutchPedal: 0,
   effThrottle: 0, engage: 0, locked: false,
-  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, pendShift: false,
+  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, parkLimit: 0, pendShift: false,
   tunnel: false, flyby: false, flyX: -380, cabin: false, mods: {},
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
   spinV: 0, lockup: false,
@@ -1857,6 +1858,32 @@ function sayEvent(key, text, opt = {}) {
 // forget the cooldowns when the situation resets (new car, restart)
 function clearVox() { for (const k in VOX) delete VOX[k]; }
 
+/* Key on, engine off. Every car does this: once the dash has finished
+   waking up it starts quietly reminding you it's sitting there powered but
+   not running, and it doesn't stop until you either start it or switch it
+   off. Deliberately soft — a nudge, not the warning tone. */
+function sfxAccNag() {
+  if (!AU.ready || S.muted) return;
+  const t = AU.ctx.currentTime;
+  clusterBeep(t, 1174.7, 0.1, 0.019);
+  clusterBeep(t + 0.17, 880, 0.14, 0.016);
+}
+
+let accNagT = 0;
+function accNagStop() { if (accNagT) { clearTimeout(accNagT); accNagT = 0; } }
+function accNagStart(delay) {
+  accNagStop();
+  const seq = S.crankSeq;                  // any further ignition press ends it
+  const tick = () => {
+    accNagT = 0;
+    if (S.crankSeq !== seq) return;
+    if (!S.acc || S.engineOn || S.cranking) return;
+    sfxAccNag();
+    accNagT = setTimeout(tick, 2800);
+  };
+  accNagT = setTimeout(tick, delay);
+}
+
 /* the harsh two-tone a cluster uses when it actually wants your attention —
    deliberately unpleasant, and nothing like the polite self-test beep */
 function warnChime(urgency = 1) {
@@ -2166,6 +2193,9 @@ function sfxAccOn(c) {
    back out with a falling whine.
    ================================================================ */
 
+// a parked automatic is held here no matter how hard you lean on it
+const PARK_REV_LIMIT = 4500;
+
 // what the starter is up against, derived from the engine itself
 function crankProfile(c) {
   const cyl = c.cyl || 6;
@@ -2186,8 +2216,8 @@ function crankProfile(c) {
   p.flareT = diesel ? 0.6 : c.asp === "na" ? (cyl >= 10 ? 1.0 : 0.78) : 0.72;
   // …but only ever to a couple of thousand over idle. No car on earth starts
   // to the limiter — the ECU catches it and hands straight back to idle.
-  p.peak = clamp(c.idle * (diesel ? 1.9 : c.asp === "na" ? 3.0 : 2.6),
-                 1500, diesel ? 2000 : 3800);
+  p.peak = clamp(c.idle * (diesel ? 2.0 : c.asp === "na" ? 3.6 : 3.1),
+                 1500, diesel ? 2100 : 4000);
   return Object.assign(p, c.start || {});
 }
 
@@ -2701,6 +2731,13 @@ function stepPhysics(dt) {
 
   // rev limiter
   if (S.rpm > ENG.cut) S.cutTimer = 0.07;
+  // …and a far lower one with the automatic in Park or Neutral. Nothing is
+  // loading the engine, so the ECU refuses to let you sit it on the redline —
+  // lean on the throttle at a standstill and it just holds here.
+  if (S.mode === "auto" && (S.autoSel === "P" || S.autoSel === "N")) {
+    S.parkLimit = Math.min(PARK_REV_LIMIT, ENG.cut * 0.95);
+    if (S.rpm > S.parkLimit) S.cutTimer = Math.max(S.cutTimer, 0.05);
+  } else S.parkLimit = 0;
 
   // idle governor keeps the engine alive at no throttle (free or lightly
   // loaded). Its authority grows as the revs sink below idle — tiny engines
@@ -2734,7 +2771,7 @@ function stepPhysics(dt) {
     const peak = S.catchPeak || ENG.idle * 2.6;
     if (S.rpm > peak) S.catchT = 0;
     else {
-      const band = Math.max(250, (peak - ENG.idle) * 0.45);
+      const band = Math.max(180, (peak - ENG.idle) * 0.2);
       eff = Math.max(eff, (S.catchAmt || 0.55)
         * clamp((peak - S.rpm) / band, 0, 1)
         * Math.min(1, S.catchT / 0.4));
@@ -2903,7 +2940,7 @@ function stepPhysics(dt) {
   if (Math.abs(S.v) < 0.015 && S.brake > 0.1) S.v = 0;
   S.odo += Math.abs(S.v) * dt / 1000;
 
-  S.rpm = clamp(S.rpm, 0, ENG.cut * 1.24);
+  S.rpm = clamp(S.rpm, 0, S.parkLimit ? S.parkLimit : ENG.cut * 1.24);
 
   // stalling — only the full-clutch mode can stall
   if (S.engineOn && !S.cranking && S.mode === "clutch" && !CC.ev &&
@@ -3059,6 +3096,7 @@ function toggleIgnition() {
     if (S.powered) {                          // power everything down
       S.powered = false; S.engineOn = false; S.eDrive = "gas";
       S.rpm = 0; S.boost = 0; S.acc = false;
+      accNagStop();
       sfxClunk(0.45);
       closeStartCap();
       updateRunLamp(); updateEdriveUi();
@@ -3070,6 +3108,7 @@ function toggleIgnition() {
 
   if (S.engineOn) {
     S.engineOn = false; S.acc = false;
+    accNagStop();
     sfxClunk(0.5);
     closeStartCap();
     updateRunLamp();
@@ -3096,12 +3135,14 @@ function toggleIgnition() {
     $("stallOverlay").classList.remove("show");
     $("lampStall").classList.remove("lit", "blink");
     sfxAccOn(CC);
+    accNagStart(CC.bootRich ? 2600 : 1900);   // …then it starts asking
     updateRunLamp();
     return;
   }
 
   // crank — hybrids quick-start: the e-motor spins it up faster and quieter
   const quiet = !!CC.edrive;
+  accNagStop();                       // it got what it was asking for
   const p = crankProfile(CC);
   if (quiet) { p.dur = 0.4; p.rpm *= 1.9; p.fires = 2; p.flare = 0.35; p.flareT = 0.35; }
   S.acc = true;
@@ -3910,6 +3951,7 @@ function selectCar(id) {
   S.crankSeq = (S.crankSeq || 0) + 1;
   S.cranking = false; S.engineOn = false; S.stalled = false;
   S.acc = false; S.capOpen = false; S._overWarn = 0;
+  accNagStop();
   clearVox();
   S.powered = false; S.eDrive = "gas";
   S.rpm = 0; S.v = 0; S.boost = 0; S.locked = false;
