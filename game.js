@@ -135,6 +135,8 @@ const CARS = [
             [9000, 560], [9700, 360]],
     mass: 1525, finalDrive: 3.54, clutchCap: 950, cdA: 0.61, brakeMax: 15500, grip: 1.85,
     asp: "na", pops: 3.2, tachMax: 10, redK: 9, kmhMax: 360, mphMax: 240,
+    startCap: true,          // the red flip-up cover over the starter
+    twoStage: true,          // cover up, press once for electronics, again to crank
     /* the raging-bull V12 with the exhaust deleted — voiced like the real Gintani car:
        a wide 3-voice detuned unison core (thick, never sterile), half-order
        partials from the 12-cylinder firing overlap (the growl BETWEEN the
@@ -207,6 +209,7 @@ const CARS = [
     mass: 1550, finalDrive: 3.54, clutchCap: 1500, cdA: 0.62, brakeMax: 15000, grip: 2.0,
     asp: "na", pops: 2.6, tachMax: 9, redK: 8.5, kmhMax: 340, mphMax: 210,
     dash: { accent: "#9ee800" },
+    startCap: true,
     /* the 5.2 V10 next door to the SVJ, uneven-fire 90°: a low growl with a
        slight lope at idle, a snarling half-order midrange (the odd-even gap
        between firings), then the celebrated top-end — a hard, honking intake
@@ -237,6 +240,7 @@ const CARS = [
             [9250, 655], [9800, 420]],
     mass: 1820, finalDrive: 3.4, clutchCap: 1400, cdA: 0.60, brakeMax: 16000, grip: 2.1,
     asp: "na", pops: 2.6, tachMax: 10, redK: 9.25, kmhMax: 360, mphMax: 220,
+    startCap: true,
     // 296-style hybrid: silent EV creep on the front axle motors up to ~130km/h,
     // then you light the V12 yourself (H / eDrive button)
     edrive: true, evCapKmh: 130, evForce: 8200, badge: "V12-H", fireLbl: "FIRE V12",
@@ -269,6 +273,7 @@ const CARS = [
   {
     id: "kaminari", name: "Kaminari 13R", tag: "twin-rotor screamer", layout: "2-rotor · 1.3L",
     cyl: 4, idle: 850, max: 9000, cut: 9300, inertia: 0.13,  // near-zero rotating mass: revs instantly
+    twoStage: true,          // old rotary: key to ON, wait for the pump, then crank
     curve: [[0, 60], [1000, 105], [3000, 150], [5000, 175], [7000, 190], [8500, 196],
             [9000, 188], [9700, 130]],
     mass: 1180, finalDrive: 4.3, clutchCap: 260, cdA: 0.60, brakeMax: 10500,
@@ -284,6 +289,7 @@ const CARS = [
   {
     id: "kodiak", name: "Kodiak TD", tag: "workhorse truck", layout: "I4 diesel",
     cyl: 4, idle: 750, max: 4400, cut: 4550, inertia: 0.55, noPop: true,
+    twoStage: true,          // diesel: glow plugs have to warm before it will fire
     curve: [[0, 120], [700, 195], [1300, 255], [1900, 278], [2800, 258], [3600, 214],
             [4400, 150], [4800, 80]],
     mass: 1980, finalDrive: 3.9, clutchCap: 650, cdA: 0.75, brakeMax: 11000,
@@ -295,6 +301,7 @@ const CARS = [
   {
     id: "tempest", name: "Tempest MkIV", tag: "single big turbo", layout: "I6",
     cyl: 6, idle: 850, max: 7600, cut: 7800, inertia: 0.33,
+    twoStage: true,          // 90s ECU + fuel pump prime before the starter
     curve: [[0, 80], [1000, 148], [2500, 208], [4000, 238], [5500, 248], [6800, 236],
             [7600, 208], [8200, 130]],
     mass: 1450, finalDrive: 3.7, clutchCap: 700, cdA: 0.64, brakeMax: 12000,
@@ -325,6 +332,7 @@ const CARS = [
   {
     id: "hellion", name: "Hellion 6.2 SC", tag: "supercharged muscle", layout: "V8",
     cyl: 8, idle: 680, max: 6400, cut: 6550, inertia: 0.44,
+    twoStage: true,          // ignition on, let the pump build, then crank
     curve: [[0, 150], [700, 318], [2000, 415], [3500, 468], [4800, 478], [5800, 452],
             [6400, 408], [6900, 280]],
     mass: 1760, finalDrive: 3.3, clutchCap: 820, cdA: 0.68, brakeMax: 12000,
@@ -407,6 +415,7 @@ const CARS = [
   {
     id: "falkner", name: "Falkner S6", tag: "howling straight-six", layout: "I6 NA",
     cyl: 6, idle: 850, max: 8000, cut: 8250, inertia: 0.26,
+    twoStage: true,
     curve: [[0, 80], [900, 160], [2500, 220], [4500, 262], [6000, 270], [7200, 258],
             [8000, 235], [8600, 150]],
     mass: 1360, finalDrive: 4.05, clutchCap: 340, cdA: 0.61, brakeMax: 11500,
@@ -562,6 +571,7 @@ const CARS = [
   {
     id: "kaze", name: "Kaze 787", tag: "quad-rotor Le Mans legend", layout: "4-rotor · 2.6L",
     cyl: 8, idle: 1100, max: 9000, cut: 9300, inertia: 0.11,  // R26B: pure response
+    twoStage: true,          // race car: master switch, pump, THEN the button
     curve: [[0, 120], [1500, 300], [3500, 450], [5000, 540], [6500, 608], [7800, 590],
             [9000, 555], [9700, 380]],
     mass: 830, finalDrive: 3.1, clutchCap: 800, cdA: 0.58, brakeMax: 16000,
@@ -659,6 +669,18 @@ const CAR = {
 
 function applyCar(c) {
   const m = (S && S.mods && S.mods[c.id]) || {};
+  // the starter itself changes car to car: the Sant'Agata cars wear the red
+  // flip-up cover, and the older/ornerier stuff wants electronics first
+  const ign = $("ignition");
+  if (ign) {
+    ign.classList.toggle("has-cap", !!c.startCap);
+    ign.classList.toggle("cap-open", !!(c.startCap && S && S.capOpen));
+    ign.title = c.startCap
+      ? "Flip the cover, then start (I)"
+      : c.twoStage
+        ? "Press for electronics, again to start (I)"
+        : "Start / stop engine (I)";
+  }
   const tuned = !!m.tune;
   ENG.idle = c.idle;
   ENG.max = c.max + (tuned ? 400 : 0);            // race tune revs higher…
@@ -785,6 +807,8 @@ function popEff() { return (curEx().popMul || 1) * curMod().pop; }
 const S = {
   mode: "auto", units: "kmh", muted: false,
   engineOn: false, cranking: false, stalled: false,
+  acc: false,        // electronics live, engine not turning (two-stage cars)
+  capOpen: false,    // the red starter cover is flipped up
   powered: false, eDrive: "gas",       // eDrive cars: system-on flag + ev|gas motor
   rpm: 0, v: 0, odo: 0, boost: 0,
   gear: 0,                             // 0=N, 1..6, "R"
@@ -1647,6 +1671,129 @@ function sfxShiftMetal(strength = 1) {
   o2.connect(g2); g2.connect(AU.master); o2.start(t); o2.stop(t + 0.11);
 }
 
+/* the starter button itself: a proper tactile switch. A crisp plastic tick as
+   the dome collapses under your thumb, a bright little snap on top, and a
+   small solid knock underneath so it lands in the panel rather than on it. */
+function sfxIgnClick(amp = 1) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  // the dome collapsing — tight highpassed noise tick
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 2.6;
+  const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 2600;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.5 * amp, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.022);
+  n.connect(f); f.connect(g); g.connect(AU.master); n.start(t); n.stop(t + 0.04);
+  // the bright snap — short, dry, no ring
+  const o = ctx.createOscillator(); o.type = "square";
+  o.frequency.setValueAtTime(2400, t);
+  o.frequency.exponentialRampToValueAtTime(900, t + 0.02);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.16 * amp, t);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+  o.connect(og); og.connect(AU.master); o.start(t); o.stop(t + 0.045);
+  // the knock into the panel — the bit you feel
+  const k = ctx.createOscillator(); k.type = "sine";
+  k.frequency.setValueAtTime(320, t);
+  k.frequency.exponentialRampToValueAtTime(110, t + 0.05);
+  const kg = ctx.createGain();
+  kg.gain.setValueAtTime(0.3 * amp, t);
+  kg.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+  k.connect(kg); kg.connect(AU.master); k.start(t); k.stop(t + 0.09);
+}
+
+/* the red cover: a sprung aluminium lid on a machined hinge. Flipping it up
+   is a latch release, a light spring twang and the lid slapping its stop. */
+function sfxCapFlip(open = true) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  // latch release
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 2.2;
+  const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 3400; f.Q.value = 1.2;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.42, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+  n.connect(f); f.connect(g); g.connect(AU.master); n.start(t); n.stop(t + 0.05);
+  // spring twang — thin metal, quickly damped
+  [[1750, 0.1], [2620, 0.05]].forEach(([hz, amp]) => {
+    const o = ctx.createOscillator(); o.type = "triangle";
+    o.frequency.setValueAtTime(hz, t);
+    o.frequency.exponentialRampToValueAtTime(hz * (open ? 1.12 : 0.88), t + 0.09);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(amp, t + 0.004);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+    o.connect(og); og.connect(AU.master); o.start(t + 0.004); o.stop(t + 0.13);
+  });
+  // the lid arriving at its stop a beat later
+  const dt = open ? 0.11 : 0.07;
+  const k = ctx.createOscillator(); k.type = "sine";
+  k.frequency.setValueAtTime(520, t + dt);
+  k.frequency.exponentialRampToValueAtTime(150, t + dt + 0.05);
+  const kg = ctx.createGain();
+  kg.gain.setValueAtTime(0.34, t + dt);
+  kg.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.08);
+  k.connect(kg); kg.connect(AU.master); k.start(t + dt); k.stop(t + dt + 0.1);
+  const c = ctx.createBufferSource(); c.buffer = AU.noiseBuf; c.playbackRate.value = 1.7;
+  const cf = ctx.createBiquadFilter(); cf.type = "bandpass"; cf.frequency.value = 2100; cf.Q.value = 0.9;
+  const cg = ctx.createGain();
+  cg.gain.setValueAtTime(0.3, t + dt);
+  cg.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.035);
+  c.connect(cf); cf.connect(cg); cg.connect(AU.master); c.start(t + dt); c.stop(t + dt + 0.05);
+}
+
+/* first press: electronics live. The main relay clacks in, the in-tank fuel
+   pump spins up and primes with that rising whirr, then goes quiet as the
+   rail comes up to pressure — the moment the car stops being furniture. */
+function sfxAccOn() {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  // main relay: a hard, dry clack
+  const r = ctx.createBufferSource(); r.buffer = AU.noiseBuf; r.playbackRate.value = 1.5;
+  const rf = ctx.createBiquadFilter(); rf.type = "bandpass"; rf.frequency.value = 1300; rf.Q.value = 1.4;
+  const rg = ctx.createGain();
+  rg.gain.setValueAtTime(0.55, t);
+  rg.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+  r.connect(rf); rf.connect(rg); rg.connect(AU.master); r.start(t); r.stop(t + 0.05);
+  const rk = ctx.createOscillator(); rk.type = "sine";
+  rk.frequency.setValueAtTime(260, t); rk.frequency.exponentialRampToValueAtTime(90, t + 0.06);
+  const rkg = ctx.createGain();
+  rkg.gain.setValueAtTime(0.36, t); rkg.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+  rk.connect(rkg); rkg.connect(AU.master); rk.start(t); rk.stop(t + 0.1);
+  // fuel pump prime: a rising electric whirr that holds, then drops away
+  const p0 = t + 0.07, pDur = 0.85;
+  const p = ctx.createOscillator(); p.type = "sawtooth";
+  p.frequency.setValueAtTime(160, p0);
+  p.frequency.exponentialRampToValueAtTime(430, p0 + 0.22);
+  p.frequency.setValueAtTime(430, p0 + pDur - 0.22);
+  p.frequency.exponentialRampToValueAtTime(300, p0 + pDur);
+  const pf = ctx.createBiquadFilter(); pf.type = "bandpass"; pf.frequency.value = 900; pf.Q.value = 2.2;
+  const pg = ctx.createGain();
+  pg.gain.setValueAtTime(0.001, p0);
+  pg.gain.linearRampToValueAtTime(0.075, p0 + 0.09);
+  pg.gain.setValueAtTime(0.075, p0 + pDur - 0.3);
+  pg.gain.exponentialRampToValueAtTime(0.001, p0 + pDur);
+  p.connect(pf); pf.connect(pg); pg.connect(AU.master);
+  p.start(p0); p.stop(p0 + pDur + 0.05);
+  // the hiss of fuel moving with it
+  const h = ctx.createBufferSource(); h.buffer = AU.noiseBuf; h.loop = true; h.playbackRate.value = 1.1;
+  const hf = ctx.createBiquadFilter(); hf.type = "bandpass"; hf.frequency.value = 2400; hf.Q.value = 0.8;
+  const hg = ctx.createGain();
+  hg.gain.setValueAtTime(0.001, p0);
+  hg.gain.linearRampToValueAtTime(0.03, p0 + 0.12);
+  hg.gain.exponentialRampToValueAtTime(0.001, p0 + pDur);
+  h.connect(hf); hf.connect(hg); hg.connect(AU.master);
+  h.start(p0); h.stop(p0 + pDur + 0.05);
+  // instrument cluster waking: two clean tones under the needle sweep
+  [[880, 0.02], [1320, 0.16]].forEach(([hz, dt2]) => {
+    const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = hz;
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.001, t + dt2);
+    og.gain.linearRampToValueAtTime(0.055, t + dt2 + 0.015);
+    og.gain.exponentialRampToValueAtTime(0.001, t + dt2 + 0.3);
+    o.connect(og); og.connect(AU.master); o.start(t + dt2); o.stop(t + dt2 + 0.34);
+  });
+}
+
 function sfxStarter(dur, amp = 1) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime;
@@ -2308,6 +2455,31 @@ function stallEngine() {
    IGNITION
    ================================================================ */
 
+/* every physical press of the button lands here. On the Sant'Agata cars the
+   red cover has to come up first — that press costs you nothing but the flip.
+   After that it's a real switch under your thumb, so it clicks. */
+function ignitionPress() {
+  initAudio();
+  if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+
+  if (CC.startCap && !S.capOpen) {
+    S.capOpen = true;
+    $("ignition").classList.add("cap-open");
+    sfxCapFlip(true);
+    return;
+  }
+  if (!S.cranking) sfxIgnClick();
+  toggleIgnition();
+}
+
+// drop the cover back over the button — done whenever the car goes dark
+function closeStartCap() {
+  if (!S.capOpen) return;
+  S.capOpen = false;
+  $("ignition").classList.remove("cap-open");
+  if (CC.startCap) sfxCapFlip(false);
+}
+
 function toggleIgnition() {
   initAudio();
   if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
@@ -2321,8 +2493,9 @@ function toggleIgnition() {
   if (CC.edrive) {
     if (S.powered) {                          // power everything down
       S.powered = false; S.engineOn = false; S.eDrive = "gas";
-      S.rpm = 0; S.boost = 0;
+      S.rpm = 0; S.boost = 0; S.acc = false;
       sfxClunk(0.45);
+      closeStartCap();
       updateRunLamp(); updateEdriveUi();
       return;
     }
@@ -2331,14 +2504,15 @@ function toggleIgnition() {
   }
 
   if (S.engineOn) {
-    S.engineOn = false;
+    S.engineOn = false; S.acc = false;
     sfxClunk(0.5);
+    closeStartCap();
     updateRunLamp();
     return;
   }
   // EV: no starter motor — just power up with a chime
   if (CC.ev) {
-    S.engineOn = true; S.stalled = false;
+    S.engineOn = true; S.stalled = false; S.acc = true;
     S.rpm = 0; S.sweep = 0;
     $("stallOverlay").classList.remove("show");
     $("lampStall").classList.remove("lit", "blink");
@@ -2346,8 +2520,23 @@ function toggleIgnition() {
     updateRunLamp();
     return;
   }
+  // two-stage cars — the SVJ, the older stuff, the diesel, the race car. The
+  // first press only wakes it up: relay in, pump priming, needles sweeping the
+  // dials and back. Everything is live and the starter is armed, but nothing
+  // has turned yet. Press again and it goes.
+  if (CC.twoStage && !S.acc) {
+    S.acc = true; S.stalled = false;
+    S.rpm = 0; S.sweep = 0;             // the welcome sweep across the gauges
+    $("stallOverlay").classList.remove("show");
+    $("lampStall").classList.remove("lit", "blink");
+    sfxAccOn();
+    updateRunLamp();
+    return;
+  }
+
   // crank — hybrids quick-start: the e-motor spins it up faster and quieter
   const quiet = !!CC.edrive;
+  S.acc = true;
   S.cranking = true; S.stalled = false;
   $("stallOverlay").classList.remove("show");
   $("lampStall").classList.remove("lit", "blink");
@@ -2378,7 +2567,10 @@ function toggleIgnition() {
 }
 
 function updateRunLamp() {
-  $("ignition").classList.toggle("running", S.engineOn || (CC.edrive && S.powered));
+  const ign = $("ignition");
+  ign.classList.toggle("running", S.engineOn || (CC.edrive && S.powered));
+  // armed-but-not-running: amber pulse asking for the second press
+  ign.classList.toggle("acc", S.acc && !S.engineOn && !S.cranking);
   $("lampRun").classList.toggle("lit", S.engineOn);
   $("lampEv").classList.toggle("lit", CC.edrive && S.powered && S.eDrive === "ev");
 }
@@ -2423,7 +2615,7 @@ function toggleEdrive() {
     if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
     if (S.cranking) return;
     S.crankSeq = (S.crankSeq || 0) + 1;
-    S.powered = true; S.engineOn = false; S.eDrive = "ev";
+    S.powered = true; S.engineOn = false; S.eDrive = "ev"; S.acc = true;
     S.stalled = false; S.rpm = 0; S.boost = 0; S.sweep = 0;
     $("stallOverlay").classList.remove("show");
     $("lampStall").classList.remove("lit", "blink");
@@ -3134,11 +3326,13 @@ function esc(s) {
 function selectCar(id) {
   const car = CARS.find(c => c.id === id) || CARS[1];
   CC = car;
+  S.capOpen = false;                     // new car arrives with the cover down
   applyCar(car);
 
   // full reset — new car arrives parked, engine off
   S.crankSeq = (S.crankSeq || 0) + 1;
   S.cranking = false; S.engineOn = false; S.stalled = false;
+  S.acc = false; S.capOpen = false;
   S.powered = false; S.eDrive = "gas";
   S.rpm = 0; S.v = 0; S.boost = 0; S.locked = false;
   S.seqStage = 0; S._seqPrev = 0;
@@ -3966,7 +4160,7 @@ function autodriveTick(dt) {
   AD.startT -= dt;
   if ((!S.engineOn || S.stalled) && !S.cranking) {
     AD.gas = 0; AD.brake = 0;
-    if (AD.startT <= 0) { AD.startT = 2.5; toggleIgnition(); }
+    if (AD.startT <= 0) { AD.startT = 1.2; ignitionPress(); }   // cover, electronics, crank
     return;
   }
   if (S.cranking) return;
@@ -4552,7 +4746,7 @@ function initInput() {
         return e.code === "Space";      // still swallow space (page scroll)
       case "KeyE": if (down && !e.repeat) seqShift(1); return true;
       case "KeyQ": if (down && !e.repeat) seqShift(-1); return true;
-      case "KeyI": if (down && !e.repeat) toggleIgnition(); return true;
+      case "KeyI": if (down && !e.repeat) ignitionPress(); return true;
       case "KeyH": if (down && !e.repeat) toggleEdrive(); return true;
       case "KeyL":
         if (down && !e.repeat) LT.phase === "off" ? openLaunch() : closeLaunch();
@@ -4588,7 +4782,7 @@ function initInput() {
   bindPedal($("pedBrake"), "brake");
   bindPedal($("pedClutch"), "clutch");
 
-  $("ignition").addEventListener("click", toggleIgnition);
+  $("ignition").addEventListener("click", ignitionPress);
   $("edriveBtn").addEventListener("click", toggleEdrive);
 
   document.querySelectorAll(".mode-btn").forEach(b =>
@@ -4792,7 +4986,7 @@ function pollGamepad() {
     if (S.mode === "manual") seqShift(-1);
     else if (S.mode === "clutch") kbSeqGate(-1);
   }
-  if (gpPressed(gp, 9, prev)) toggleIgnition();          // Start/Menu
+  if (gpPressed(gp, 9, prev)) ignitionPress();           // Start/Menu
   if (gpPressed(gp, 3, prev)) toggleEdrive();            // Y — eDrive cars only
   if (gpPressed(gp, 1, prev)) toggleCruise();            // B
 }

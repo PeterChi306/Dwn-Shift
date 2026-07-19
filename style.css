@@ -408,6 +408,7 @@ kbd {
   width: 84px; height: 84px; border-radius: 50%;
   border: 0; cursor: pointer; background: none;
   font-family: inherit;
+  perspective: 340px;
 }
 .ign-ring {
   position: absolute; inset: 0; border-radius: 50%;
@@ -432,6 +433,62 @@ kbd {
 }
 .ignition.cranking .ign-face { animation: crank 0.14s linear infinite; }
 @keyframes crank { 50% { transform: scale(0.97) rotate(0.6deg); } }
+
+/* electronics live, engine not yet turning — the dash is awake and the
+   starter is armed, so the button breathes amber and asks for the second press */
+.ignition.acc .ign-face {
+  color: #ffb02e;
+  box-shadow: inset 0 -4px 8px rgba(0,0,0,0.35), inset 0 2px 2px var(--edge-hi),
+              0 0 16px rgba(255,176,46,0.35);
+  animation: ignArmed 1.15s ease-in-out infinite;
+}
+@keyframes ignArmed { 50% { box-shadow: inset 0 -4px 8px rgba(0,0,0,0.35), inset 0 2px 2px var(--edge-hi), 0 0 26px rgba(255,176,46,0.6); } }
+.ignition.acc.cranking .ign-face { animation: crank 0.14s linear infinite; }
+
+/* ---- the signature red flip-up starter cover (Sant'Agata cars) ---- */
+.ign-cap { display: none; }
+.ignition.has-cap .ign-cap {
+  display: block;
+  position: absolute; inset: -3px;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+.ignition.has-cap .cap-lid {
+  position: absolute; inset: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transform-origin: 50% 4%;
+  transform: rotateX(0deg);
+  transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.5, 1), box-shadow 0.4s ease;
+  background:
+    repeating-linear-gradient(-38deg, rgba(0,0,0,0.16) 0 2px, rgba(255,255,255,0.05) 2px 5px),
+    radial-gradient(circle at 34% 24%, #ff4a3a, #c81409 55%, #7d0a05 100%);
+  border: 1px solid rgba(255,140,120,0.45);
+  box-shadow:
+    inset 0 2px 3px rgba(255,190,175,0.5), inset 0 -6px 12px rgba(0,0,0,0.45),
+    0 8px 18px -6px rgba(0,0,0,0.7), 0 0 14px -2px rgba(255,60,40,0.35);
+}
+.ignition.has-cap .cap-lid b {
+  font-size: 8px; font-weight: 800; letter-spacing: 0.2em;
+  color: rgba(255,225,215,0.85);
+  text-shadow: 0 -1px 0 rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.18);
+}
+/* the machined hinge lug the lid swings on — stays put while the lid flips */
+.ignition.has-cap .cap-hinge {
+  position: absolute; top: -2px; left: 50%; transform: translateX(-50%);
+  width: 26px; height: 8px; border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(180deg, #9aa1a8, #4a5057 60%, #23272b);
+  border: 1px solid rgba(0,0,0,0.5);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
+}
+.ignition.has-cap.cap-open .cap-lid {
+  transform: rotateX(-122deg);
+  box-shadow: inset 0 2px 3px rgba(255,190,175,0.35), inset 0 -6px 12px rgba(0,0,0,0.55),
+              0 -6px 16px -8px rgba(0,0,0,0.8);
+}
+/* closed cover swallows the press — the whole button reads as one part */
+.ignition.has-cap:not(.cap-open):active .cap-lid { transform: rotateX(0deg) scale(0.97); }
+.ignition.has-cap:not(.cap-open) .ign-face { opacity: 0; }
+.ignition.has-cap .ign-face { transition: transform 0.1s ease, color 0.25s ease, box-shadow 0.3s ease, opacity 0.25s ease 0.15s; }
 
 /* hybrid eDrive toggle — sits beside the ignition on the 296 */
 .edrive-btn {
