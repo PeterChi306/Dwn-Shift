@@ -849,7 +849,7 @@ const S = {
   in: { gas: 0, brake: 0, clutch: 0 }, // key/pointer targets
   throttle: 0, brake: 0, clutchPedal: 0,
   effThrottle: 0, engage: 0, locked: false,
-  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, parkLimit: 0, pendShift: false,
+  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, catchGuard: 0, parkLimit: 0, pendShift: false,
   tunnel: false, flyby: false, flyX: -380, cabin: false, mods: {},
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
   spinV: 0, lockup: false,
@@ -1858,15 +1858,141 @@ function sayEvent(key, text, opt = {}) {
 // forget the cooldowns when the situation resets (new car, restart)
 function clearVox() { for (const k in VOX) delete VOX[k]; }
 
+/* ---- the electrics you can actually hear running -------------------
+   Key on and a car is not silent. The radiator fans spin up and stay
+   spinning, the HVAC blower comes on with them, and underneath it all
+   is the flat electrical hum of a live loom. It runs until the engine
+   catches and takes over, or until you switch it off.
+
+   This is a sustained bed rather than a one-shot, so it keeps going for
+   as long as you leave the car sitting there powered up. */
+function accBedStart(loud = 1) {
+  if (!AU.ready) return;
+  accBedStop(0.05);
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const bed = { nodes: [], gains: [] };
+
+  // --- radiator fans: broadband rush, spinning up over about a second
+  const fan = ctx.createBufferSource(); fan.buffer = AU.noiseBuf; fan.loop = true;
+  fan.playbackRate.value = 0.62;
+  const fanF = ctx.createBiquadFilter(); fanF.type = "bandpass"; fanF.Q.value = 0.75;
+  fanF.frequency.setValueAtTime(220, t);
+  fanF.frequency.exponentialRampToValueAtTime(760, t + 1.0);
+  const fanG = ctx.createGain();
+  fanG.gain.setValueAtTime(0.0001, t);
+  fanG.gain.linearRampToValueAtTime(0.115 * loud, t + 0.85);
+  fan.connect(fanF); fanF.connect(fanG); fanG.connect(AU.master);
+  fan.start(t);
+  bed.nodes.push(fan); bed.gains.push(fanG);
+
+  // --- the blade-pass tone that makes it read as a fan and not just hiss.
+  //     Rises with the spin-up and then wanders very slightly, the way a
+  //     real one does as it loads and unloads.
+  const blade = ctx.createOscillator(); blade.type = "sawtooth";
+  blade.frequency.setValueAtTime(46, t);
+  blade.frequency.exponentialRampToValueAtTime(132, t + 1.0);
+  const wob = ctx.createOscillator(); wob.type = "sine"; wob.frequency.value = 0.7;
+  const wobG = ctx.createGain(); wobG.gain.value = 2.4;
+  wob.connect(wobG); wobG.connect(blade.frequency); wob.start(t);
+  const bladeF = ctx.createBiquadFilter(); bladeF.type = "lowpass"; bladeF.frequency.value = 560;
+  const bladeG = ctx.createGain();
+  bladeG.gain.setValueAtTime(0.0001, t);
+  bladeG.gain.linearRampToValueAtTime(0.062 * loud, t + 0.9);
+  blade.connect(bladeF); bladeF.connect(bladeG); bladeG.connect(AU.master);
+  blade.start(t);
+  bed.nodes.push(blade, wob); bed.gains.push(bladeG);
+
+  // --- HVAC blower in the dash: softer, closer, no blade tone
+  const blow = ctx.createBufferSource(); blow.buffer = AU.noiseBuf; blow.loop = true;
+  blow.playbackRate.value = 0.4;
+  const blowF = ctx.createBiquadFilter(); blowF.type = "lowpass"; blowF.frequency.value = 900;
+  const blowG = ctx.createGain();
+  blowG.gain.setValueAtTime(0.0001, t + 0.3);
+  blowG.gain.linearRampToValueAtTime(0.05 * loud, t + 1.4);
+  blow.connect(blowF); blowF.connect(blowG); blowG.connect(AU.master);
+  blow.start(t + 0.3);
+  bed.nodes.push(blow); bed.gains.push(blowG);
+
+  // --- and the loom itself: the flat hum of a car that is switched on
+  const hum = ctx.createOscillator(); hum.type = "triangle"; hum.frequency.value = 118;
+  const humG = ctx.createGain();
+  humG.gain.setValueAtTime(0.0001, t);
+  humG.gain.linearRampToValueAtTime(0.02 * loud, t + 0.4);
+  hum.connect(humG); humG.connect(AU.master); hum.start(t);
+  bed.nodes.push(hum); bed.gains.push(humG);
+
+  AU.accBed = bed;
+}
+
+function accBedStop(fade = 0.5) {
+  const bed = AU.accBed;
+  if (!bed || !AU.ready) return;
+  AU.accBed = null;
+  const t = AU.ctx.currentTime;
+  bed.gains.forEach(g => {
+    try {
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + fade);
+    } catch (_) {}
+  });
+  bed.nodes.forEach(n => { try { n.stop(t + fade + 0.05); } catch (_) {} });
+}
+
+/* the ABS pump running its self-test — a short, hard motor buzz with the
+   solenoid valves clicking through underneath it. Every car with ABS does
+   this on key-on and it is unmistakably mechanical. */
+function sfxAbsTest(at) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx;
+  const m = ctx.createOscillator(); m.type = "square";
+  m.frequency.setValueAtTime(74, at);
+  m.frequency.linearRampToValueAtTime(96, at + 0.26);
+  const mf = ctx.createBiquadFilter(); mf.type = "lowpass"; mf.frequency.value = 700;
+  const mg = ctx.createGain();
+  mg.gain.setValueAtTime(0.0001, at);
+  mg.gain.linearRampToValueAtTime(0.045, at + 0.04);
+  mg.gain.setValueAtTime(0.045, at + 0.22);
+  mg.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
+  m.connect(mf); mf.connect(mg); mg.connect(AU.master);
+  m.start(at); m.stop(at + 0.34);
+  // the valve block ticking through its channels
+  for (let i = 0; i < 5; i++) {
+    const tt = at + 0.03 + i * 0.045;
+    const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 2.2;
+    const nf = ctx.createBiquadFilter(); nf.type = "bandpass";
+    nf.frequency.value = 2600 + i * 180; nf.Q.value = 2.4;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.05, tt);
+    ng.gain.exponentialRampToValueAtTime(0.0001, tt + 0.014);
+    n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(tt); n.stop(tt + 0.02);
+  }
+}
+
+/* injectors and the rail ticking as the ECU pulses them — fast, dry, quiet,
+   the sound of a fuel system being told to wake up */
+function sfxInjectorTicks(at, n = 9) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx;
+  for (let i = 0; i < n; i++) {
+    const tt = at + i * 0.037 + Math.random() * 0.008;
+    const s = ctx.createBufferSource(); s.buffer = AU.noiseBuf; s.playbackRate.value = 2.8;
+    const f = ctx.createBiquadFilter(); f.type = "bandpass";
+    f.frequency.value = 3800 + Math.random() * 900; f.Q.value = 3;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.026, tt);
+    g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.01);
+    s.connect(f); f.connect(g); g.connect(AU.master); s.start(tt); s.stop(tt + 0.015);
+  }
+}
+
 /* Key on, engine off. Every car does this: once the dash has finished
    waking up it starts quietly reminding you it's sitting there powered but
    not running, and it doesn't stop until you either start it or switch it
    off. Deliberately soft — a nudge, not the warning tone. */
 function sfxAccNag() {
   if (!AU.ready || S.muted) return;
-  const t = AU.ctx.currentTime;
-  clusterBeep(t, 1174.7, 0.1, 0.019);
-  clusterBeep(t + 0.17, 880, 0.14, 0.016);
+  clusterBeep(AU.ctx.currentTime, 2093, 0.06, 0.024);   // one short pip, nothing more
 }
 
 let accNagT = 0;
@@ -1879,7 +2005,7 @@ function accNagStart(delay) {
     if (S.crankSeq !== seq) return;
     if (!S.acc || S.engineOn || S.cranking) return;
     sfxAccNag();
-    accNagT = setTimeout(tick, 2800);
+    accNagT = setTimeout(tick, 1500);
   };
   accNagT = setTimeout(tick, delay);
 }
@@ -2025,21 +2151,6 @@ function sfxAccRich(c) {
     kn.connect(knF); knF.connect(knG); knG.connect(AU.master); kn.start(seat); kn.stop(seat + 0.06);
   });
 
-  /* --- the cooling fans blipping as the ECU checks them --- */
-  const f0 = t + 0.5;
-  const fan = ctx.createBufferSource(); fan.buffer = AU.noiseBuf; fan.loop = true;
-  fan.playbackRate.value = 0.8;
-  const fanF = ctx.createBiquadFilter(); fanF.type = "bandpass"; fanF.Q.value = 1.6;
-  fanF.frequency.setValueAtTime(300, f0);
-  fanF.frequency.exponentialRampToValueAtTime(900, f0 + 0.22);
-  fanF.frequency.exponentialRampToValueAtTime(340, f0 + 0.55);
-  const fanG = ctx.createGain();
-  fanG.gain.setValueAtTime(0.0001, f0);
-  fanG.gain.linearRampToValueAtTime(0.03, f0 + 0.14);
-  fanG.gain.exponentialRampToValueAtTime(0.0001, f0 + 0.6);
-  fan.connect(fanF); fanF.connect(fanG); fanG.connect(AU.master);
-  fan.start(f0); fan.stop(f0 + 0.65);
-
   /* --- and the belt reminder, because it always does --- */
   clusterBeep(t + 1.42, 1760, 0.09, 0.03);
   clusterBeep(t + 1.62, 1760, 0.09, 0.03);
@@ -2146,6 +2257,19 @@ function sfxAccOn(c) {
   sv.start(s0); sv.stop(s0 + 0.36);
   }
 
+  /* --- the ABS pump cycling its valve block, and the injectors being
+         pulsed awake --- */
+  if (modern) {
+    sfxAbsTest(t + 0.66);
+    sfxInjectorTicks(t + 0.34, 9);
+  } else {
+    sfxInjectorTicks(t + 0.3, 5);
+  }
+
+  /* --- the fans, the blower and the loom: everything that keeps running for
+         as long as the car sits there switched on --- */
+  accBedStart(modern ? 1 : 0.75);
+
   /* --- secondary relays ticking in behind everything else --- */
   [0.30, 0.47, 0.61, 0.82].forEach((dt, i) => {
     const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
@@ -2210,15 +2334,28 @@ function crankProfile(c) {
     grit: diesel ? 1.7 : 1,                      // how much clatter rides the crank
     whine: diesel ? 780 : 1120 + cyl * 22,       // starter gear pitch
   };
-  // a naturally aspirated engine with light internals flares hard on the
+  // a naturally aspirated engine with light internals flares hardest on the
   // first fires — the throttle plates are shut, so it's all fuelling
-  p.flare = diesel ? 0.55 : c.asp === "na" ? 0.95 : 0.8;
-  p.flareT = diesel ? 0.6 : c.asp === "na" ? (cyl >= 10 ? 1.0 : 0.78) : 0.72;
-  // …but only ever to a couple of thousand over idle. No car on earth starts
-  // to the limiter — the ECU catches it and hands straight back to idle.
-  p.peak = clamp(c.idle * (diesel ? 2.0 : c.asp === "na" ? 3.6 : 3.1),
-                 1500, diesel ? 2100 : 4000);
-  return Object.assign(p, c.start || {});
+  p.flare = diesel ? 0.9 : c.asp === "na" ? 1 : 0.95;
+  p.flareT = diesel ? 1.0 : c.asp === "na" ? (cyl >= 10 ? 1.25 : 1.1) : 1.05;
+  const m = Object.assign(p, c.start || {});
+
+  /* Every car swings to somewhere between three and four thousand and comes
+     straight back down — that's the whole shape of a start, and it doesn't
+     matter whether the redline is 4,550 or 12,100. Where inside that band a
+     given car lands is down to how eager it is: a light naturally aspirated
+     engine goes higher than a heavy turbo one. Anything with a low redline
+     is held to three quarters of it so the needle never looks silly. */
+  if (m.peak == null)
+    m.peak = clamp(c.idle * (diesel ? 3.4 : c.asp === "na" ? 3.8 : 3.5),
+                   3000, Math.min(4000, c.cut * 0.78));
+  // and it needs the authority to actually get there
+  m.flare = Math.max(m.flare, 0.95);
+  m.flareT = Math.max(m.flareT, 1.6);
+  // a genuinely feeble engine needs longer to swing that far — the Peel makes
+  // ten horsepower and has to drag itself up there
+  if (Math.max(...c.curve.map(q => q[1])) < 60) m.flareT *= 2.4;
+  return m;
 }
 
 /* the crank itself — solenoid, motor, and the engine fighting back */
@@ -2765,18 +2902,24 @@ function stepPhysics(dt) {
   // startup flare — first fires push the revs up before the idle settles
   S.catchT = Math.max(0, S.catchT - dt);
   if (S.catchT > 0) {
-    // aimed at the start-up ceiling, not held wide open: as the revs come up
-    // to it the fuelling backs off, so it swings up and settles rather than
-    // running away. Overshoot ends the flare outright.
+    /* The flare is aimed at a ceiling rather than held wide open, and it
+       looks ahead to get there cleanly: a featherweight V12 that is climbing
+       at eight thousand rpm a second has to start backing off long before a
+       heavy diesel does, or it sails straight past. So the fuelling is cut
+       against where the revs will BE in a moment, not where they are —
+       which is exactly what the real ECU is doing. */
     const peak = S.catchPeak || ENG.idle * 2.6;
-    if (S.rpm > peak) S.catchT = 0;
-    else {
-      const band = Math.max(180, (peak - ENG.idle) * 0.2);
+    const rate = (S.rpm - (S._catchPrev != null ? S._catchPrev : S.rpm)) / Math.max(dt, 1e-4);
+    S._catchPrev = S.rpm;
+    const lead = S.rpm + rate * 0.2;             // where it is headed
+    if (S.rpm >= peak) S.catchT = 0;             // there. Hand back to idle.
+    else if (lead < peak) {
+      const band = Math.max(180, (peak - ENG.idle) * 0.28);
       eff = Math.max(eff, (S.catchAmt || 0.55)
-        * clamp((peak - S.rpm) / band, 0, 1)
+        * clamp((peak - lead) / band, 0, 1)
         * Math.min(1, S.catchT / 0.4));
     }
-  }
+  } else S._catchPrev = null;
   if (S.cutTimer > 0 || (S.shiftCut > 0 && S.blip <= 0) || !S.engineOn) eff = 0;
   S.effThrottle = eff;
 
@@ -2941,6 +3084,10 @@ function stepPhysics(dt) {
   S.odo += Math.abs(S.v) * dt / 1000;
 
   S.rpm = clamp(S.rpm, 0, S.parkLimit ? S.parkLimit : ENG.cut * 1.24);
+  // the start-up ceiling is absolute — momentum doesn't get to carry the
+  // needle through it either, so the guard outlives the flare by a beat
+  S.catchGuard = Math.max(0, (S.catchGuard || 0) - dt);
+  if (S.catchGuard > 0 && S.catchPeak) S.rpm = Math.min(S.rpm, S.catchPeak);
 
   // stalling — only the full-clutch mode can stall
   if (S.engineOn && !S.cranking && S.mode === "clutch" && !CC.ev &&
@@ -3096,7 +3243,7 @@ function toggleIgnition() {
     if (S.powered) {                          // power everything down
       S.powered = false; S.engineOn = false; S.eDrive = "gas";
       S.rpm = 0; S.boost = 0; S.acc = false;
-      accNagStop();
+      accNagStop(); accBedStop(0.35);
       sfxClunk(0.45);
       closeStartCap();
       updateRunLamp(); updateEdriveUi();
@@ -3108,7 +3255,7 @@ function toggleIgnition() {
 
   if (S.engineOn) {
     S.engineOn = false; S.acc = false;
-    accNagStop();
+    accNagStop(); accBedStop(0.35);
     sfxClunk(0.5);
     closeStartCap();
     updateRunLamp();
@@ -3135,7 +3282,7 @@ function toggleIgnition() {
     $("stallOverlay").classList.remove("show");
     $("lampStall").classList.remove("lit", "blink");
     sfxAccOn(CC);
-    accNagStart(CC.bootRich ? 2600 : 1900);   // …then it starts asking
+    accNagStart(CC.bootRich ? 2400 : 1700);   // …then it starts asking
     updateRunLamp();
     return;
   }
@@ -3174,9 +3321,11 @@ function toggleIgnition() {
     S.catchAmt = p.flare;               // …and how hard it flares is the car's
     S.catchT = p.flareT;
     S.catchPeak = p.peak;               // …up to here and no further
+    S.catchGuard = p.flareT + 0.8;
     // open pipes make a meal of the first fires; a stock system barely coughs
     sfxCatch(p, quiet ? 0.35 : 0.5 + Math.min(1.6, popsRating() * 0.42));
     S.sweep = 0;                        // needle sweep
+    accBedStop(1.1);                    // the engine takes over from the fans
     updateRunLamp();
   }, p.dur * 1000);
 }
@@ -3951,7 +4100,7 @@ function selectCar(id) {
   S.crankSeq = (S.crankSeq || 0) + 1;
   S.cranking = false; S.engineOn = false; S.stalled = false;
   S.acc = false; S.capOpen = false; S._overWarn = 0;
-  accNagStop();
+  accNagStop(); accBedStop(0.2);
   clearVox();
   S.powered = false; S.eDrive = "gas";
   S.rpm = 0; S.v = 0; S.boost = 0; S.locked = false;
