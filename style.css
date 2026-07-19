@@ -447,77 +447,55 @@ kbd {
 
 /* ================================================================
    THE SANT'AGATA STARTER
-   Drawn from the real part: a polished chrome plinth — a long, soft
-   teardrop, narrow at the nose and wide at the base — carrying a
-   candy-red faceted cap with rounded corners, an engraved lift-here
-   chevron down its left flank, and the black START/STOP plaque set
-   into the middle of it.
+   One part only: the red flip-up cover. The button under it is the
+   same engine start button every other car in the garage has, ring
+   and all — the cover is the only thing that differs.
 
-   The cap is only a cover. Underneath is the car's ordinary engine
-   start button, and that is still the thing you press.
+   The lid is a real two-sided panel: candy-red faceted crown on the
+   front, machined aluminium on the back. Flipped up it swings past
+   vertical and you see its underside, so "open" is unmistakable.
    ================================================================ */
 .ign-cap { display: none; }
 .ignition.has-cap .ign-cap {
   display: block;
-  position: absolute; inset: -9px -1px -3px;
+  position: absolute; inset: -2px;
   transform-style: preserve-3d;
   pointer-events: none;
 }
 
-/* --- the polished plinth. Soft rounded teardrop, not a cut hexagon --- */
-.ignition.has-cap .cap-bezel {
-  position: absolute; inset: 0;
-  border-radius: 48% 48% 42% 42% / 38% 38% 30% 30%;
-  background:
-    /* the hard specular bands that make chrome read as chrome */
-    linear-gradient(198deg,
-      rgba(255,255,255,0.95) 0%, rgba(158,166,176,0.55) 12%,
-      rgba(32,36,42,0.8) 27%, rgba(212,220,230,0.9) 44%,
-      rgba(246,250,255,0.98) 52%, rgba(104,112,122,0.72) 64%,
-      rgba(20,23,27,0.9) 78%, rgba(186,196,206,0.85) 92%,
-      rgba(120,128,138,0.7) 100%),
-    conic-gradient(from 208deg at 50% 44%, #d4dbe3, #70787f 16%, #f1f6fb 32%,
-                   #464d55 50%, #e3eaf2 68%, #7a828b 84%, #d4dbe3);
-  filter: saturate(0.3);
-  box-shadow:
-    inset 0 1px 1px rgba(255,255,255,0.8),
-    inset 0 -3px 6px rgba(0,0,0,0.45),
-    0 9px 20px -9px rgba(0,0,0,0.85);
-}
-/* the shadowed step where the plinth drops away to the cap */
-.ignition.has-cap .cap-well {
-  position: absolute; inset: 16.5% 14.5% 20.5%;
-  /* follows the cap's outline so no black corners show around it */
-  clip-path: polygon(
-    42% 0%, 58% 0%, 88% 9%, 96% 17%, 100% 47%, 98% 60%,
-    62% 96%, 50% 100%, 38% 96%, 2% 60%, 0% 47%, 4% 17%, 12% 9%);
-  background: radial-gradient(ellipse at 50% 26%, #2c2118, #0a0708 78%);
-  box-shadow: inset 0 3px 7px rgba(0,0,0,0.95);
-  transition: opacity 0.2s ease 0.16s;
-}
-.ignition.has-cap.cap-open .cap-well { opacity: 0; }
-
-/* the hinge lug at the nose */
+/* the machined hinge lug the lid swings on */
 .ignition.has-cap .cap-hinge {
-  position: absolute; top: 14%; left: 50%; transform: translateX(-50%);
-  width: 13px; height: 5px; border-radius: 2px 2px 0 0;
+  position: absolute; top: 3px; left: 50%; transform: translateX(-50%);
+  width: 16px; height: 6px; border-radius: 2px 2px 0 0;
   background: linear-gradient(180deg, #eef2f7, #939aa2 45%, #40464c 75%, #1d2024);
   border: 1px solid rgba(0,0,0,0.5);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+  z-index: 7;
 }
 
-/* --- the cap: soft-cornered faceted hexagon in candy red --- */
+/* --- the lid: a two-sided panel hinged at its top edge --- */
 .ignition.has-cap .cap-lid {
-  position: absolute; inset: 18.5% 16.5% 22.5%;
-  /* a hexagon with every corner chamfered — reads as rounded at this size */
+  position: absolute; inset: 5px;
+  transform-style: preserve-3d;
+  transform-origin: 50% 0%;
+  transform: rotateX(0deg);
+  transition: transform 0.55s cubic-bezier(0.34, 1.4, 0.5, 1);
+  z-index: 8;
+}
+/* the faces share the hexagon outline — every corner chamfered, so it
+   reads as the rounded part it is rather than a cut nut */
+.ignition.has-cap .cap-front,
+.ignition.has-cap .cap-back {
+  position: absolute; inset: 0;
   clip-path: polygon(
     42% 0%, 58% 0%, 88% 9%, 96% 17%, 100% 47%, 98% 60%,
     62% 96%, 50% 100%, 38% 96%, 2% 60%, 0% 47%, 4% 17%, 12% 9%);
+  backface-visibility: hidden;
+}
+
+/* --- front: candy red over metal --- */
+.ignition.has-cap .cap-front {
   display: flex; align-items: center; justify-content: center;
-  transform-origin: 50% 0%;
-  transform: rotateX(0deg);
-  transition: transform 0.52s cubic-bezier(0.34, 1.42, 0.5, 1);
-  /* candy red over metal: hot where the light lands, near-black in the wells */
   background:
     linear-gradient(166deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 22%),
     radial-gradient(ellipse at 46% 12%, #ff7a52 0%, #ee2a17 30%,
@@ -525,8 +503,7 @@ kbd {
   box-shadow:
     inset 0 1px 1px rgba(255,214,198,0.8),
     inset 0 -7px 13px rgba(52,2,0,0.75),
-    0 5px 12px -4px rgba(0,0,0,0.8),
-    0 0 10px -3px rgba(255,60,30,0.35);
+    0 5px 12px -4px rgba(0,0,0,0.85);
 }
 /* the cut planes — each catches the light at its own angle, which is what
    stops it reading as a flat red sticker */
@@ -558,45 +535,56 @@ kbd {
 }
 /* the engraved lift-here chevron down the left flank */
 .ignition.has-cap .cap-arrow {
-  position: absolute; left: 20%; top: 46%;
-  width: 6px; height: 6px; margin-top: -3px;
+  position: absolute; left: 19%; top: 47%;
+  width: 7px; height: 7px; margin-top: -3.5px;
   border-left: 1px solid rgba(255,226,216,0.55);
   border-top: 1px solid rgba(255,226,216,0.55);
   transform: rotate(45deg);
   filter: drop-shadow(0 1px 0 rgba(70,4,0,0.7));
 }
 /* the black START/STOP plaque set into the face */
-.ignition.has-cap .cap-lid b {
+.ignition.has-cap .cap-front b {
   position: relative; z-index: 2;
   display: flex; flex-direction: column; align-items: center; line-height: 1.1;
-  padding: 2px 4px; border-radius: 2.5px;
-  font-size: 5px; font-weight: 800; letter-spacing: 0.1em;
+  padding: 2px 5px; border-radius: 2.5px;
+  font-size: 5.5px; font-weight: 800; letter-spacing: 0.1em;
   color: rgba(236,240,246,0.92);
   background: linear-gradient(180deg, #17181b, #050506);
   box-shadow: inset 0 1px 1px rgba(0,0,0,0.9), 0 0 0 0.5px rgba(255,190,175,0.35);
 }
-.ignition.has-cap .cap-lid b i {
-  font-style: normal; font-size: 4.5px; opacity: 0.55; letter-spacing: 0.24em;
+.ignition.has-cap .cap-front b i {
+  font-style: normal; font-size: 5px; opacity: 0.55; letter-spacing: 0.24em;
 }
 
-/* flipped up — the lid hinges away and the real button is underneath */
-.ignition.has-cap.cap-open .cap-lid {
-  transform: rotateX(-116deg);
-  box-shadow: inset 0 1px 1px rgba(255,214,198,0.4), inset 0 -7px 13px rgba(52,2,0,0.85),
-              0 -5px 14px -7px rgba(0,0,0,0.85);
+/* --- back: the machined underside, only seen once it's flipped up --- */
+.ignition.has-cap .cap-back {
+  transform: rotateX(180deg);
+  background:
+    repeating-linear-gradient(96deg, rgba(255,255,255,0.06) 0 1px, rgba(0,0,0,0.09) 1px 2.5px),
+    radial-gradient(ellipse at 50% 70%, #6e727a, #3a3e44 60%, #1e2125 100%);
+  box-shadow: inset 0 -1px 1px rgba(255,255,255,0.3), inset 0 6px 12px rgba(0,0,0,0.6);
 }
+/* the return spring coiled around the hinge pin, visible from below */
+.ignition.has-cap .cap-back::after {
+  content: ""; position: absolute; left: 50%; bottom: 14%;
+  width: 20px; height: 4px; margin-left: -10px; border-radius: 2px;
+  background: repeating-linear-gradient(90deg, #aeb4bc 0 1px, #4b5057 1px 2.5px);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+
+/* --- open: swung well past vertical, showing its underside, clear of the
+       button so there's no mistaking it for shut --- */
+.ignition.has-cap.cap-open .cap-lid { transform: rotateX(-138deg); }
 .ignition.has-cap:not(.cap-open):active .cap-lid { transform: rotateX(0deg) scale(0.965); }
 
-/* --- the button underneath is the car's ordinary engine start button.
-       Hidden behind the closed cover, and lifted above the plinth once
-       the cover is up so you can actually get at it. --- */
-.ignition.has-cap .ign-ring { opacity: 0; }
+/* --- the button underneath is the standard one, unchanged. It's simply
+       hidden while the cover is over it. --- */
 .ignition.has-cap .ign-face {
-  opacity: 0; transform: scale(0.88);
-  transition: opacity 0.25s ease 0.16s, transform 0.32s var(--ease-snap) 0.16s,
+  opacity: 0; transform: scale(0.9);
+  transition: opacity 0.25s ease 0.18s, transform 0.32s var(--ease-snap) 0.18s,
               color 0.25s ease, box-shadow 0.3s ease;
 }
-.ignition.has-cap.cap-open .ign-face { opacity: 1; transform: scale(1); z-index: 6; }
+.ignition.has-cap.cap-open .ign-face { opacity: 1; transform: scale(1); }
 .ignition.has-cap.cap-open:active .ign-face { transform: scale(0.94); }
 /* ================================================================
    PHYSICAL KEY BARREL — the old cars. OFF → ON (electronics live)

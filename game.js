@@ -49,6 +49,7 @@ const CARS = [
   {
     id: "strada", name: "Strada Corsa V10", tag: "formula screamer", layout: "V10",
     cyl: 10, idle: 1400, max: 12200, cut: 12500, inertia: 0.16,
+    bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 280, dur: 0.6,  fires: 4, flare: 1.0,  flareT: 0.9 },
     curve: [[0, 90], [1500, 175], [4000, 295], [7000, 375], [9500, 415], [11500, 398],
             [12200, 368], [13000, 220]],
@@ -66,6 +67,7 @@ const CARS = [
   {
     id: "t50", name: "Dunsfold T.50", tag: "12,100 rpm V12 · ground-effect fan", layout: "V12 · 3.9L NA · 986kg",
     cyl: 12, idle: 1000, max: 11500, cut: 12100, inertia: 0.09,   // lightest crank ever fitted to a road car
+    bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 270, dur: 0.52, fires: 4, flare: 0.98, flareT: 0.85 },
     curve: [[0, 140], [1500, 270], [4000, 370], [7000, 430], [9000, 466], [10500, 452],
             [11500, 425], [12400, 290]],
@@ -98,6 +100,7 @@ const CARS = [
   {
     id: "veleno", name: "Maranello 812", tag: "front-engined V12 thoroughbred", layout: "V12 · 6.5L NA",
     cyl: 12, idle: 900, max: 8900, cut: 9250, inertia: 0.20,
+    bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 235, dur: 0.72, fires: 4, flare: 0.88, flareT: 0.9 },
     curve: [[0, 140], [1000, 320], [3000, 480], [5000, 560], [7000, 600], [8000, 585],
             [8900, 540], [9600, 350]],
@@ -134,6 +137,7 @@ const CARS = [
   {
     id: "gintani", name: "Sant'Agata SVJ Gintani", tag: "straight-pipe V12 · fireworks", layout: "V12 · 6.5L open pipes",
     cyl: 12, idle: 950, max: 9000, cut: 9350, inertia: 0.19, shiftLights: true,
+    bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 232, dur: 0.92, fires: 5, flare: 1.0, flareT: 1.2, whine: 1290 },
     curve: [[0, 150], [1000, 335], [3000, 500], [5000, 585], [7000, 625], [8000, 610],
             [9000, 560], [9700, 360]],
@@ -170,6 +174,7 @@ const CARS = [
   {
     id: "huayrar", name: "San Cesario R", tag: "the best-sounding car in the world", layout: "V12 · 6.0L NA · open megaphone",
     cyl: 12, idle: 1100, max: 8750, cut: 9000, inertia: 0.10,  // race-spec V12, near-zero flywheel
+    bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 240, dur: 0.66, fires: 5, flare: 1.0,  flareT: 1.0 },
     curve: [[0, 150], [1200, 330], [3000, 545], [5500, 750], [7000, 745], [8250, 720],
             [8750, 680], [9400, 420]],
@@ -209,6 +214,7 @@ const CARS = [
   {
     id: "huracan", name: "Sant'Agata V10 Evo", tag: "the everyday supercar scream", layout: "V10 · 5.2L NA",
     cyl: 10, idle: 1000, max: 8500, cut: 8700, inertia: 0.21, shiftLights: true, awd: true,
+    bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 250, dur: 0.74, fires: 4, flare: 0.92, flareT: 0.9 },
     curve: [[0, 190], [1000, 330], [3000, 470], [5000, 560], [6500, 600], [7500, 592],
             [8500, 545], [9200, 360]],
@@ -242,6 +248,7 @@ const CARS = [
   {
     id: "revuelto", name: "Sant'Agata Revuelto", tag: "V12 hybrid flagship · 9,500 rpm", layout: "V12 · 6.5L NA + 3 e-motors",
     cyl: 12, idle: 950, max: 9250, cut: 9500, inertia: 0.15, shiftLights: true, awd: true,
+    bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 300, dur: 0.5,  fires: 3, flare: 0.7,  flareT: 0.6 },
     curve: [[0, 200], [1000, 400], [3000, 560], [5000, 650], [6750, 725], [8000, 712],
             [9250, 655], [9800, 420]],
@@ -309,7 +316,7 @@ const CARS = [
   {
     id: "tempest", name: "Tempest MkIV", tag: "single big turbo", layout: "I6",
     cyl: 6, idle: 850, max: 7600, cut: 7800, inertia: 0.33,
-    start: { rpm: 265, dur: 0.7,  fires: 3, flare: 0.6,  flareT: 0.55, grit: 1.2 },
+    start: { rpm: 265, dur: 0.7,  fires: 3, flare: 0.85, flareT: 0.8, grit: 1.2 },
     twoStage: true, ignKey: true,   // 90s ECU + fuel pump prime before the starter
     curve: [[0, 80], [1000, 148], [2500, 208], [4000, 238], [5500, 248], [6800, 236],
             [7600, 208], [8200, 130]],
@@ -341,7 +348,7 @@ const CARS = [
   {
     id: "hellion", name: "Hellion 6.2 SC", tag: "supercharged muscle", layout: "V8",
     cyl: 8, idle: 680, max: 6400, cut: 6550, inertia: 0.44,
-    start: { rpm: 230, dur: 0.66, fires: 3, flare: 0.75, flareT: 0.6, grit: 1.15 },
+    start: { rpm: 230, dur: 0.66, fires: 3, flare: 0.9,  flareT: 0.8, grit: 1.15 },
     twoStage: true, ignKey: true,   // ignition on, let the pump build, then crank
     curve: [[0, 150], [700, 318], [2000, 415], [3500, 468], [4800, 478], [5800, 452],
             [6400, 408], [6900, 280]],
@@ -392,6 +399,7 @@ const CARS = [
   {
     id: "woking765", name: "Woking 765LT", tag: "longtail savage · flat-plane TT", layout: "V8 · 4.0L twin turbo",
     cyl: 8, idle: 800, max: 8100, cut: 8500, inertia: 0.22,   // LT flywheel — throttle like a switch
+    bootRich: true,          // full supercar dash boot on the key
     curve: [[0, 110], [800, 230], [2500, 360], [4500, 400], [5500, 405], [7000, 400],
             [8100, 370], [8600, 240]],
     mass: 1420, finalDrive: 3.7, clutchCap: 1500, cdA: 0.60, brakeMax: 15000, grip: 1.75,
@@ -475,6 +483,7 @@ const CARS = [
   {
     id: "hexen", name: "Hexen 5.2 FP", tag: "flat-plane screamer", layout: "V8 NA · flat-plane",
     cyl: 8, idle: 800, max: 8250, cut: 8500, inertia: 0.3,
+    bootRich: true,          // full supercar dash boot on the key
     curve: [[0, 110], [800, 230], [3000, 380], [5000, 480], [6500, 530], [7500, 520],
             [8250, 480], [8900, 300]],
     mass: 1660, finalDrive: 3.73, clutchCap: 700, cdA: 0.65, brakeMax: 13000,
@@ -506,6 +515,7 @@ const CARS = [
   {
     id: "cavallino", name: "Maranello 296", tag: "hybrid V6 · eDrive", layout: "V6 · twin turbo + e-motor",
     cyl: 6, idle: 900, max: 8500, cut: 8700, inertia: 0.19, shiftLights: true,
+    bootRich: true,          // full supercar dash boot on the key
     curve: [[0, 260], [1500, 460], [3000, 590], [4500, 650], [6000, 665], [6500, 665],
             [7500, 645], [8000, 615], [8500, 570], [9200, 380]],
     // clutchCap must clear peak torque × full boost (665 × 1.78 ≈ 1180) or the
@@ -548,6 +558,7 @@ const CARS = [
   {
     id: "f458", name: "Maranello 458 Spider", tag: "the last pure NA V8 · top down", layout: "V8 · 4.5L flat-plane",
     cyl: 8, idle: 900, max: 9000, cut: 9250, inertia: 0.17, shiftLights: true,
+    bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 265, dur: 0.68, fires: 4, flare: 0.95, flareT: 0.85 },
     curve: [[0, 170], [1000, 300], [3000, 430], [5000, 505], [6000, 540], [7500, 532],
             [8500, 508], [9000, 485], [9700, 330]],
@@ -583,6 +594,7 @@ const CARS = [
   {
     id: "kaze", name: "Kaze 787", tag: "quad-rotor Le Mans legend", layout: "4-rotor · 2.6L",
     cyl: 8, idle: 1100, max: 9000, cut: 9300, inertia: 0.11,  // R26B: pure response
+    bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 320, dur: 0.72, fires: 3, flare: 0.95, flareT: 0.8, whine: 1500 },
     twoStage: true,          // race car: master switch, pump, THEN the button
     curve: [[0, 120], [1500, 300], [3500, 450], [5000, 540], [6500, 608], [7800, 590],
@@ -618,7 +630,8 @@ const CARS = [
     id: "molsheim", name: "Molsheim 16.4", tag: "quad-turbo hypercar", layout: "W16 · quad turbo",
     awd: true,
     cyl: 16, idle: 800, max: 7100, cut: 7300, inertia: 0.5,
-    start: { rpm: 195, dur: 1.15, fires: 6, flare: 0.6,  flareT: 0.7,  whine: 900 },
+    bootRich: true,          // full supercar dash boot on the key
+    start: { rpm: 195, dur: 1.15, fires: 6, flare: 0.8,  flareT: 0.85, whine: 900 },
     curve: [[0, 300], [800, 520], [2000, 760], [3000, 880], [4500, 900], [6000, 860],
             [7100, 780], [7600, 500]],
     mass: 1995, finalDrive: 2.0, clutchCap: 2600, cdA: 0.50, brakeMax: 17000,
@@ -643,6 +656,7 @@ const CARS = [
   {
     id: "absolut", name: "Ängelholm Absolut", tag: "twin-turbo top-speed missile · 0-400-0", layout: "V8 · 5.0L flat-plane twin turbo",
     cyl: 8, idle: 820, max: 8500, cut: 8700, inertia: 0.15,   // flat crank, feathery response
+    bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 245, dur: 0.78, fires: 4, flare: 0.8,  flareT: 0.7 },
     curve: [[0, 300], [1500, 660], [3000, 940], [4500, 1020], [6000, 985], [7200, 890],
             [8500, 720], [9000, 480]],
@@ -834,7 +848,7 @@ const S = {
   in: { gas: 0, brake: 0, clutch: 0 }, // key/pointer targets
   throttle: 0, brake: 0, clutchPedal: 0,
   effThrottle: 0, engage: 0, locked: false,
-  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, pendShift: false,
+  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, pendShift: false,
   tunnel: false, flyby: false, flyX: -380, cabin: false, mods: {},
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
   spinV: 0, lockup: false,
@@ -1828,9 +1842,35 @@ function sayVoice(text, opt = {}) {
   } catch (_) {}
 }
 
+/* Event callouts. Rate-limited per kind so the cluster informs you rather
+   than nags: a warning you're actively ignoring repeats, everything else
+   says its piece once and shuts up. */
+const VOX = {};
+function sayEvent(key, text, opt = {}) {
+  if (!S.voice || S.muted) return;
+  const now = performance.now();
+  const gap = (opt.cool != null ? opt.cool : 6) * 1000;
+  if (VOX[key] && now - VOX[key] < gap) return;
+  VOX[key] = now;
+  sayVoice(text, opt);
+}
+// forget the cooldowns when the situation resets (new car, restart)
+function clearVox() { for (const k in VOX) delete VOX[k]; }
+
+/* the harsh two-tone a cluster uses when it actually wants your attention —
+   deliberately unpleasant, and nothing like the polite self-test beep */
+function warnChime(urgency = 1) {
+  if (!AU.ready) return;
+  const t = AU.ctx.currentTime;
+  clusterBeep(t, 988, 0.09, 0.055 * urgency);
+  clusterBeep(t + 0.11, 740, 0.11, 0.055 * urgency);
+  if (urgency > 1) clusterBeep(t + 0.24, 988, 0.09, 0.05 * urgency);
+}
+
 // a clean cluster beep — the kind a self-test makes: sine core, a touch of
 // third harmonic for the piezo edge, hard-gated so it never rings
 function clusterBeep(at, hz = 2100, dur = 0.055, amp = 0.05) {
+  if (!AU.ready) return;
   const ctx = AU.ctx;
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.0001, at);
@@ -1844,6 +1884,138 @@ function clusterBeep(at, hz = 2100, dur = 0.055, amp = 0.05) {
     const og = ctx.createGain(); og.gain.value = lvl;
     o.connect(og); og.connect(g); o.start(at); o.stop(at + dur + 0.02);
   });
+}
+
+/* The full supercar wake-up, on top of the ordinary one. This is the bit
+   people film: you turn it on and the car spends two seconds proving it
+   still works before it will let you start it.
+
+   Everything here is a real noise a real car makes on key-on — the head
+   unit's speaker relay, the needles sweeping their stops, the exhaust
+   bypass valves cycling, the fans blipping, the TFT dash lighting up. */
+function sfxAccRich(c) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const loud = Math.min(1.5, 0.7 + popsRating() * 0.2);   // open pipes make a meal of it
+
+  /* --- the head unit's speaker relay. A soft thunk with real weight to it,
+         the sound of amplifiers being connected to drivers. Nothing else on
+         a car sounds like this and everyone knows it instantly. --- */
+  const amp0 = t + 0.09;
+  const amp = ctx.createOscillator(); amp.type = "sine";
+  amp.frequency.setValueAtTime(96, amp0);
+  amp.frequency.exponentialRampToValueAtTime(38, amp0 + 0.1);
+  const ampG = ctx.createGain();
+  ampG.gain.setValueAtTime(0.0001, amp0);
+  ampG.gain.linearRampToValueAtTime(0.3, amp0 + 0.008);
+  ampG.gain.exponentialRampToValueAtTime(0.0001, amp0 + 0.16);
+  amp.connect(ampG); ampG.connect(AU.master); amp.start(amp0); amp.stop(amp0 + 0.2);
+  // the tiny relay contact that does it
+  const rc = ctx.createBufferSource(); rc.buffer = AU.noiseBuf; rc.playbackRate.value = 1.9;
+  const rcF = ctx.createBiquadFilter(); rcF.type = "bandpass"; rcF.frequency.value = 2700; rcF.Q.value = 2;
+  const rcG = ctx.createGain();
+  rcG.gain.setValueAtTime(0.13, amp0);
+  rcG.gain.exponentialRampToValueAtTime(0.0001, amp0 + 0.018);
+  rc.connect(rcF); rcF.connect(rcG); rcG.connect(AU.master); rc.start(amp0); rc.stop(amp0 + 0.03);
+
+  /* --- the TFT dash lighting up: a soft rising swell, no transient. The
+         cluster arriving rather than switching. --- */
+  const tft0 = t + 0.2;
+  [[220, 0.020], [330, 0.014], [440, 0.010]].forEach(([hz, lvl], i) => {
+    const o = ctx.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(hz * 0.985, tft0);
+    o.frequency.linearRampToValueAtTime(hz, tft0 + 0.5);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, tft0 + i * 0.05);
+    g.gain.linearRampToValueAtTime(lvl, tft0 + 0.28 + i * 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, tft0 + 0.95);
+    o.connect(g); g.connect(AU.master); o.start(tft0 + i * 0.05); o.stop(tft0 + 1.0);
+  });
+
+  /* --- the needles sweeping to their stops and back. Stepper motors under
+         glass: a thin whirr that rises with the sweep out, pauses on the peg,
+         then falls as they come home. Timed to the gauges actually moving. --- */
+  const sw0 = t + 0.26;
+  const nsw = ctx.createOscillator(); nsw.type = "sawtooth";
+  nsw.frequency.setValueAtTime(240, sw0);
+  nsw.frequency.linearRampToValueAtTime(720, sw0 + 0.4);       // out to the stop
+  nsw.frequency.setValueAtTime(720, sw0 + 0.48);
+  nsw.frequency.linearRampToValueAtTime(250, sw0 + 0.92);      // and back home
+  const nswF = ctx.createBiquadFilter(); nswF.type = "bandpass";
+  nswF.frequency.value = 2100; nswF.Q.value = 4.5;
+  const nswG = ctx.createGain();
+  nswG.gain.setValueAtTime(0.0001, sw0);
+  nswG.gain.linearRampToValueAtTime(0.026, sw0 + 0.06);
+  nswG.gain.setValueAtTime(0.026, sw0 + 0.86);
+  nswG.gain.exponentialRampToValueAtTime(0.0001, sw0 + 0.95);
+  nsw.connect(nswF); nswF.connect(nswG); nswG.connect(AU.master);
+  nsw.start(sw0); nsw.stop(sw0 + 1.0);
+  // both needles hitting their stops, then landing back on zero
+  [[sw0 + 0.42, 0.06], [sw0 + 0.45, 0.05], [sw0 + 0.9, 0.045], [sw0 + 0.93, 0.04]]
+    .forEach(([at, lvl]) => {
+      const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 2.4;
+      const nf = ctx.createBiquadFilter(); nf.type = "bandpass";
+      nf.frequency.value = 3400; nf.Q.value = 2.2;
+      const ng = ctx.createGain();
+      ng.gain.setValueAtTime(lvl, at);
+      ng.gain.exponentialRampToValueAtTime(0.0001, at + 0.02);
+      n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(at); n.stop(at + 0.03);
+    });
+
+  /* --- the exhaust bypass valves cycling on their self-test. Two actuator
+         servos, a beat apart, each ending in the valve plate seating against
+         its stop — right down the pipes, so on a straight-piped car you hear
+         it through the whole exhaust. --- */
+  [0.62, 0.86].forEach((dt, i) => {
+    const v0 = t + dt;
+    // the actuator driving over
+    const v = ctx.createOscillator(); v.type = "sawtooth";
+    v.frequency.setValueAtTime(150, v0);
+    v.frequency.linearRampToValueAtTime(300 + i * 60, v0 + 0.13);
+    const vf = ctx.createBiquadFilter(); vf.type = "bandpass";
+    vf.frequency.value = 1150; vf.Q.value = 3.4;
+    const vg = ctx.createGain();
+    vg.gain.setValueAtTime(0.0001, v0);
+    vg.gain.linearRampToValueAtTime(0.03 * loud, v0 + 0.03);
+    vg.gain.setValueAtTime(0.03 * loud, v0 + 0.1);
+    vg.gain.exponentialRampToValueAtTime(0.0001, v0 + 0.15);
+    v.connect(vf); vf.connect(vg); vg.connect(AU.master); v.start(v0); v.stop(v0 + 0.18);
+    // the plate seating — a dull metallic clack that rings down the pipe
+    const seat = v0 + 0.14;
+    const k = ctx.createOscillator(); k.type = "sine";
+    k.frequency.setValueAtTime(430 - i * 60, seat);
+    k.frequency.exponentialRampToValueAtTime(120, seat + 0.06);
+    const kg = ctx.createGain();
+    kg.gain.setValueAtTime(0.16 * loud, seat);
+    kg.gain.exponentialRampToValueAtTime(0.0001, seat + 0.1);
+    k.connect(kg); kg.connect(AU.master); k.start(seat); k.stop(seat + 0.12);
+    const kn = ctx.createBufferSource(); kn.buffer = AU.noiseBuf; kn.playbackRate.value = 1.4;
+    const knF = ctx.createBiquadFilter(); knF.type = "bandpass";
+    knF.frequency.value = 1700; knF.Q.value = 1.1;
+    const knG = ctx.createGain();
+    knG.gain.setValueAtTime(0.14 * loud, seat);
+    knG.gain.exponentialRampToValueAtTime(0.0001, seat + 0.045);
+    kn.connect(knF); knF.connect(knG); knG.connect(AU.master); kn.start(seat); kn.stop(seat + 0.06);
+  });
+
+  /* --- the cooling fans blipping as the ECU checks them --- */
+  const f0 = t + 0.5;
+  const fan = ctx.createBufferSource(); fan.buffer = AU.noiseBuf; fan.loop = true;
+  fan.playbackRate.value = 0.8;
+  const fanF = ctx.createBiquadFilter(); fanF.type = "bandpass"; fanF.Q.value = 1.6;
+  fanF.frequency.setValueAtTime(300, f0);
+  fanF.frequency.exponentialRampToValueAtTime(900, f0 + 0.22);
+  fanF.frequency.exponentialRampToValueAtTime(340, f0 + 0.55);
+  const fanG = ctx.createGain();
+  fanG.gain.setValueAtTime(0.0001, f0);
+  fanG.gain.linearRampToValueAtTime(0.03, f0 + 0.14);
+  fanG.gain.exponentialRampToValueAtTime(0.0001, f0 + 0.6);
+  fan.connect(fanF); fanF.connect(fanG); fanG.connect(AU.master);
+  fan.start(f0); fan.stop(f0 + 0.65);
+
+  /* --- and the belt reminder, because it always does --- */
+  clusterBeep(t + 1.42, 1760, 0.09, 0.03);
+  clusterBeep(t + 1.62, 1760, 0.09, 0.03);
 }
 
 /* first press: everything wakes up.
@@ -1969,6 +2141,9 @@ function sfxAccOn(c) {
   } else {
     clusterBeep(t + 0.55, 1046, 0.16, 0.035);
   }
+
+  // the exotics get the whole performance on top
+  if (c && c.bootRich) sfxAccRich(c);
 }
 
 /* ================================================================
@@ -2007,8 +2182,12 @@ function crankProfile(c) {
   };
   // a naturally aspirated engine with light internals flares hard on the
   // first fires — the throttle plates are shut, so it's all fuelling
-  p.flare = diesel ? 0.34 : c.asp === "na" ? 0.95 : 0.62;
-  p.flareT = diesel ? 0.5 : c.asp === "na" ? (cyl >= 10 ? 1.0 : 0.78) : 0.55;
+  p.flare = diesel ? 0.55 : c.asp === "na" ? 0.95 : 0.8;
+  p.flareT = diesel ? 0.6 : c.asp === "na" ? (cyl >= 10 ? 1.0 : 0.78) : 0.72;
+  // …but only ever to a couple of thousand over idle. No car on earth starts
+  // to the limiter — the ECU catches it and hands straight back to idle.
+  p.peak = clamp(c.idle * (diesel ? 1.9 : c.asp === "na" ? 3.0 : 2.6),
+                 1500, diesel ? 2000 : 3800);
   return Object.assign(p, c.start || {});
 }
 
@@ -2548,8 +2727,19 @@ function stepPhysics(dt) {
   }
   // startup flare — first fires push the revs up before the idle settles
   S.catchT = Math.max(0, S.catchT - dt);
-  if (S.catchT > 0)
-    eff = Math.max(eff, (S.catchAmt || 0.55) * Math.min(1, S.catchT / 0.4));
+  if (S.catchT > 0) {
+    // aimed at the start-up ceiling, not held wide open: as the revs come up
+    // to it the fuelling backs off, so it swings up and settles rather than
+    // running away. Overshoot ends the flare outright.
+    const peak = S.catchPeak || ENG.idle * 2.6;
+    if (S.rpm > peak) S.catchT = 0;
+    else {
+      const band = Math.max(250, (peak - ENG.idle) * 0.45);
+      eff = Math.max(eff, (S.catchAmt || 0.55)
+        * clamp((peak - S.rpm) / band, 0, 1)
+        * Math.min(1, S.catchT / 0.4));
+    }
+  }
   if (S.cutTimer > 0 || (S.shiftCut > 0 && S.blip <= 0) || !S.engineOn) eff = 0;
   S.effThrottle = eff;
 
@@ -2753,6 +2943,8 @@ function stepPhysics(dt) {
         sfxBackfire();
         $("lampCel").classList.add("lit", "blink");
         setTimeout(() => $("lampCel").classList.remove("blink"), 2600);
+        warnChime(1);
+        sayEvent("cel", "Check engine", { cool: 45 });
       }
     } else if (Math.random() < dt * 0.12 && S.rpm > ENG.idle * 1.2) {
       S.shiftCut = Math.max(S.shiftCut, 0.09);   // brief ignition drop — lurch
@@ -2814,6 +3006,8 @@ function stallEngine() {
   S.engineOn = false; S.stalled = true; S.locked = false;
   updateRunLamp();
   sfxClunk(1.4);
+  warnChime(1);
+  sayEvent("stall", "Engine stalled", { cool: 3 });
   $("stallOverlay").classList.add("show");
   $("lampStall").classList.add("lit", "blink");
 }
@@ -2938,6 +3132,7 @@ function toggleIgnition() {
     S.rpm = p.rpm;                      // catches from cranking speed…
     S.catchAmt = p.flare;               // …and how hard it flares is the car's
     S.catchT = p.flareT;
+    S.catchPeak = p.peak;               // …up to here and no further
     // open pipes make a meal of the first fires; a stock system barely coughs
     sfxCatch(p, quiet ? 0.35 : 0.5 + Math.min(1.6, popsRating() * 0.42));
     S.sweep = 0;                        // needle sweep
@@ -2967,9 +3162,10 @@ function fireHybrid() {
   } else if (S.mode === "manual") S.gear = 1;
   S.rpm = 3500;                               // the fire-up flare
   S.shiftCool = 0.45;                         // a beat before the box reacts
-  S.catchT = 0.1; S.catchAmt = 0.45;
+  S.catchT = 0.1; S.catchAmt = 0.45; S.catchPeak = 3600;
   S.sweep = -1;
   sfxHybridFire();
+  sayEvent("gas", CC.cyl >= 12 ? "V twelve engaged" : "Combustion engine engaged", { cool: 4 });
   updateRunLamp(); updateEdriveUi();
 }
 
@@ -2984,6 +3180,7 @@ function toElectric() {
   }
   S.eDrive = "ev"; S.engineOn = false; S.rpm = 0; S.boost = 0;
   sfxChimeFerrari(0.7);                       // a quieter grace note mid-drive
+  sayEvent("ev", "Electric mode on", { cool: 4 });
   updateRunLamp(); updateEdriveUi();
 }
 
@@ -3712,7 +3909,8 @@ function selectCar(id) {
   // full reset — new car arrives parked, engine off
   S.crankSeq = (S.crankSeq || 0) + 1;
   S.cranking = false; S.engineOn = false; S.stalled = false;
-  S.acc = false; S.capOpen = false;
+  S.acc = false; S.capOpen = false; S._overWarn = 0;
+  clearVox();
   S.powered = false; S.eDrive = "gas";
   S.rpm = 0; S.v = 0; S.boost = 0; S.locked = false;
   S.seqStage = 0; S._seqPrev = 0;
@@ -4520,11 +4718,13 @@ function toggleAutodrive() {
   AD.target = adVmax() * (0.35 + Math.random() * 0.3);
   $("adBtn").classList.add("on");
   $("lampAuto").classList.add("lit");
+  sayEvent("ad", "Auto drive engaged", { cool: 3 });
 }
 
 function autodriveOff() {
   if (!AD.on) return;
   AD.on = false; AD.gas = 0; AD.brake = 0;
+  sayEvent("adOff", "Manual control", { cool: 3 });
   $("adBtn").classList.remove("on");
   $("lampAuto").classList.remove("lit");
 }
@@ -4630,12 +4830,15 @@ function toggleCruise() {
   S.cruise.on = true;
   S.cruise.set = Math.abs(S.v);
   S.cruise.i = S.throttle;                 // hand over from the driver's foot
+  if (AU.ready) clusterBeep(AU.ctx.currentTime, 1568, 0.07, 0.04);
+  sayEvent("cruise", "Cruise control set", { cool: 3 });
   updateCruiseUi();
 }
 
 function cruiseOff() {
   if (!S.cruise.on) return;
   S.cruise.on = false;
+  sayEvent("cruiseOff", "Cruise cancelled", { cool: 3 });
   updateCruiseUi();
 }
 
@@ -5531,10 +5734,23 @@ function frame(now) {
   const over = S.rpm > ENG.cut * 1.03;
   $("lampRev").classList.toggle("lit", over);
   $("lampRev").classList.toggle("blink", over);
+  // sitting on the limiter is the one thing worth nagging about: it keeps
+  // warning, and keeps saying so, for as long as you keep doing it
+  if (over) {
+    if (!S._overWarn || performance.now() - S._overWarn > 1500) {
+      S._overWarn = performance.now();
+      warnChime(2);
+    }
+    sayEvent("rev", "Over rev", { cool: 1.9, rate: 1.15, volume: 0.6 });
+  } else if (S._overWarn && S.rpm < ENG.max * 0.9) {
+    S._overWarn = 0;
+  }
   $("lampShift").classList.toggle("lit", S.engineOn && S.rpm > ENG.max * 0.93 && !over);
   const slipping = S.spinV > 1 || S.lockup;
   $("lampGrip").classList.toggle("lit", slipping);
   $("lampGrip").classList.toggle("blink", slipping);
+  if (slipping && S.engineOn)
+    sayEvent("grip", S.lockup ? "Wheels locked" : "Traction loss", { cool: 9 });
 
   /* --- redline / over-rev cockpit vibration --- */
   const cluster = $("cluster");
