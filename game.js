@@ -49,6 +49,7 @@ const CARS = [
   {
     id: "strada", name: "Strada Corsa V10", tag: "formula screamer", layout: "V10",
     cyl: 10, idle: 1400, max: 12200, cut: 12500, inertia: 0.16,
+    start: { rpm: 280, dur: 0.6,  fires: 4, flare: 1.0,  flareT: 0.9 },
     curve: [[0, 90], [1500, 175], [4000, 295], [7000, 375], [9500, 415], [11500, 398],
             [12200, 368], [13000, 220]],
     mass: 930, finalDrive: 3.5, clutchCap: 560, cdA: 0.58, brakeMax: 15000,
@@ -65,6 +66,7 @@ const CARS = [
   {
     id: "t50", name: "Dunsfold T.50", tag: "12,100 rpm V12 · ground-effect fan", layout: "V12 · 3.9L NA · 986kg",
     cyl: 12, idle: 1000, max: 11500, cut: 12100, inertia: 0.09,   // lightest crank ever fitted to a road car
+    start: { rpm: 270, dur: 0.52, fires: 4, flare: 0.98, flareT: 0.85 },
     curve: [[0, 140], [1500, 270], [4000, 370], [7000, 430], [9000, 466], [10500, 452],
             [11500, 425], [12400, 290]],
     mass: 986, finalDrive: 3.71, clutchCap: 700, cdA: 0.55, brakeMax: 14500, grip: 1.75,
@@ -96,6 +98,7 @@ const CARS = [
   {
     id: "veleno", name: "Maranello 812", tag: "front-engined V12 thoroughbred", layout: "V12 · 6.5L NA",
     cyl: 12, idle: 900, max: 8900, cut: 9250, inertia: 0.20,
+    start: { rpm: 235, dur: 0.72, fires: 4, flare: 0.88, flareT: 0.9 },
     curve: [[0, 140], [1000, 320], [3000, 480], [5000, 560], [7000, 600], [8000, 585],
             [8900, 540], [9600, 350]],
     mass: 1580, finalDrive: 3.4, clutchCap: 900, cdA: 0.62, brakeMax: 15000,
@@ -131,6 +134,7 @@ const CARS = [
   {
     id: "gintani", name: "Sant'Agata SVJ Gintani", tag: "straight-pipe V12 · fireworks", layout: "V12 · 6.5L open pipes",
     cyl: 12, idle: 950, max: 9000, cut: 9350, inertia: 0.19, shiftLights: true,
+    start: { rpm: 232, dur: 0.92, fires: 5, flare: 1.0, flareT: 1.2, whine: 1290 },
     curve: [[0, 150], [1000, 335], [3000, 500], [5000, 585], [7000, 625], [8000, 610],
             [9000, 560], [9700, 360]],
     mass: 1525, finalDrive: 3.54, clutchCap: 950, cdA: 0.61, brakeMax: 15500, grip: 1.85,
@@ -166,6 +170,7 @@ const CARS = [
   {
     id: "huayrar", name: "San Cesario R", tag: "the best-sounding car in the world", layout: "V12 · 6.0L NA · open megaphone",
     cyl: 12, idle: 1100, max: 8750, cut: 9000, inertia: 0.10,  // race-spec V12, near-zero flywheel
+    start: { rpm: 240, dur: 0.66, fires: 5, flare: 1.0,  flareT: 1.0 },
     curve: [[0, 150], [1200, 330], [3000, 545], [5500, 750], [7000, 745], [8250, 720],
             [8750, 680], [9400, 420]],
     mass: 1050, finalDrive: 3.8, clutchCap: 900, cdA: 0.72, brakeMax: 16000,
@@ -204,6 +209,7 @@ const CARS = [
   {
     id: "huracan", name: "Sant'Agata V10 Evo", tag: "the everyday supercar scream", layout: "V10 · 5.2L NA",
     cyl: 10, idle: 1000, max: 8500, cut: 8700, inertia: 0.21, shiftLights: true, awd: true,
+    start: { rpm: 250, dur: 0.74, fires: 4, flare: 0.92, flareT: 0.9 },
     curve: [[0, 190], [1000, 330], [3000, 470], [5000, 560], [6500, 600], [7500, 592],
             [8500, 545], [9200, 360]],
     mass: 1550, finalDrive: 3.54, clutchCap: 1500, cdA: 0.62, brakeMax: 15000, grip: 2.0,
@@ -236,6 +242,7 @@ const CARS = [
   {
     id: "revuelto", name: "Sant'Agata Revuelto", tag: "V12 hybrid flagship · 9,500 rpm", layout: "V12 · 6.5L NA + 3 e-motors",
     cyl: 12, idle: 950, max: 9250, cut: 9500, inertia: 0.15, shiftLights: true, awd: true,
+    start: { rpm: 300, dur: 0.5,  fires: 3, flare: 0.7,  flareT: 0.6 },
     curve: [[0, 200], [1000, 400], [3000, 560], [5000, 650], [6750, 725], [8000, 712],
             [9250, 655], [9800, 420]],
     mass: 1820, finalDrive: 3.4, clutchCap: 1400, cdA: 0.60, brakeMax: 16000, grip: 2.1,
@@ -273,6 +280,7 @@ const CARS = [
   {
     id: "kaminari", name: "Kaminari 13R", tag: "twin-rotor screamer", layout: "2-rotor · 1.3L",
     cyl: 4, idle: 850, max: 9000, cut: 9300, inertia: 0.13,  // near-zero rotating mass: revs instantly
+    start: { rpm: 300, dur: 0.86, fires: 2, flare: 0.85, flareT: 0.7, whine: 1420 },
     twoStage: true, ignKey: true,   // old rotary: key to ON, wait for the pump, then crank
     curve: [[0, 60], [1000, 105], [3000, 150], [5000, 175], [7000, 190], [8500, 196],
             [9000, 188], [9700, 130]],
@@ -301,6 +309,7 @@ const CARS = [
   {
     id: "tempest", name: "Tempest MkIV", tag: "single big turbo", layout: "I6",
     cyl: 6, idle: 850, max: 7600, cut: 7800, inertia: 0.33,
+    start: { rpm: 265, dur: 0.7,  fires: 3, flare: 0.6,  flareT: 0.55, grit: 1.2 },
     twoStage: true, ignKey: true,   // 90s ECU + fuel pump prime before the starter
     curve: [[0, 80], [1000, 148], [2500, 208], [4000, 238], [5500, 248], [6800, 236],
             [7600, 208], [8200, 130]],
@@ -332,6 +341,7 @@ const CARS = [
   {
     id: "hellion", name: "Hellion 6.2 SC", tag: "supercharged muscle", layout: "V8",
     cyl: 8, idle: 680, max: 6400, cut: 6550, inertia: 0.44,
+    start: { rpm: 230, dur: 0.66, fires: 3, flare: 0.75, flareT: 0.6, grit: 1.15 },
     twoStage: true, ignKey: true,   // ignition on, let the pump build, then crank
     curve: [[0, 150], [700, 318], [2000, 415], [3500, 468], [4800, 478], [5800, 452],
             [6400, 408], [6900, 280]],
@@ -538,6 +548,7 @@ const CARS = [
   {
     id: "f458", name: "Maranello 458 Spider", tag: "the last pure NA V8 · top down", layout: "V8 · 4.5L flat-plane",
     cyl: 8, idle: 900, max: 9000, cut: 9250, inertia: 0.17, shiftLights: true,
+    start: { rpm: 265, dur: 0.68, fires: 4, flare: 0.95, flareT: 0.85 },
     curve: [[0, 170], [1000, 300], [3000, 430], [5000, 505], [6000, 540], [7500, 532],
             [8500, 508], [9000, 485], [9700, 330]],
     mass: 1505, finalDrive: 3.9, clutchCap: 1200, cdA: 0.61, brakeMax: 15000, grip: 1.7,
@@ -572,6 +583,7 @@ const CARS = [
   {
     id: "kaze", name: "Kaze 787", tag: "quad-rotor Le Mans legend", layout: "4-rotor · 2.6L",
     cyl: 8, idle: 1100, max: 9000, cut: 9300, inertia: 0.11,  // R26B: pure response
+    start: { rpm: 320, dur: 0.72, fires: 3, flare: 0.95, flareT: 0.8, whine: 1500 },
     twoStage: true,          // race car: master switch, pump, THEN the button
     curve: [[0, 120], [1500, 300], [3500, 450], [5000, 540], [6500, 608], [7800, 590],
             [9000, 555], [9700, 380]],
@@ -606,6 +618,7 @@ const CARS = [
     id: "molsheim", name: "Molsheim 16.4", tag: "quad-turbo hypercar", layout: "W16 · quad turbo",
     awd: true,
     cyl: 16, idle: 800, max: 7100, cut: 7300, inertia: 0.5,
+    start: { rpm: 195, dur: 1.15, fires: 6, flare: 0.6,  flareT: 0.7,  whine: 900 },
     curve: [[0, 300], [800, 520], [2000, 760], [3000, 880], [4500, 900], [6000, 860],
             [7100, 780], [7600, 500]],
     mass: 1995, finalDrive: 2.0, clutchCap: 2600, cdA: 0.50, brakeMax: 17000,
@@ -630,6 +643,7 @@ const CARS = [
   {
     id: "absolut", name: "Ängelholm Absolut", tag: "twin-turbo top-speed missile · 0-400-0", layout: "V8 · 5.0L flat-plane twin turbo",
     cyl: 8, idle: 820, max: 8500, cut: 8700, inertia: 0.15,   // flat crank, feathery response
+    start: { rpm: 245, dur: 0.78, fires: 4, flare: 0.8,  flareT: 0.7 },
     curve: [[0, 300], [1500, 660], [3000, 940], [4500, 1020], [6000, 985], [7200, 890],
             [8500, 720], [9000, 480]],
     mass: 1420, finalDrive: 2.35, clutchCap: 2400, cdA: 0.42, brakeMax: 16500, grip: 1.9,
@@ -809,7 +823,7 @@ function popEff() { return (curEx().popMul || 1) * curMod().pop; }
 /* ---------------- state ---------------- */
 
 const S = {
-  mode: "auto", units: "kmh", muted: false,
+  mode: "auto", units: "kmh", muted: false, voice: true,
   engineOn: false, cranking: false, stalled: false,
   acc: false,        // electronics live, engine not turning (two-stage cars)
   capOpen: false,    // the red starter cover is flipped up
@@ -820,7 +834,7 @@ const S = {
   in: { gas: 0, brake: 0, clutch: 0 }, // key/pointer targets
   throttle: 0, brake: 0, clutchPedal: 0,
   effThrottle: 0, engage: 0, locked: false,
-  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, pendShift: false,
+  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, pendShift: false,
   tunnel: false, flyby: false, flyX: -380, cabin: false, mods: {},
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
   spinV: 0, lockup: false,
@@ -1792,10 +1806,61 @@ function sfxCapFlip(open = true) {
 /* first press: electronics live. The main relay clacks in, the in-tank fuel
    pump spins up and primes with that rising whirr, then goes quiet as the
    rail comes up to pressure — the moment the car stops being furniture. */
-function sfxAccOn() {
+/* ---- cluster voice callouts ----------------------------------------
+   Spoken by the browser's own speech engine, so there's nothing to
+   download and it follows the system voice. Kept low, slow and flat —
+   it should sound like a car telling you something, not an assistant. */
+function sayVoice(text, opt = {}) {
+  if (!S.voice || S.muted) return;
+  if (typeof speechSynthesis === "undefined") return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = opt.rate != null ? opt.rate : 0.94;
+    u.pitch = opt.pitch != null ? opt.pitch : 0.72;   // dropped — flat and machine-ish
+    u.volume = opt.volume != null ? opt.volume : 0.5;
+    // prefer a plain system voice over anything chirpy
+    const vs = speechSynthesis.getVoices() || [];
+    const pick = vs.find(v => /daniel|alex|google uk english male|male/i.test(v.name))
+              || vs.find(v => /en[-_]/i.test(v.lang));
+    if (pick) u.voice = pick;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  } catch (_) {}
+}
+
+// a clean cluster beep — the kind a self-test makes: sine core, a touch of
+// third harmonic for the piezo edge, hard-gated so it never rings
+function clusterBeep(at, hz = 2100, dur = 0.055, amp = 0.05) {
+  const ctx = AU.ctx;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.linearRampToValueAtTime(amp, at + 0.006);
+  g.gain.setValueAtTime(amp, at + dur - 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  g.connect(AU.master);
+  [[1, 1], [3, 0.22], [5, 0.07]].forEach(([mul, lvl]) => {
+    const o = ctx.createOscillator(); o.type = "sine";
+    o.frequency.value = hz * mul;
+    const og = ctx.createGain(); og.gain.value = lvl;
+    o.connect(og); og.connect(g); o.start(at); o.stop(at + dur + 0.02);
+  });
+}
+
+/* first press: everything wakes up.
+
+   Modelled on the real sequence, in order: the main relay throws, the
+   cluster backlight energises, the ECU runs its lamp self-test and beeps,
+   the in-tank pump primes the rail (the rising whirr, then quiet once it
+   hits pressure), the drive-by-wire throttle sweeps itself end to end,
+   secondary relays tick in behind, and the car says it's ready. */
+function sfxAccOn(c) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime;
-  // main relay: a hard, dry clack
+  // a car old enough to have a barrel lock has no lamp self-test, no
+  // drive-by-wire and nothing to say — it clicks, it primes, that's it
+  const modern = !(c && c.ignKey);
+
+  /* --- main relay: a hard, dry clack with a lump behind it --- */
   const r = ctx.createBufferSource(); r.buffer = AU.noiseBuf; r.playbackRate.value = 1.5;
   const rf = ctx.createBiquadFilter(); rf.type = "bandpass"; rf.frequency.value = 1300; rf.Q.value = 1.4;
   const rg = ctx.createGain();
@@ -1807,22 +1872,55 @@ function sfxAccOn() {
   const rkg = ctx.createGain();
   rkg.gain.setValueAtTime(0.36, t); rkg.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
   rk.connect(rkg); rkg.connect(AU.master); rk.start(t); rk.stop(t + 0.1);
-  // fuel pump prime: a rising electric whirr that holds, then drops away
-  const p0 = t + 0.07, pDur = 0.85;
+
+  /* --- the cluster coming up: a short energising swell, the electrical
+         equivalent of a screen catching light --- */
+  const en = ctx.createBufferSource(); en.buffer = AU.noiseBuf; en.playbackRate.value = 0.5;
+  const enf = ctx.createBiquadFilter(); enf.type = "bandpass"; enf.Q.value = 0.9;
+  enf.frequency.setValueAtTime(240, t + 0.02);
+  enf.frequency.exponentialRampToValueAtTime(1500, t + 0.26);
+  const eng = ctx.createGain();
+  eng.gain.setValueAtTime(0.001, t + 0.02);
+  eng.gain.linearRampToValueAtTime(0.05, t + 0.1);
+  eng.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  en.connect(enf); enf.connect(eng); eng.connect(AU.master);
+  en.start(t + 0.02); en.stop(t + 0.4);
+  // the mains hum that lives under a live dashboard until you stop noticing it
+  const hum = ctx.createOscillator(); hum.type = "triangle"; hum.frequency.value = 118;
+  const humG = ctx.createGain();
+  humG.gain.setValueAtTime(0.001, t + 0.03);
+  humG.gain.linearRampToValueAtTime(0.018, t + 0.2);
+  humG.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+  hum.connect(humG); humG.connect(AU.master); hum.start(t + 0.03); hum.stop(t + 1.6);
+
+  /* --- ECU self-test: three quick beeps as the warning lamps sweep --- */
+  if (modern) {
+    clusterBeep(t + 0.16, 2100, 0.05, 0.05);
+    clusterBeep(t + 0.28, 2100, 0.05, 0.05);
+    clusterBeep(t + 0.40, 2794, 0.075, 0.055);    // the third one resolves upward
+  }
+
+  /* --- fuel pump priming the rail: rises, holds, drops off at pressure --- */
+  const p0 = t + 0.12, pDur = 0.92;
   const p = ctx.createOscillator(); p.type = "sawtooth";
-  p.frequency.setValueAtTime(160, p0);
-  p.frequency.exponentialRampToValueAtTime(430, p0 + 0.22);
-  p.frequency.setValueAtTime(430, p0 + pDur - 0.22);
-  p.frequency.exponentialRampToValueAtTime(300, p0 + pDur);
+  p.frequency.setValueAtTime(150, p0);
+  p.frequency.exponentialRampToValueAtTime(455, p0 + 0.24);
+  p.frequency.setValueAtTime(455, p0 + pDur - 0.26);
+  p.frequency.exponentialRampToValueAtTime(280, p0 + pDur);
+  // a slight warble — the pump loading and unloading as the rail fills
+  const warb = ctx.createOscillator(); warb.type = "sine"; warb.frequency.value = 11;
+  const warbG = ctx.createGain(); warbG.gain.value = 16;
+  warb.connect(warbG); warbG.connect(p.frequency);
+  warb.start(p0); warb.stop(p0 + pDur + 0.05);
   const pf = ctx.createBiquadFilter(); pf.type = "bandpass"; pf.frequency.value = 900; pf.Q.value = 2.2;
   const pg = ctx.createGain();
   pg.gain.setValueAtTime(0.001, p0);
-  pg.gain.linearRampToValueAtTime(0.075, p0 + 0.09);
-  pg.gain.setValueAtTime(0.075, p0 + pDur - 0.3);
+  pg.gain.linearRampToValueAtTime(0.08, p0 + 0.09);
+  pg.gain.setValueAtTime(0.08, p0 + pDur - 0.3);
   pg.gain.exponentialRampToValueAtTime(0.001, p0 + pDur);
   p.connect(pf); pf.connect(pg); pg.connect(AU.master);
   p.start(p0); p.stop(p0 + pDur + 0.05);
-  // the hiss of fuel moving with it
+  // the hiss of fuel actually moving with it
   const h = ctx.createBufferSource(); h.buffer = AU.noiseBuf; h.loop = true; h.playbackRate.value = 1.1;
   const hf = ctx.createBiquadFilter(); hf.type = "bandpass"; hf.frequency.value = 2400; hf.Q.value = 0.8;
   const hg = ctx.createGain();
@@ -1831,43 +1929,263 @@ function sfxAccOn() {
   hg.gain.exponentialRampToValueAtTime(0.001, p0 + pDur);
   h.connect(hf); hf.connect(hg); hg.connect(AU.master);
   h.start(p0); h.stop(p0 + pDur + 0.05);
-  // instrument cluster waking: two clean tones under the needle sweep
-  [[880, 0.02], [1320, 0.16]].forEach(([hz, dt2]) => {
-    const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = hz;
-    const og = ctx.createGain();
-    og.gain.setValueAtTime(0.001, t + dt2);
-    og.gain.linearRampToValueAtTime(0.055, t + dt2 + 0.015);
-    og.gain.exponentialRampToValueAtTime(0.001, t + dt2 + 0.3);
-    o.connect(og); og.connect(AU.master); o.start(t + dt2); o.stop(t + dt2 + 0.34);
+
+  /* --- drive-by-wire throttle sweeping itself open and shut --- */
+  if (modern) {
+  const sv = ctx.createOscillator(); sv.type = "sawtooth";
+  const s0 = t + 0.42;
+  sv.frequency.setValueAtTime(190, s0);
+  sv.frequency.linearRampToValueAtTime(560, s0 + 0.14);
+  sv.frequency.linearRampToValueAtTime(210, s0 + 0.3);
+  const svf = ctx.createBiquadFilter(); svf.type = "bandpass"; svf.frequency.value = 1500; svf.Q.value = 3;
+  const svg = ctx.createGain();
+  svg.gain.setValueAtTime(0.001, s0);
+  svg.gain.linearRampToValueAtTime(0.028, s0 + 0.04);
+  svg.gain.setValueAtTime(0.028, s0 + 0.24);
+  svg.gain.exponentialRampToValueAtTime(0.001, s0 + 0.32);
+  sv.connect(svf); svf.connect(svg); svg.connect(AU.master);
+  sv.start(s0); sv.stop(s0 + 0.36);
+  }
+
+  /* --- secondary relays ticking in behind everything else --- */
+  [0.30, 0.47, 0.61, 0.82].forEach((dt, i) => {
+    const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
+    n.playbackRate.value = 1.3 + i * 0.25;
+    const nf = ctx.createBiquadFilter(); nf.type = "bandpass";
+    nf.frequency.value = 1500 + i * 420; nf.Q.value = 2;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.11 - i * 0.015, t + dt);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.022);
+    n.connect(nf); nf.connect(ng); ng.connect(AU.master);
+    n.start(t + dt); n.stop(t + dt + 0.035);
   });
+
+  /* --- systems ready: a two-note resolve, then the callout. The old cars
+         get a single dull warning chime instead, which is all they had. --- */
+  if (modern) {
+    clusterBeep(t + 1.02, 1568, 0.075, 0.045);
+    clusterBeep(t + 1.12, 2093, 0.13, 0.05);
+    setTimeout(() => sayVoice("Electronics on"), 1250);
+  } else {
+    clusterBeep(t + 0.55, 1046, 0.16, 0.035);
+  }
 }
 
-function sfxStarter(dur, amp = 1) {
+/* ================================================================
+   THE START
+   Built from what physically happens rather than a generic whirr.
+
+   A starter does not make one sound — it makes three at once. The
+   solenoid throws the pinion into the ring gear (a hard clack). The
+   motor then drags the engine over, and what you actually hear is
+   ONE LUMP PER COMPRESSION STROKE: the piston comes up on a closed
+   valve, the motor bogs, the pitch dips, the piston goes over and
+   the motor surges again. That rate is (cylinders ÷ 2) × rpm ÷ 60 —
+   which is why a V12 at 235rpm burrs at 23 lumps a second while a
+   big four lopes at eight. Getting that rate right is most of what
+   makes a start sound like the car it belongs to.
+
+   Then it catches, and the first cylinders fire OUT OF RHYTHM —
+   two or three ragged cracks before the whole thing joins up — and
+   the engine runs away from the starter, which throws its pinion
+   back out with a falling whine.
+   ================================================================ */
+
+// what the starter is up against, derived from the engine itself
+function crankProfile(c) {
+  const cyl = c.cyl || 6;
+  const diesel = !!c.noPop && c.idle < 900;
+  const p = {
+    cyl,
+    // big engines with heavy rotating mass turn over slower
+    rpm: diesel ? 185 : cyl >= 12 ? 230 : cyl >= 8 ? 255 : cyl >= 6 ? 275 : 300,
+    // and take longer to light — as does anything with a lot of inertia
+    dur: 0.42 + cyl * 0.022 + (c.inertia || 0.3) * 0.7 + (diesel ? 0.5 : 0),
+    fires: clamp(Math.round(cyl / 2.5), 2, 6),   // ragged cylinders before it joins up
+    grit: diesel ? 1.7 : 1,                      // how much clatter rides the crank
+    whine: diesel ? 780 : 1120 + cyl * 22,       // starter gear pitch
+  };
+  // a naturally aspirated engine with light internals flares hard on the
+  // first fires — the throttle plates are shut, so it's all fuelling
+  p.flare = diesel ? 0.34 : c.asp === "na" ? 0.95 : 0.62;
+  p.flareT = diesel ? 0.5 : c.asp === "na" ? (cyl >= 10 ? 1.0 : 0.78) : 0.55;
+  return Object.assign(p, c.start || {});
+}
+
+/* the crank itself — solenoid, motor, and the engine fighting back */
+function sfxCrank(p, amp = 1) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime;
-  // cranking lump: sawtooth chopped by a square LFO — whirr-whirr-whirr
-  const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = 50;
-  o.frequency.linearRampToValueAtTime(58, t + dur);          // motor labors up
-  const am = ctx.createOscillator(); am.type = "square"; am.frequency.value = 6.3;
-  const amG = ctx.createGain(); amG.gain.value = 0.55;
-  const base = ctx.createGain(); base.gain.value = 0.55;
-  const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 380;
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0.001, t);
-  g.gain.linearRampToValueAtTime(0.36 * amp, t + 0.06);
-  g.gain.setValueAtTime(0.36 * amp, t + dur - 0.08);
-  g.gain.linearRampToValueAtTime(0.001, t + dur);
-  am.connect(amG); amG.connect(base.gain);
-  o.connect(base); base.connect(f); f.connect(g); g.connect(AU.master);
-  o.start(t); am.start(t); o.stop(t + dur + 0.05); am.stop(t + dur + 0.05);
-  // thin starter-motor gear whine on top
-  const w = ctx.createOscillator(); w.type = "sine"; w.frequency.value = 940;
-  w.frequency.linearRampToValueAtTime(1240, t + dur);
-  const wg = ctx.createGain();
-  wg.gain.setValueAtTime(0.001, t);
-  wg.gain.linearRampToValueAtTime(0.035 * amp, t + 0.08);
-  wg.gain.linearRampToValueAtTime(0.001, t + dur);
-  w.connect(wg); wg.connect(AU.master); w.start(t); w.stop(t + dur + 0.05);
+  const dur = p.dur;
+  const chug = (p.cyl / 2) * (p.rpm / 60);      // compressions per second
+
+  /* --- the solenoid throwing the pinion into the ring gear --- */
+  const sol = ctx.createBufferSource(); sol.buffer = AU.noiseBuf; sol.playbackRate.value = 1.6;
+  const solF = ctx.createBiquadFilter(); solF.type = "bandpass";
+  solF.frequency.value = 2300; solF.Q.value = 1.3;
+  const solG = ctx.createGain();
+  solG.gain.setValueAtTime(0.55 * amp, t);
+  solG.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+  sol.connect(solF); solF.connect(solG); solG.connect(AU.master);
+  sol.start(t); sol.stop(t + 0.06);
+  // gear teeth meshing — a hard, low clack you feel in the bellhousing
+  const mesh = ctx.createOscillator(); mesh.type = "sine";
+  mesh.frequency.setValueAtTime(240, t);
+  mesh.frequency.exponentialRampToValueAtTime(78, t + 0.06);
+  const meshG = ctx.createGain();
+  meshG.gain.setValueAtTime(0.42 * amp, t);
+  meshG.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+  mesh.connect(meshG); meshG.connect(AU.master); mesh.start(t); mesh.stop(t + 0.11);
+
+  /* --- the starter motor: a gear whine dragged down on every compression.
+         The LFO runs at the compression rate and pulls BOTH the pitch and
+         the level, which is the wow-wow-wow under everything else. --- */
+  const lfo = ctx.createOscillator(); lfo.type = "sine";
+  lfo.frequency.setValueAtTime(chug * 0.84, t);
+  lfo.frequency.linearRampToValueAtTime(chug, t + dur);   // motor speeds up as it goes
+
+  const wh = ctx.createOscillator(); wh.type = "sawtooth";
+  wh.frequency.setValueAtTime(p.whine * 0.9, t + 0.03);
+  wh.frequency.linearRampToValueAtTime(p.whine, t + dur);
+  const whDepth = ctx.createGain(); whDepth.gain.value = p.whine * 0.075;  // ± the drag
+  lfo.connect(whDepth); whDepth.connect(wh.frequency);
+  const whF = ctx.createBiquadFilter(); whF.type = "bandpass";
+  whF.frequency.value = p.whine * 1.15; whF.Q.value = 3.2;
+  const whG = ctx.createGain();
+  whG.gain.setValueAtTime(0.001, t + 0.02);
+  whG.gain.linearRampToValueAtTime(0.05 * amp, t + 0.1);
+  whG.gain.setValueAtTime(0.05 * amp, t + dur - 0.05);
+  whG.gain.linearRampToValueAtTime(0.001, t + dur + 0.02);
+  wh.connect(whF); whF.connect(whG); whG.connect(AU.master);
+  wh.start(t + 0.02); wh.stop(t + dur + 0.06);
+  lfo.start(t); lfo.stop(t + dur + 0.06);
+
+  /* --- the armature drone underneath: the DC motor's own note --- */
+  const arm = ctx.createOscillator(); arm.type = "sawtooth";
+  arm.frequency.setValueAtTime(p.whine * 0.11, t + 0.02);
+  arm.frequency.linearRampToValueAtTime(p.whine * 0.13, t + dur);
+  const armF = ctx.createBiquadFilter(); armF.type = "lowpass";
+  armF.frequency.value = 420; armF.Q.value = 0.7;
+  const armG = ctx.createGain();
+  armG.gain.setValueAtTime(0.001, t + 0.02);
+  armG.gain.linearRampToValueAtTime(0.13 * amp, t + 0.09);
+  armG.gain.setValueAtTime(0.13 * amp, t + dur - 0.06);
+  armG.gain.linearRampToValueAtTime(0.001, t + dur + 0.02);
+  arm.connect(armF); armF.connect(armG); armG.connect(AU.master);
+  arm.start(t + 0.02); arm.stop(t + dur + 0.06);
+
+  /* --- the compressions. One event per firing stroke, jittered, because
+         no real starter is metronomic and that unevenness is most of the
+         character. Rate accelerates slightly as the oil thins out. --- */
+  let time = 0.035, i = 0;
+  while (time < dur - 0.02 && i < 40) {
+    const prog = time / dur;
+    const lvl = amp * (0.62 + 0.38 * prog) * (0.85 + Math.random() * 0.3);
+    const tt = t + time + (Math.random() - 0.5) * 0.008;
+    // the lump: the engine being forced over on a closed valve
+    const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
+    n.playbackRate.value = 0.3 + Math.random() * 0.12;
+    const nf = ctx.createBiquadFilter(); nf.type = "lowpass";
+    nf.frequency.value = 230 + p.grit * 170;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.001, tt);
+    ng.gain.linearRampToValueAtTime(0.3 * lvl, tt + 0.006);
+    ng.gain.exponentialRampToValueAtTime(0.001, tt + 0.05);
+    n.connect(nf); nf.connect(ng); ng.connect(AU.master);
+    n.start(tt); n.stop(tt + 0.07);
+    // the thud through the block
+    const k = ctx.createOscillator(); k.type = "sine";
+    k.frequency.setValueAtTime(84 + Math.random() * 14, tt);
+    k.frequency.exponentialRampToValueAtTime(46, tt + 0.045);
+    const kg = ctx.createGain();
+    kg.gain.setValueAtTime(0.26 * lvl, tt);
+    kg.gain.exponentialRampToValueAtTime(0.001, tt + 0.06);
+    k.connect(kg); kg.connect(AU.master); k.start(tt); k.stop(tt + 0.08);
+    // diesels and tired old engines clatter on top of every stroke
+    if (p.grit > 1.2) {
+      const c2 = ctx.createBufferSource(); c2.buffer = AU.noiseBuf; c2.playbackRate.value = 2.1;
+      const cf = ctx.createBiquadFilter(); cf.type = "bandpass";
+      cf.frequency.value = 2900; cf.Q.value = 1.6;
+      const cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.07 * lvl * p.grit, tt + 0.004);
+      cg.gain.exponentialRampToValueAtTime(0.001, tt + 0.03);
+      c2.connect(cf); cf.connect(cg); cg.connect(AU.master);
+      c2.start(tt + 0.004); c2.stop(tt + 0.04);
+    }
+    time += 1 / (chug * (0.84 + 0.16 * prog));
+    i++;
+  }
+}
+
+/* it catches: two or three cylinders light out of rhythm, the pinion is
+   thrown back out as the engine runs away from the starter, and the intake
+   takes its first real breath. This is the moment the car becomes alive. */
+function sfxCatch(p, amp = 1) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const hard = clamp(amp, 0.2, 2.2);
+
+  /* --- the pinion kicked back out: a falling whine, gone in a blink --- */
+  const bx = ctx.createOscillator(); bx.type = "sawtooth";
+  bx.frequency.setValueAtTime(p.whine * 1.15, t);
+  bx.frequency.exponentialRampToValueAtTime(p.whine * 0.22, t + 0.2);
+  const bxF = ctx.createBiquadFilter(); bxF.type = "bandpass";
+  bxF.frequency.value = p.whine; bxF.Q.value = 2.4;
+  const bxG = ctx.createGain();
+  bxG.gain.setValueAtTime(0.055, t);
+  bxG.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+  bx.connect(bxF); bxF.connect(bxG); bxG.connect(AU.master);
+  bx.start(t); bx.stop(t + 0.25);
+
+  /* --- the ragged first fires. Intervals close up as the crank speeds,
+         amplitude climbs as more cylinders join in. --- */
+  let dt = 0.0, gap = 0.082;
+  for (let i = 0; i < (p.fires || 3); i++) {
+    const lvl = hard * (0.5 + 0.5 * (i / Math.max(1, p.fires - 1))) * (0.8 + Math.random() * 0.4);
+    const tt = t + dt + (Math.random() - 0.5) * 0.012;
+    // the crack out of the pipe
+    const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.5;
+    const nf = ctx.createBiquadFilter(); nf.type = "highpass"; nf.frequency.value = 900;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.34 * lvl, tt);
+    ng.gain.exponentialRampToValueAtTime(0.001, tt + 0.055);
+    n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(tt); n.stop(tt + 0.07);
+    // the body of the combustion — a fat, fast-falling low tone
+    const o = ctx.createOscillator(); o.type = "sawtooth";
+    o.frequency.setValueAtTime(150 + Math.random() * 50, tt);
+    o.frequency.exponentialRampToValueAtTime(58, tt + 0.09);
+    const of = ctx.createBiquadFilter(); of.type = "lowpass";
+    of.frequency.setValueAtTime(2200, tt);
+    of.frequency.exponentialRampToValueAtTime(500, tt + 0.1);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.4 * lvl, tt);
+    og.gain.exponentialRampToValueAtTime(0.001, tt + 0.12);
+    o.connect(of); of.connect(og); og.connect(AU.master); o.start(tt); o.stop(tt + 0.14);
+    // and the punch in the chest
+    const k = ctx.createOscillator(); k.type = "sine";
+    k.frequency.setValueAtTime(120, tt);
+    k.frequency.exponentialRampToValueAtTime(42, tt + 0.08);
+    const kg = ctx.createGain();
+    kg.gain.setValueAtTime(0.38 * lvl, tt);
+    kg.gain.exponentialRampToValueAtTime(0.001, tt + 0.1);
+    k.connect(kg); kg.connect(AU.master); k.start(tt); k.stop(tt + 0.12);
+    dt += gap;
+    gap *= 0.72;                              // the fires close up into a run
+  }
+
+  /* --- the intake taking its first proper breath as the revs fly up --- */
+  const air = ctx.createBufferSource(); air.buffer = AU.noiseBuf; air.loop = true;
+  air.playbackRate.value = 1.1;
+  const af = ctx.createBiquadFilter(); af.type = "bandpass"; af.Q.value = 1.0;
+  af.frequency.setValueAtTime(420, t);
+  af.frequency.exponentialRampToValueAtTime(2300, t + 0.3);
+  af.frequency.exponentialRampToValueAtTime(900, t + 0.75);
+  const ag = ctx.createGain();
+  ag.gain.setValueAtTime(0.001, t);
+  ag.gain.linearRampToValueAtTime(0.1 * hard, t + 0.16);
+  ag.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+  air.connect(af); af.connect(ag); ag.connect(AU.master);
+  air.start(t); air.stop(t + 0.85);
 }
 
 function sfxBlowoff() {
@@ -2230,7 +2548,8 @@ function stepPhysics(dt) {
   }
   // startup flare — first fires push the revs up before the idle settles
   S.catchT = Math.max(0, S.catchT - dt);
-  if (S.catchT > 0) eff = Math.max(eff, 0.55 * Math.min(1, S.catchT / 0.4));
+  if (S.catchT > 0)
+    eff = Math.max(eff, (S.catchAmt || 0.55) * Math.min(1, S.catchT / 0.4));
   if (S.cutTimer > 0 || (S.shiftCut > 0 && S.blip <= 0) || !S.engineOn) eff = 0;
   S.effThrottle = eff;
 
@@ -2569,6 +2888,7 @@ function toggleIgnition() {
     $("stallOverlay").classList.remove("show");
     $("lampStall").classList.remove("lit", "blink");
     sfxChime();
+    setTimeout(() => sayVoice("Systems ready"), 700);
     updateRunLamp();
     return;
   }
@@ -2581,24 +2901,30 @@ function toggleIgnition() {
     S.rpm = 0; S.sweep = 0;             // the welcome sweep across the gauges
     $("stallOverlay").classList.remove("show");
     $("lampStall").classList.remove("lit", "blink");
-    sfxAccOn();
+    sfxAccOn(CC);
     updateRunLamp();
     return;
   }
 
   // crank — hybrids quick-start: the e-motor spins it up faster and quieter
   const quiet = !!CC.edrive;
+  const p = crankProfile(CC);
+  if (quiet) { p.dur = 0.4; p.rpm *= 1.9; p.fires = 2; p.flare = 0.35; p.flareT = 0.35; }
   S.acc = true;
   S.cranking = true; S.stalled = false;
   $("stallOverlay").classList.remove("show");
   $("lampStall").classList.remove("lit", "blink");
   const btn = $("ignition");
   btn.classList.add("cranking");
-  sfxStarter(quiet ? 0.42 : 0.75, quiet ? 0.35 : 1);
+  sfxCrank(p, quiet ? 0.35 : 1);
+  // the needle actually sits at cranking speed, wavering on each compression
+  const chugHz = (p.cyl / 2) * (p.rpm / 60);
   const crank0 = performance.now();
   const crankAnim = () => {
     if (!S.cranking) return;
-    S.rpm = 260 + Math.sin((performance.now() - crank0) / 45) * 60;
+    const el = (performance.now() - crank0) / 1000;
+    S.rpm = p.rpm * (0.86 + 0.14 * Math.min(1, el / p.dur))
+          + Math.sin(el * chugHz * 6.283) * p.rpm * 0.16;
     requestAnimationFrame(crankAnim);
   };
   crankAnim();
@@ -2609,14 +2935,14 @@ function toggleIgnition() {
     if (CC.ignKey) sfxKeyTurn(-1);      // sprung out of START, back to ON
     S.engineOn = true;
     armCel();                           // restart clears the code… for now
-    S.rpm = 260;                        // catches from cranking speed…
-    S.catchT = quiet ? 0.3 : 0.55;      // …and flares up on first fires
-    if (!quiet)
-      for (const ms of [90, 200, 340])  // rough first combustion pops
-        setTimeout(() => { if (S.engineOn) sfxPop(0.10 + Math.random() * 0.08); }, ms);
+    S.rpm = p.rpm;                      // catches from cranking speed…
+    S.catchAmt = p.flare;               // …and how hard it flares is the car's
+    S.catchT = p.flareT;
+    // open pipes make a meal of the first fires; a stock system barely coughs
+    sfxCatch(p, quiet ? 0.35 : 0.5 + Math.min(1.6, popsRating() * 0.42));
     S.sweep = 0;                        // needle sweep
     updateRunLamp();
-  }, quiet ? 480 : 780);
+  }, p.dur * 1000);
 }
 
 function updateRunLamp() {
@@ -2641,7 +2967,7 @@ function fireHybrid() {
   } else if (S.mode === "manual") S.gear = 1;
   S.rpm = 3500;                               // the fire-up flare
   S.shiftCool = 0.45;                         // a beat before the box reacts
-  S.catchT = 0.1;
+  S.catchT = 0.1; S.catchAmt = 0.45;
   S.sweep = -1;
   sfxHybridFire();
   updateRunLamp(); updateEdriveUi();
@@ -2673,6 +2999,7 @@ function toggleEdrive() {
     $("stallOverlay").classList.remove("show");
     $("lampStall").classList.remove("lit", "blink");
     sfxChimeFerrari();                        // the full welcome on power-up
+    setTimeout(() => sayVoice("Electric drive ready"), 900);
     updateRunLamp(); updateEdriveUi();
     return;
   }
@@ -4749,6 +5076,7 @@ function save() {
   try {
     localStorage.setItem("dwnshift", JSON.stringify({
       theme: document.body.dataset.theme, units: S.units, mode: S.mode, muted: S.muted,
+      voice: S.voice,
       car: CC.id, tunnel: S.tunnel, flyby: S.flyby, cabin: S.cabin, mods: S.mods,
       traffic: S.traffic, rain: S.rain, lt: S.ltTgt, ltBest: LT.best,
       night: S.night, station: S.station,
@@ -4953,6 +5281,14 @@ function initInput() {
     $("fsBtn").classList.toggle("on", !!document.fullscreenElement));
   document.addEventListener("webkitfullscreenchange", () =>
     $("fsBtn").classList.toggle("on", !!document.webkitFullscreenElement));
+
+  $("voiceBtn").addEventListener("click", () => {
+    S.voice = !S.voice;
+    $("voiceBtn").classList.toggle("on", S.voice);
+    if (!S.voice) { if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel(); }
+    else sayVoice("Voice callouts on");
+    save();
+  });
 
   $("muteBtn").addEventListener("click", () => {
     S.muted = !S.muted;
@@ -5222,6 +5558,8 @@ function frame(now) {
   S.units = saved.units || "kmh";
   S.muted = !!saved.muted;
   $("muteBtn").classList.toggle("muted", S.muted);
+  if (saved.voice != null) S.voice = !!saved.voice;
+  $("voiceBtn").classList.toggle("on", S.voice);
   S.tunnel = !!saved.tunnel;
   $("tunnelBtn").classList.toggle("on", S.tunnel);
   document.body.classList.toggle("tunnel", S.tunnel);
