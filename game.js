@@ -707,12 +707,12 @@ function applyCar(c) {
     ign.classList.toggle("has-key", !!c.ignKey);
     ign.classList.toggle("cap-open", !!(c.startCap && S && S.capOpen));
     ign.title = c.ignKey
-      ? "Key to ON, then over to START (I)"
+      ? "Key to ON, then hold it over to START (hold I)"
       : c.startCap
-        ? "Flip the cover, then start (I)"
+        ? "Flip the cover, then hold to start (hold I)"
         : c.twoStage
-          ? "Press for electronics, again to start (I)"
-          : "Start / stop engine (I)";
+          ? "Press for electronics, then hold to start (hold I)"
+          : "Hold to start / press to stop (I)";
   }
   const tuned = !!m.tune;
   ENG.idle = c.idle;
@@ -849,7 +849,7 @@ const S = {
   in: { gas: 0, brake: 0, clutch: 0 }, // key/pointer targets
   throttle: 0, brake: 0, clutchPedal: 0,
   effThrottle: 0, engage: 0, locked: false,
-  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, catchGuard: 0, parkLimit: 0, pendShift: false,
+  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, catchGuard: 0, parkLimit: 0, crankP: null, crankTimer: 0, settleT: 0, settleDur: 1, settleFrom: 0, pendShift: false,
   tunnel: false, flyby: false, flyX: -380, cabin: false, mods: {},
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
   spinV: 0, lockup: false,
@@ -1825,6 +1825,15 @@ function sfxCapFlip(open = true) {
    Spoken by the browser's own speech engine, so there's nothing to
    download and it follows the system voice. Kept low, slow and flat —
    it should sound like a car telling you something, not an assistant. */
+// the voice list arrives asynchronously; ask for it early so the first
+// callout of the session isn't the one that comes out in the wrong voice
+if (typeof speechSynthesis !== "undefined") {
+  try {
+    speechSynthesis.getVoices();
+    speechSynthesis.addEventListener("voiceschanged", () => speechSynthesis.getVoices());
+  } catch (_) {}
+}
+
 function sayVoice(text, opt = {}) {
   if (!S.voice || S.muted) return;
   if (typeof speechSynthesis === "undefined") return;
@@ -1992,7 +2001,7 @@ function sfxInjectorTicks(at, n = 9) {
    off. Deliberately soft — a nudge, not the warning tone. */
 function sfxAccNag() {
   if (!AU.ready || S.muted) return;
-  clusterBeep(AU.ctx.currentTime, 2093, 0.06, 0.024);   // one short pip, nothing more
+  clusterBeep(AU.ctx.currentTime, 2093, 0.06, 0.036);   // one short pip, nothing more
 }
 
 let accNagT = 0;
@@ -2005,7 +2014,7 @@ function accNagStart(delay) {
     if (S.crankSeq !== seq) return;
     if (!S.acc || S.engineOn || S.cranking) return;
     sfxAccNag();
-    accNagT = setTimeout(tick, 1500);
+    accNagT = setTimeout(tick, 1150);
   };
   accNagT = setTimeout(tick, delay);
 }
@@ -2288,7 +2297,7 @@ function sfxAccOn(c) {
   if (modern) {
     clusterBeep(t + 1.02, 1568, 0.075, 0.045);
     clusterBeep(t + 1.12, 2093, 0.13, 0.05);
-    setTimeout(() => sayVoice("Electronics on"), 1250);
+    setTimeout(() => sayVoice("Electronics on", { volume: 0.85, rate: 0.9 }), 1250);
   } else {
     clusterBeep(t + 0.55, 1046, 0.16, 0.035);
   }
@@ -2360,9 +2369,12 @@ function crankProfile(c) {
 
 /* the crank itself — solenoid, motor, and the engine fighting back */
 function sfxCrank(p, amp = 1) {
-  if (!AU.ready) return;
+  if (!AU.ready) return null;
   const ctx = AU.ctx, t = ctx.currentTime;
   const dur = p.dur;
+  /* everything the starter makes goes through one bus, so letting go of the
+     button can cut it off mid-turn the way releasing a real key does */
+  const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(AU.master);
   const chug = (p.cyl / 2) * (p.rpm / 60);      // compressions per second
 
   /* --- the solenoid throwing the pinion into the ring gear --- */
@@ -2372,7 +2384,7 @@ function sfxCrank(p, amp = 1) {
   const solG = ctx.createGain();
   solG.gain.setValueAtTime(0.55 * amp, t);
   solG.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-  sol.connect(solF); solF.connect(solG); solG.connect(AU.master);
+  sol.connect(solF); solF.connect(solG); solG.connect(bus);
   sol.start(t); sol.stop(t + 0.06);
   // gear teeth meshing — a hard, low clack you feel in the bellhousing
   const mesh = ctx.createOscillator(); mesh.type = "sine";
@@ -2381,7 +2393,7 @@ function sfxCrank(p, amp = 1) {
   const meshG = ctx.createGain();
   meshG.gain.setValueAtTime(0.42 * amp, t);
   meshG.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-  mesh.connect(meshG); meshG.connect(AU.master); mesh.start(t); mesh.stop(t + 0.11);
+  mesh.connect(meshG); meshG.connect(bus); mesh.start(t); mesh.stop(t + 0.11);
 
   /* --- the starter motor: a gear whine dragged down on every compression.
          The LFO runs at the compression rate and pulls BOTH the pitch and
@@ -2402,7 +2414,7 @@ function sfxCrank(p, amp = 1) {
   whG.gain.linearRampToValueAtTime(0.05 * amp, t + 0.1);
   whG.gain.setValueAtTime(0.05 * amp, t + dur - 0.05);
   whG.gain.linearRampToValueAtTime(0.001, t + dur + 0.02);
-  wh.connect(whF); whF.connect(whG); whG.connect(AU.master);
+  wh.connect(whF); whF.connect(whG); whG.connect(bus);
   wh.start(t + 0.02); wh.stop(t + dur + 0.06);
   lfo.start(t); lfo.stop(t + dur + 0.06);
 
@@ -2417,7 +2429,7 @@ function sfxCrank(p, amp = 1) {
   armG.gain.linearRampToValueAtTime(0.13 * amp, t + 0.09);
   armG.gain.setValueAtTime(0.13 * amp, t + dur - 0.06);
   armG.gain.linearRampToValueAtTime(0.001, t + dur + 0.02);
-  arm.connect(armF); armF.connect(armG); armG.connect(AU.master);
+  arm.connect(armF); armF.connect(armG); armG.connect(bus);
   arm.start(t + 0.02); arm.stop(t + dur + 0.06);
 
   /* --- the compressions. One event per firing stroke, jittered, because
@@ -2427,7 +2439,7 @@ function sfxCrank(p, amp = 1) {
   while (time < dur - 0.02 && i < 40) {
     const prog = time / dur;
     const lvl = amp * (0.62 + 0.38 * prog) * (0.85 + Math.random() * 0.3);
-    const tt = t + time + (Math.random() - 0.5) * 0.008;
+    const tt = Math.max(t, t + time + (Math.random() - 0.5) * 0.008);
     // the lump: the engine being forced over on a closed valve
     const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
     n.playbackRate.value = 0.3 + Math.random() * 0.12;
@@ -2437,7 +2449,7 @@ function sfxCrank(p, amp = 1) {
     ng.gain.setValueAtTime(0.001, tt);
     ng.gain.linearRampToValueAtTime(0.3 * lvl, tt + 0.006);
     ng.gain.exponentialRampToValueAtTime(0.001, tt + 0.05);
-    n.connect(nf); nf.connect(ng); ng.connect(AU.master);
+    n.connect(nf); nf.connect(ng); ng.connect(bus);
     n.start(tt); n.stop(tt + 0.07);
     // the thud through the block
     const k = ctx.createOscillator(); k.type = "sine";
@@ -2446,7 +2458,7 @@ function sfxCrank(p, amp = 1) {
     const kg = ctx.createGain();
     kg.gain.setValueAtTime(0.26 * lvl, tt);
     kg.gain.exponentialRampToValueAtTime(0.001, tt + 0.06);
-    k.connect(kg); kg.connect(AU.master); k.start(tt); k.stop(tt + 0.08);
+    k.connect(kg); kg.connect(bus); k.start(tt); k.stop(tt + 0.08);
     // diesels and tired old engines clatter on top of every stroke
     if (p.grit > 1.2) {
       const c2 = ctx.createBufferSource(); c2.buffer = AU.noiseBuf; c2.playbackRate.value = 2.1;
@@ -2455,12 +2467,25 @@ function sfxCrank(p, amp = 1) {
       const cg = ctx.createGain();
       cg.gain.setValueAtTime(0.07 * lvl * p.grit, tt + 0.004);
       cg.gain.exponentialRampToValueAtTime(0.001, tt + 0.03);
-      c2.connect(cf); cf.connect(cg); cg.connect(AU.master);
+      c2.connect(cf); cf.connect(cg); cg.connect(bus);
       c2.start(tt + 0.004); c2.stop(tt + 0.04);
     }
     time += 1 / (chug * (0.84 + 0.16 * prog));
     i++;
   }
+
+  return {
+    // let go early and the starter drops out: the bus is ducked away over a
+    // few hundredths, which is exactly how abruptly a real one stops
+    stop(fade = 0.06) {
+      const now = ctx.currentTime;
+      try {
+        bus.gain.cancelScheduledValues(now);
+        bus.gain.setValueAtTime(bus.gain.value, now);
+        bus.gain.exponentialRampToValueAtTime(0.0001, now + fade);
+      } catch (_) {}
+    },
+  };
 }
 
 /* it catches: two or three cylinders light out of rhythm, the pinion is
@@ -2488,7 +2513,7 @@ function sfxCatch(p, amp = 1) {
   let dt = 0.0, gap = 0.082;
   for (let i = 0; i < (p.fires || 3); i++) {
     const lvl = hard * (0.5 + 0.5 * (i / Math.max(1, p.fires - 1))) * (0.8 + Math.random() * 0.4);
-    const tt = t + dt + (Math.random() - 0.5) * 0.012;
+    const tt = Math.max(t, t + dt + (Math.random() - 0.5) * 0.012);
     // the crack out of the pipe
     const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.5;
     const nf = ctx.createBiquadFilter(); nf.type = "highpass"; nf.frequency.value = 900;
@@ -2900,6 +2925,7 @@ function stepPhysics(dt) {
     eff = Math.max(eff, Math.min(1, S.blip / 0.12));
   }
   // startup flare — first fires push the revs up before the idle settles
+  const catchWas = S.catchT;
   S.catchT = Math.max(0, S.catchT - dt);
   if (S.catchT > 0) {
     /* The flare is aimed at a ceiling rather than held wide open, and it
@@ -2920,6 +2946,32 @@ function stepPhysics(dt) {
         * Math.min(1, S.catchT / 0.4));
     }
   } else S._catchPrev = null;
+
+  /* The way down is the half of a start people actually remember: it does
+     not drop off the flare, it sags back on a long smooth curve over a
+     couple of seconds while the ECU bleeds the fast idle away. So the flare
+     hands over to a governor that tracks a decaying target — friction pulls
+     the revs down, this feathers just enough throttle to keep them on the
+     curve, and it lets go the moment you touch the pedal yourself. */
+  if (catchWas > 0 && S.catchT <= 0 && S.engineOn) {
+    S.settleDur = 1.8 + (S.catchPeak - ENG.idle) / 2600;   // further to fall, longer to fall
+    S.settleT = S.settleDur;
+    S.settleFrom = Math.max(S.rpm, ENG.idle + 100);
+  }
+  if (S.settleT > 0) {
+    S.settleT = Math.max(0, S.settleT - dt);
+    if (!S.engineOn || S.in.gas > 0.04 || S.blip > 0) S.settleT = 0;
+    else {
+      const k = S.settleT / S.settleDur;
+      // eased, not linear — it falls away quickly at first and creeps the
+      // last few hundred rpm, which is exactly how a warm engine settles
+      const target = ENG.idle + (S.settleFrom - ENG.idle) * k * k * (3 - 2 * k) * 0.98;
+      if (S.rpm < target) {
+        const band = Math.max(160, (S.settleFrom - ENG.idle) * 0.5);
+        eff = Math.max(eff, 0.55 * clamp((target - S.rpm) / band, 0, 1));
+      }
+    }
+  }
   if (S.cutTimer > 0 || (S.shiftCut > 0 && S.blip <= 0) || !S.engineOn) eff = 0;
   S.effThrottle = eff;
 
@@ -3203,9 +3255,10 @@ function stallEngine() {
 /* every physical press of the button lands here. On the Sant'Agata cars the
    red cover has to come up first — that press costs you nothing but the flip.
    After that it's a real switch under your thumb, so it clicks. */
-function ignitionPress() {
+function ignitionDown() {
   initAudio();
   if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+  if (S.cranking) return;                   // already turning over
 
   if (CC.startCap && !S.capOpen) {
     S.capOpen = true;
@@ -3214,11 +3267,26 @@ function ignitionPress() {
     return;
   }
   // key cars turn a barrel; everything else is a switch under your thumb
-  if (!S.cranking) {
-    if (CC.ignKey) sfxKeyTurn(S.engineOn ? -1 : 1);
-    else sfxIgnClick();
-  }
+  if (CC.ignKey) sfxKeyTurn(S.engineOn ? -1 : 1);
+  else sfxIgnClick();
   toggleIgnition();
+}
+
+/* Letting go matters. You hold the button — or hold the key over against
+   its spring — until it lights; let go early and the starter drops out and
+   the engine falls back to nothing, same as the real thing. */
+function ignitionUp() {
+  if (S.cranking) abortCrank();
+}
+
+// a complete press-and-hold, for everything that isn't a finger on the
+// button: the gamepad, the autopilot, a scripted start
+function ignitionPress() {
+  ignitionDown();
+  if (S.cranking) {
+    const hold = ((S.crankP && S.crankP.dur) || 0.8) * 1000 + 150;
+    setTimeout(ignitionUp, hold);
+  }
 }
 
 // drop the cover back over the button — done whenever the car goes dark
@@ -3282,7 +3350,7 @@ function toggleIgnition() {
     $("stallOverlay").classList.remove("show");
     $("lampStall").classList.remove("lit", "blink");
     sfxAccOn(CC);
-    accNagStart(CC.bootRich ? 2400 : 1700);   // …then it starts asking
+    accNagStart(CC.bootRich ? 2200 : 1500);   // …then it starts asking
     updateRunLamp();
     return;
   }
@@ -3291,43 +3359,107 @@ function toggleIgnition() {
   const quiet = !!CC.edrive;
   accNagStop();                       // it got what it was asking for
   const p = crankProfile(CC);
-  if (quiet) { p.dur = 0.4; p.rpm *= 1.9; p.fires = 2; p.flare = 0.35; p.flareT = 0.35; }
+  // the e-motor spins it up fast and near-silently, but once it lights it
+  // still swings up like anything else — it just gets there sooner
+  if (quiet) { p.dur = 0.4; p.rpm *= 1.9; p.fires = 2; }
   S.acc = true;
   S.cranking = true; S.stalled = false;
+  S.crankP = p;
   $("stallOverlay").classList.remove("show");
   $("lampStall").classList.remove("lit", "blink");
   const btn = $("ignition");
   btn.classList.add("cranking");
-  sfxCrank(p, quiet ? 0.35 : 1);
-  // the needle actually sits at cranking speed, wavering on each compression
+  AU.crankFx = sfxCrank(p, quiet ? 0.4 : 1.25);
+  // the needle sits at cranking speed, wavering on every compression, and the
+  // whole thing runs on the clock rather than a timeout so letting go of the
+  // button can stop it dead partway through
   const chugHz = (p.cyl / 2) * (p.rpm / 60);
   const crank0 = performance.now();
   const crankAnim = () => {
-    if (!S.cranking) return;
+    if (!S.cranking || S.crankSeq !== seq) return;
     const el = (performance.now() - crank0) / 1000;
     S.rpm = p.rpm * (0.86 + 0.14 * Math.min(1, el / p.dur))
           + Math.sin(el * chugHz * 6.283) * p.rpm * 0.16;
     requestAnimationFrame(crankAnim);
   };
   crankAnim();
-  setTimeout(() => {
-    if (S.crankSeq !== seq || !S.cranking) return;   // car was swapped mid-crank
-    S.cranking = false;
-    btn.classList.remove("cranking");
-    if (CC.ignKey) sfxKeyTurn(-1);      // sprung out of START, back to ON
-    S.engineOn = true;
-    armCel();                           // restart clears the code… for now
-    S.rpm = p.rpm;                      // catches from cranking speed…
-    S.catchAmt = p.flare;               // …and how hard it flares is the car's
-    S.catchT = p.flareT;
-    S.catchPeak = p.peak;               // …up to here and no further
-    S.catchGuard = p.flareT + 0.8;
-    // open pipes make a meal of the first fires; a stock system barely coughs
-    sfxCatch(p, quiet ? 0.35 : 0.5 + Math.min(1.6, popsRating() * 0.42));
-    S.sweep = 0;                        // needle sweep
-    accBedStop(1.1);                    // the engine takes over from the fans
-    updateRunLamp();
-  }, p.dur * 1000);
+  // the catch runs off a timer, not the animation frame: a backgrounded tab
+  // stops painting but the engine still has to light when it lights
+  clearTimeout(S.crankTimer);
+  S.crankTimer = setTimeout(() => engineCaught(p, quiet, seq), p.dur * 1000);
+}
+
+/* it lit. The starter drops out, the first fires throw the revs up to the
+   start-up ceiling, and the settle takes over from there. */
+function engineCaught(p, quiet, seq) {
+  if (S.crankSeq !== seq || !S.cranking) return;
+  S.cranking = false;
+  $("ignition").classList.remove("cranking");
+  if (CC.ignKey) sfxKeyTurn(-1);      // sprung out of START, back to ON
+  S.engineOn = true;
+  armCel();                           // restart clears the code… for now
+  S.rpm = p.rpm;                      // catches from cranking speed…
+  S.catchAmt = p.flare;               // …and how hard it flares is the car's
+  S.catchT = p.flareT;
+  S.catchPeak = p.peak;               // …up to here and no further
+  S.catchGuard = p.flareT + 0.8;
+  // open pipes make a meal of the first fires; a stock system barely coughs
+  sfxCatch(p, quiet ? 0.4 : 0.65 + Math.min(1.9, popsRating() * 0.5));
+  S.sweep = 0;                        // needle sweep
+  accBedStop(1.1);                    // the engine takes over from the fans
+  updateRunLamp();
+}
+
+/* let go too soon and it doesn't light. The starter drops out, the engine
+   spins down on its own inertia, and you get one half-hearted cough out of
+   whichever cylinder was nearly there — then nothing. */
+function abortCrank() {
+  if (!S.cranking) return;
+  S.cranking = false;
+  clearTimeout(S.crankTimer); S.crankTimer = 0;
+  S.crankSeq = (S.crankSeq || 0) + 1;
+  $("ignition").classList.remove("cranking");
+  if (AU.crankFx) { AU.crankFx.stop(0.05); AU.crankFx = null; }
+  if (CC.ignKey) sfxKeyTurn(-1);
+  const p = S.crankP || crankProfile(CC);
+  sfxCrankDie(p);
+  S.rpm = 0;
+  // it's still switched on, so it goes back to asking
+  if (S.acc && !S.engineOn) accNagStart(900);
+  updateRunLamp();
+}
+
+/* the sound of a start that didn't take: the starter winding down, one weak
+   half-fire, and the engine coasting to a stop */
+function sfxCrankDie(p) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  // the starter spinning down
+  const w = ctx.createOscillator(); w.type = "sawtooth";
+  w.frequency.setValueAtTime(p.whine * 0.95, t);
+  w.frequency.exponentialRampToValueAtTime(p.whine * 0.18, t + 0.34);
+  const wf = ctx.createBiquadFilter(); wf.type = "bandpass";
+  wf.frequency.value = p.whine; wf.Q.value = 2.6;
+  const wg = ctx.createGain();
+  wg.gain.setValueAtTime(0.05, t);
+  wg.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
+  w.connect(wf); wf.connect(wg); wg.connect(AU.master); w.start(t); w.stop(t + 0.4);
+  // the last two compressions, slowing down and dying out
+  [[0.02, 0.5], [0.15, 0.28]].forEach(([dt, lvl]) => {
+    const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 0.3;
+    const nf = ctx.createBiquadFilter(); nf.type = "lowpass"; nf.frequency.value = 300;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.26 * lvl, t + dt);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.09);
+    n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(t + dt); n.stop(t + dt + 0.11);
+    const k = ctx.createOscillator(); k.type = "sine";
+    k.frequency.setValueAtTime(80, t + dt);
+    k.frequency.exponentialRampToValueAtTime(38, t + dt + 0.1);
+    const kg = ctx.createGain();
+    kg.gain.setValueAtTime(0.24 * lvl, t + dt);
+    kg.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.12);
+    k.connect(kg); kg.connect(AU.master); k.start(t + dt); k.stop(t + dt + 0.14);
+  });
 }
 
 function updateRunLamp() {
@@ -4099,6 +4231,7 @@ function selectCar(id) {
   // full reset — new car arrives parked, engine off
   S.crankSeq = (S.crankSeq || 0) + 1;
   S.cranking = false; S.engineOn = false; S.stalled = false;
+  clearTimeout(S.crankTimer); S.crankTimer = 0;
   S.acc = false; S.capOpen = false; S._overWarn = 0;
   accNagStop(); accBedStop(0.2);
   clearVox();
@@ -5521,7 +5654,9 @@ function initInput() {
         return e.code === "Space";      // still swallow space (page scroll)
       case "KeyE": if (down && !e.repeat) seqShift(1); return true;
       case "KeyQ": if (down && !e.repeat) seqShift(-1); return true;
-      case "KeyI": if (down && !e.repeat) ignitionPress(); return true;
+      case "KeyI":
+        if (down && !e.repeat) ignitionDown(); else if (!down) ignitionUp();
+        return true;
       case "KeyH": if (down && !e.repeat) toggleEdrive(); return true;
       case "KeyL":
         if (down && !e.repeat) LT.phase === "off" ? openLaunch() : closeLaunch();
@@ -5557,7 +5692,14 @@ function initInput() {
   bindPedal($("pedBrake"), "brake");
   bindPedal($("pedClutch"), "clutch");
 
-  $("ignition").addEventListener("click", ignitionPress);
+  const ign = $("ignition");
+  ign.addEventListener("pointerdown", e => { e.preventDefault(); ignitionDown(); });
+  ign.addEventListener("pointerup", ignitionUp);
+  ign.addEventListener("pointerleave", ignitionUp);
+  ign.addEventListener("pointercancel", ignitionUp);
+  window.addEventListener("blur", ignitionUp);
+  // keyboard "press" on a focused button would fire a second, phantom start
+  ign.addEventListener("click", e => e.preventDefault());
   $("edriveBtn").addEventListener("click", toggleEdrive);
 
   document.querySelectorAll(".mode-btn").forEach(b =>
