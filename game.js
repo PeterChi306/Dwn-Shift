@@ -617,7 +617,7 @@ const CARS = [
     },
   },
   {
-    id: "jesko", name: "Ängelholm Jesko", tag: "twin-turbo top-speed missile · 0-400-0", layout: "V8 · 5.0L flat-plane twin turbo",
+    id: "absolut", name: "Ängelholm Absolut", tag: "twin-turbo top-speed missile · 0-400-0", layout: "V8 · 5.0L flat-plane twin turbo",
     cyl: 8, idle: 820, max: 8500, cut: 8700, inertia: 0.15,   // flat crank, feathery response
     curve: [[0, 300], [1500, 660], [3000, 940], [4500, 1020], [6000, 985], [7200, 890],
             [8500, 720], [9000, 480]],
@@ -626,47 +626,24 @@ const CARS = [
     flutter: true, whistleMul: 0.7, whistleFreqMul: 1.05, turboBreath: 1.3, breathHz: 1550,
     tachMax: 9, redK: 8.5, kmhMax: 540, mphMax: 330, shiftLights: true,
     dash: { accent: "#cfe0ee" },
-    /* the 5.0 flat-plane twin-turbo built to chase 330 mph: a hard, flinty,
-       industrial V8 with the 2nd order dominant up top and a constant turbo
-       breath underneath — a rocket that flatters no one. */
+    /* the 5.0 twin-turbo built to chase 330 mph: NOT a high shriek — the big
+       turbos and long plumbing give it a deep, muscular, chest-heavy bark that
+       hardens as it climbs, with the fundamental doing the heavy lifting and a
+       constant turbo breath underneath. f0Mul drops the whole voice down. */
     sound: {
       layers: [
-        ["square",   0.5,   0.24, 0.08],
-        ["sine",     0.5,   0.16, 0.05],
-        ["sawtooth", 0.996, 0.18, 0.26],
-        ["sawtooth", 1,     0.46, 0.50],
-        ["sawtooth", 1.006, 0.20, 0.28],
-        ["sawtooth", 2.01,  0.16, 0.50],
-        ["sawtooth", 3.02,  0.05, 0.34],
-        ["sawtooth", 4.03,  0.0,  0.20],
-        ["triangle", 5.04,  0.0,  0.12],
+        ["square",   0.5,   0.34, 0.14],   // muscle/gravel at idle
+        ["sine",     0.5,   0.24, 0.10],   // chest sub
+        ["sawtooth", 0.996, 0.22, 0.30],   // unison low…
+        ["sawtooth", 1,     0.50, 0.52],   // …dominant center voice
+        ["sawtooth", 1.006, 0.22, 0.30],   // …unison high
+        ["sawtooth", 1.5,   0.10, 0.22],   // half-order colour
+        ["sawtooth", 2.01,  0.14, 0.34],   // 2nd order — present, not screaming
+        ["sawtooth", 3.02,  0.04, 0.16],   // faint metallic edge only up top
       ],
-      formants: [[240, 1.1, 4], [1400, 2.0, 5.5], [3300, 2.5, 6.5]],
-      loadDrive: 0.5, noiseMul: 1.25, volTrim: 1.2, scream: 3600,
-      drive: 0.72, pulseDepth: 0.18, raspMul: 1.5, jitter: 1.1,
-    },
-  },
-  {
-    id: "nitro", name: "Pomona Nitro TF", tag: "world-record top fuel · 0-100 in a blink", layout: "V8 · 8.2L nitro supercharged · 1 gear",
-    cyl: 8, idle: 1000, max: 8400, cut: 8700, inertia: 0.5,
-    // eleven thousand horsepower of supercharged nitromethane. A savage grip-
-    // limited launch off the line, then the pull tapers so it takes ~5s to reach
-    // 500 km/h — no gears to speak of, one direct-drive ratio and a slipper clutch.
-    curve: [[0, 12000], [1500, 13000], [2500, 11000], [4000, 7000], [6000, 4500],
-            [7500, 3200], [8700, 2200]],
-    mass: 1000, finalDrive: 1.98, clutchCap: 6000, cdA: 0.95, brakeMax: 26000, grip: 10,
-    ratios: { R: -2.2, 1: 1 },                    // direct drive — one gear, that's all there is
-    asp: "super", pops: 3, boostMax: 0.25, whineMult: 5, psiMax: 45,
-    tachMax: 9, redK: 8.4, kmhMax: 540, mphMax: 340, dial: "gear", shiftLights: true,
-    dash: { accent: "#ff5a1e" },
-    /* a lopey, earth-shaking supercharged nitro V8: rough high idle blat,
-       blower whine over the top, and a wall of noise the instant it launches. */
-    sound: {
-      layers: [["square", 0.5, 0.5, 0.22], ["sine", 0.5, 0.34, 0.14], ["sawtooth", 1, 0.42, 0.5],
-               ["sawtooth", 1.49, 0.2, 0.24], ["sawtooth", 2.01, 0.1, 0.3], ["triangle", 3.02, 0.05, 0.16]],
-      noiseMul: 1.7, drive: 0.8, pulseDepth: 0.5, pulseDiv: 2, pulseType: "square",
-      raspMul: 1.7, hunt: 1.8, idleBlat: 2.6, idleVol: 0.3, scream: 1400, volTrim: 1.4,
-      formants: [[110, 1, 5], [700, 1.7, 4.5], [1800, 1.6, 3]], loadDrive: 0.55,
+      formants: [[150, 1.0, 4], [700, 1.8, 5], [1900, 2.0, 4.5]],
+      loadDrive: 0.5, noiseMul: 1.2, volTrim: 1.15, scream: 2000,
+      drive: 0.7, pulseDepth: 0.22, raspMul: 1.35, jitter: 1.0, f0Mul: 0.85,
     },
   },
 ];
@@ -738,11 +715,11 @@ function hexA(hex, a) {
 
 const RATES = { thrUp: 4.6, thrDn: 5.6, brkUp: 5.2, brkDn: 6.0, cltUp: 9.0, cltDn: 2.0 };
 
-/* flyby pass speed: below 200 km/h the trackside car sweeps by at its true
-   speed; above 200 the pass snaps past dramatically faster. Only the excess
-   over 200 is amplified, so nothing at or below 200 km/h changes. */
+/* flyby pass speed: below 300 km/h the trackside car sweeps by at its true
+   speed; above 300 the pass snaps past dramatically faster. Only the excess
+   over 300 is amplified, so nothing at or below 300 km/h changes. */
 function flybyV() {
-  const raw = Math.abs(S.v), th = 200 / 3.6;      // 55.6 m/s
+  const raw = Math.abs(S.v), th = 300 / 3.6;      // 83.3 m/s
   return raw <= th ? raw : th + (raw - th) * 3.6;
 }
 
