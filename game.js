@@ -849,7 +849,7 @@ const S = {
   in: { gas: 0, brake: 0, clutch: 0 }, // key/pointer targets
   throttle: 0, brake: 0, clutchPedal: 0,
   effThrottle: 0, engage: 0, locked: false,
-  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, catchGuard: 0, parkLimit: 0, crankP: null, crankTimer: 0, settleT: 0, settleDur: 1, settleFrom: 0, pendShift: false,
+  shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, catchGuard: 0, parkLimit: 0, crankP: null, crankTimer: 0, settleT: 0, settleDur: 0, settleFrom: 0, fastIdle: 0, pendShift: false,
   tunnel: false, flyby: false, flyX: -380, cabin: false, mods: {},
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
   spinV: 0, lockup: false,
@@ -2954,21 +2954,37 @@ function stepPhysics(dt) {
      the revs down, this feathers just enough throttle to keep them on the
      curve, and it lets go the moment you touch the pedal yourself. */
   if (catchWas > 0 && S.catchT <= 0 && S.engineOn) {
-    S.settleDur = 1.8 + (S.catchPeak - ENG.idle) / 2600;   // further to fall, longer to fall
-    S.settleT = S.settleDur;
+    S.settleT = 0;
+    S.settleDur = 7.5;                     // the whole warm-up, start to finish
     S.settleFrom = Math.max(S.rpm, ENG.idle + 100);
+    S.fastIdle = ENG.idle * 1.55;          // where it sits while it warms
   }
-  if (S.settleT > 0) {
-    S.settleT = Math.max(0, S.settleT - dt);
-    if (!S.engineOn || S.in.gas > 0.04 || S.blip > 0) S.settleT = 0;
+  if (S.settleDur > 0 && S.settleT < S.settleDur) {
+    S.settleT += dt;
+    if (!S.engineOn || S.in.gas > 0.04 || S.blip > 0) S.settleDur = 0;
     else {
-      const k = S.settleT / S.settleDur;
-      // eased, not linear — it falls away quickly at first and creeps the
-      // last few hundred rpm, which is exactly how a warm engine settles
-      const target = ENG.idle + (S.settleFrom - ENG.idle) * k * k * (3 - 2 * k) * 0.98;
+      /* A car does not go from the flare to idle in one movement. It drops
+         onto a fast idle, SITS there while the ECU warms the cats, and only
+         then bleeds away to a proper idle — and that middle bit is most of
+         what you hear standing next to one. Three phases:
+           0.0-1.1s  falling off the flare onto the fast idle
+           1.1-4.2s  holding it, drifting down a hair
+           4.2-7.5s  the long bleed down to idle */
+      const e = S.settleT, fi = S.fastIdle;
+      let target;
+      if (e < 1.1) {
+        const k = 1 - e / 1.1;
+        target = fi + (S.settleFrom - fi) * k * k * (3 - 2 * k);
+      } else if (e < 4.2) {
+        target = fi - (fi - ENG.idle) * 0.16 * ((e - 1.1) / 3.1);
+      } else {
+        const k = clamp((e - 4.2) / 3.3, 0, 1);
+        const from = fi - (fi - ENG.idle) * 0.16;
+        target = ENG.idle + (from - ENG.idle) * (1 - k) * (1 - k);
+      }
       if (S.rpm < target) {
-        const band = Math.max(160, (S.settleFrom - ENG.idle) * 0.5);
-        eff = Math.max(eff, 0.55 * clamp((target - S.rpm) / band, 0, 1));
+        const band = Math.max(140, (S.settleFrom - ENG.idle) * 0.45);
+        eff = Math.max(eff, 0.6 * clamp((target - S.rpm) / band, 0, 1));
       }
     }
   }
@@ -3407,6 +3423,10 @@ function engineCaught(p, quiet, seq) {
   sfxCatch(p, quiet ? 0.4 : 0.65 + Math.min(1.9, popsRating() * 0.5));
   S.sweep = 0;                        // needle sweep
   accBedStop(1.1);                    // the engine takes over from the fans
+  // and you flip the cover back down over the running engine, which is what
+  // everyone does — it has to come up again before you can stop it
+  if (CC.startCap && S.capOpen)
+    setTimeout(() => { if (S.engineOn) closeStartCap(); }, 1500);
   updateRunLamp();
 }
 
@@ -5867,12 +5887,15 @@ function initInput() {
    drives the pedals and the shifter.
    ================================================================ */
 
-const GP = { index: null, prevButtons: [] };
+const GP = { index: null, prevButtons: [], ignHeld: false };
 
 function initGamepad() {
   window.addEventListener("gamepadconnected", (e) => { GP.index = e.gamepad.index; });
   window.addEventListener("gamepaddisconnected", (e) => {
-    if (GP.index === e.gamepad.index) GP.index = null;
+    if (GP.index === e.gamepad.index) {
+      GP.index = null;
+      if (GP.ignHeld) { GP.ignHeld = false; ignitionUp(); }   // don't leave it cranking
+    }
   });
 }
 
@@ -5885,35 +5908,110 @@ function gpPressed(gp, i, prev) {
   return now && !was;
 }
 
+/* how far in the trigger is, is how far down the pedal is. A rest deadzone
+   so a pad that never quite reads zero doesn't creep, rescaled so the very
+   first millimetre of travel still counts, then a gentle curve that spreads
+   the bottom of the pedal out — that's where all the useful control is, and
+   a linear trigger makes a 600hp car feel like a light switch. */
+function pedalCurve(v, gamma) {
+  const dz = 0.055;
+  if (v <= dz) return 0;
+  const t = (v - dz) / (1 - dz);
+  return Math.pow(t, gamma);
+}
+
+/* Full pad mapping. Everything the standard layout gives us does something.
+
+   RT / R2 ....... throttle (analog — how hard you press is how far it opens)
+   LT / L2 ....... brake (analog)
+   A / Cross ..... clutch, held (manual + clutch mode)
+   B / Circle .... cruise control set / cancel
+   X / Square .... auto drive on / off
+   Y / Triangle .. eDrive EV <-> engine on the hybrids, cabin view otherwise
+   RB / R1 ....... shift up
+   LB / L1 ....... shift down
+   View / Share .. cycle auto -> manual -> manual+clutch
+   Menu/Options .. ignition — HOLD it to crank, exactly like the button
+   L3 ............ night drive
+   R3 ............ cabin / exterior view
+   D-pad up ...... selector toward P
+   D-pad down .... selector toward D
+   D-pad left .... previous car
+   D-pad right ... next car                                                  */
+const GP_MAP = {
+  CLUTCH: 0, CRUISE: 1, AUTODRIVE: 2, EDRIVE: 3,
+  DOWN: 4, UP: 5, BRAKE: 6, GAS: 7,
+  MODE: 8, IGNITION: 9, NIGHT: 10, CABIN: 11,
+  SEL_UP: 12, SEL_DOWN: 13, CAR_PREV: 14, CAR_NEXT: 15,
+};
+const PRND = ["P", "R", "N", "D"];
+const GP_MODES = ["auto", "manual", "clutch"];
+
+function gpSelector(dir) {
+  if (S.mode !== "auto") return;
+  const i = clamp(PRND.indexOf(S.autoSel) + dir, 0, PRND.length - 1);
+  const b = document.querySelector(`.prnd button[data-sel="${PRND[i]}"]`);
+  if (b) b.click();
+}
+
+function gpCycleCar(dir) {
+  const i = CARS.findIndex(c => c.id === CC.id);
+  const next = CARS[(i + dir + CARS.length) % CARS.length];
+  if (next) selectCar(next.id);
+}
+
 function pollGamepad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   let gp = GP.index != null ? pads[GP.index] : null;
   if (!gp) gp = Array.from(pads).find(p => p) || null;
   if (!gp) return;
   GP.index = gp.index;
-
-  // triggers: analog buttons 7 (RT/gas) & 6 (LT/brake) on the standard
-  // mapping, with an axis fallback for pads that report them as axes
-  const rt = gp.buttons[7] ? gp.buttons[7].value : Math.max(0, gp.axes[5] || 0);
-  const lt = gp.buttons[6] ? gp.buttons[6].value : Math.max(0, gp.axes[4] || 0);
-  S.in.gas = rt;
-  S.in.brake = lt;
-  if (S.mode === "clutch")
-    S.in.clutch = (gp.buttons[0] && gp.buttons[0].pressed) ? 1 : 0;  // A held = clutch pedal
-
   const prev = GP.prevButtons;
-  // RB / LB = paddle shifters, exactly like a Forza-style sequential box
-  if (gpPressed(gp, 5, prev)) {
+  const held = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
+
+  /* --- the pedals. Analog buttons on the standard mapping, with an axis
+         fallback for the pads that report triggers as axes instead. --- */
+  const rawGas = gp.buttons[GP_MAP.GAS]
+    ? gp.buttons[GP_MAP.GAS].value : Math.max(0, gp.axes[5] || 0);
+  const rawBrake = gp.buttons[GP_MAP.BRAKE]
+    ? gp.buttons[GP_MAP.BRAKE].value : Math.max(0, gp.axes[4] || 0);
+  S.in.gas = pedalCurve(rawGas, 1.45);      // most of the travel is the bottom half
+  S.in.brake = pedalCurve(rawBrake, 1.25);  // brakes want a little less curve
+  if (S.mode === "clutch")
+    S.in.clutch = held(GP_MAP.CLUTCH) ? 1 : 0;
+
+  /* --- the ignition is press-and-hold on the pad too --- */
+  const ignNow = held(GP_MAP.IGNITION);
+  if (ignNow && !GP.ignHeld) ignitionDown();
+  else if (!ignNow && GP.ignHeld) ignitionUp();
+  GP.ignHeld = ignNow;
+  prev[GP_MAP.IGNITION] = ignNow;
+
+  /* --- paddles, exactly like a Forza-style sequential box --- */
+  if (gpPressed(gp, GP_MAP.UP, prev)) {
     if (S.mode === "manual") seqShift(1);
     else if (S.mode === "clutch") kbSeqGate(1);
   }
-  if (gpPressed(gp, 4, prev)) {
+  if (gpPressed(gp, GP_MAP.DOWN, prev)) {
     if (S.mode === "manual") seqShift(-1);
     else if (S.mode === "clutch") kbSeqGate(-1);
   }
-  if (gpPressed(gp, 9, prev)) ignitionPress();           // Start/Menu
-  if (gpPressed(gp, 3, prev)) toggleEdrive();            // Y — eDrive cars only
-  if (gpPressed(gp, 1, prev)) toggleCruise();            // B
+
+  /* --- everything else --- */
+  if (gpPressed(gp, GP_MAP.CRUISE, prev)) toggleCruise();
+  if (gpPressed(gp, GP_MAP.AUTODRIVE, prev)) toggleAutodrive();
+  if (gpPressed(gp, GP_MAP.EDRIVE, prev)) {
+    if (CC.edrive) toggleEdrive();          // hybrids: EV <-> engine
+    else $("cabinBtn").click();             // everything else: a spare view key
+  }
+  if (gpPressed(gp, GP_MAP.MODE, prev))
+    setMode(GP_MODES[(GP_MODES.indexOf(S.mode) + 1) % GP_MODES.length]);
+  if (gpPressed(gp, GP_MAP.NIGHT, prev)) setNight(!S.night);
+  if (gpPressed(gp, GP_MAP.CABIN, prev)) $("cabinBtn").click();
+  if (gpPressed(gp, GP_MAP.SEL_UP, prev)) gpSelector(-1);
+  if (gpPressed(gp, GP_MAP.SEL_DOWN, prev)) gpSelector(1);
+  if (gpPressed(gp, GP_MAP.CAR_PREV, prev)) gpCycleCar(-1);
+  if (gpPressed(gp, GP_MAP.CAR_NEXT, prev)) gpCycleCar(1);
 }
 
 /* ================================================================
