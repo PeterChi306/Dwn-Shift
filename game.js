@@ -6814,6 +6814,7 @@ function updateCasFace(stateTxt) {
 function setPlaying(p) {
   if (MUS.playing === p) return;
   MUS.playing = p;
+  updateMasterGain();          // the car steps back the moment the music starts
   $("cassette").classList.toggle("playing", p);
   updateCasFace();
   updateMasterGain();
@@ -6826,6 +6827,7 @@ function loadStation(uri) {
   if (!MUS.names[uri]) fetchStationName(uri);
   renderStations();
   updateCasFace("loading tape…");
+  updateMasterGain();          // a tape in the deck already shifts the balance
   save();
 
   // Premium + SDK: play straight on the deck's own device — real volume knob
@@ -6896,10 +6898,58 @@ function applyStereoWide() {
    own mix control — the higher it sits, the further the engine steps back
    under a playing tape (hardest with the windows up); Premium accounts
    additionally get true Spotify volume through the SDK player. */
+/* ---------------- the music balance ----------------
+   Spotify's stream is DRM-boxed: we can't touch its gain, and in the bare
+   embed fallback we can't even see inside the iframe. So VOL doesn't make the
+   music louder — it pulls the CAR back, which your ear reads as the same
+   thing. Turn it up and the engine, the road, the weather and everything else
+   step aside; turn it down and the car comes back over the top of the track.
+
+   That's not a trick so much as how a real stereo fight works, and it's the
+   only lever we actually have. */
+
+/* Should the deck be treated as running?
+   With the Web Playback SDK or the IFrame API we're told. With the plain
+   embed there is no telemetry at all — so once a tape is loaded we assume
+   it's playing, because a volume slider that silently does nothing is a much
+   worse outcome than one that leans in a moment early. */
+function deckLive() {
+  if (MUS.playing) return true;
+  const telemetry = !!MUS.player || !!MUS.ctrl;   // something that reports back
+  return !!S.station && !telemetry;
+}
+
+/* how far the world steps back, 0..1 (1 = untouched) */
+function musicDuck() {
+  if (!deckLive()) return 1;
+  // Shaped rather than linear. The bottom half of the travel barely moves the
+  // car, so you can nudge the balance; the top half pulls away hard, so the
+  // end of the slider is where the "turn it UP" feeling lives.
+  // With the windows up there's less road noise to compete with, so the
+  // stereo wins by more — same as sitting in a real car.
+  const depth = (S.cabin ? 0.82 : 0.64) * Math.pow(clamp(MUS.vol, 0, 1), 1.5);
+  return 1 - depth;
+}
+
 function updateMasterGain() {
   if (!AU.ready) return;
-  const duck = MUS.playing ? 1 - MUS.vol * (S.cabin ? 0.68 : 0.4) : 1;
-  AU.master.gain.setTargetAtTime(S.muted ? 0 : 0.85 * duck, AU.ctx.currentTime, 0.25);
+  const t = AU.ctx.currentTime, duck = musicDuck();
+  AU.master.gain.setTargetAtTime(S.muted ? 0 : 0.85 * duck, t, 0.25);
+  // Rain and traffic hang off their own bus, downstream of nothing — so they
+  // ducked for exactly no one. Turning the music up used to leave the weather
+  // roaring straight over the top of it. (This also means MUTE finally mutes
+  // the weather, which it never did either.)
+  AU.amb.gain.setTargetAtTime(S.muted ? 0 : duck, t, 0.25);
+  updateDuckReadout();
+}
+
+/* say out loud what the slider is doing, so it doesn't look broken */
+function updateDuckReadout() {
+  const el = $("tpDuck");
+  if (!el) return;
+  const cut = Math.round((1 - musicDuck()) * 100);
+  el.textContent = cut > 0 ? "car −" + cut + "%" : "car full";
+  el.classList.toggle("live", cut > 0);
 }
 
 function setTheme(t) {

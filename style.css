@@ -2549,3 +2549,13 @@ body.night .dp-title { color: #ffffff; text-shadow: 0 0 14px rgba(182, 255, 240,
 @media (max-width: 620px) {
   .dp-screen { width: 140px; }
 }
+
+/* the VOL slider's real job, stated plainly: it doesn't raise the music
+   (Spotify's stream isn't ours to touch) — it steps the car back */
+.tp-duck {
+  flex: none; min-width: 62px; text-align: right;
+  font-size: 9.5px; letter-spacing: 0.08em;
+  color: var(--muted); opacity: 0.55;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+.tp-duck.live { color: var(--accent); opacity: 1; }
