@@ -974,12 +974,47 @@ body[data-theme="frost"] .pedal-pad {
   filter: var(--heatFilter, none);
   transition: filter 0.2s ease;
 }
+/* ---- flame chemistry: the colour is set by HOW the charge burned ----
+   Each k- class only swaps three variables — the plume gradient and the two
+   halo colours the pipe throws — so size, shape and timing stay identical
+   across every flame type. See flameKind() in game.js for which is which. */
+.tip {
+  /* rich, sooty orange: the default overrun torch */
+  --flameGrad: linear-gradient(to right,
+    #ffffff 0%, #fff2c4 14%, #ffd24d 32%, #ff8a24 54%, #ff4c12 74%, rgba(255,52,12,0) 100%);
+  --glowNear: rgba(255,120,40,0.9);
+  --glowFar:  rgba(255,80,20,0.5);
+}
+/* lean blue: high pressure in a red-hot pipe, almost no soot to glow */
+.tip.k-blue {
+  --flameGrad: linear-gradient(to right,
+    #ffffff 0%, #d8f4ff 10%, #7fd4ff 26%, #3a94ff 48%, #1b4cf0 72%, rgba(24,50,220,0) 100%);
+  --glowNear: rgba(70,150,255,0.95);
+  --glowFar:  rgba(24,70,240,0.55);
+}
+/* white hot: a big slug going off at once — the core outruns its own edges */
+.tip.k-white {
+  --flameGrad: linear-gradient(to right,
+    #ffffff 0%, #ffffff 18%, #fff8e8 34%, #ffd9a0 54%, #ff9a4a 76%, rgba(255,140,60,0) 100%);
+  --glowNear: rgba(255,240,215,1);
+  --glowFar:  rgba(255,160,70,0.6);
+}
+/* violet: the thin clean fringe off long straight pipes at night */
+.tip.k-violet {
+  --flameGrad: linear-gradient(to right,
+    #ffffff 0%, #f0dcff 12%, #c99bff 30%, #9a5cf5 54%, #6425c8 76%, rgba(90,30,190,0) 100%);
+  --glowNear: rgba(180,110,255,0.9);
+  --glowFar:  rgba(110,40,210,0.55);
+}
 /* flame flash: the whole pipe glows and a jet blasts out the back */
 .tip.fire .barrel {
-  filter: drop-shadow(0 0 22px rgba(255,120,40,0.9)) drop-shadow(0 0 52px rgba(255,80,20,0.5));
+  filter: drop-shadow(0 0 10px var(--glowNear)) drop-shadow(0 0 24px var(--glowFar));
 }
 .tip.fire.big .barrel {
-  filter: drop-shadow(0 0 34px rgba(255,150,50,0.95)) drop-shadow(0 0 80px rgba(255,70,16,0.6));
+  filter: drop-shadow(0 0 15px var(--glowNear)) drop-shadow(0 0 34px var(--glowFar));
+}
+.tip.fire.huge .barrel {
+  filter: drop-shadow(0 0 21px var(--glowNear)) drop-shadow(0 0 50px var(--glowFar));
 }
 /* the flame plume — an elongated horizontal jet fired straight OUT the mouth */
 .tip i {
@@ -988,11 +1023,13 @@ body[data-theme="frost"] .pedal-pad {
   opacity: 0; pointer-events: none;
   filter: blur(1.1px); mix-blend-mode: screen;
   transform: translateY(-50%) scaleX(0.2);
-  background: linear-gradient(to right,
-    #ffffff 0%, #fff2c4 14%, #ffd24d 32%, #ff8a24 54%, #ff4c12 74%, rgba(255,52,12,0) 100%);
+  background: var(--flameGrad);
 }
+.tip.big i  { height: 52px; }
+.tip.huge i { height: 64px; filter: blur(1.6px); }
 .tip.fire i { animation: flameShoot 0.28s ease-out; }
 .tip.fire.big i { animation: flameShootBig 0.34s ease-out; }
+.tip.fire.huge i { animation: flameShootHuge 0.42s ease-out; }
 
 /* ---- exhaust looks per fitted system: each a different shape AND colour ---- */
 /* Touring: small, discreet, bright polished chrome, gentle cut — the quiet one */
@@ -1084,18 +1121,36 @@ body[data-theme="frost"] .pedal-pad {
   60%  { opacity: 0.92;transform: translateY(-50%) scaleX(1.5)  scaleY(1.0); }
   100% { opacity: 0;   transform: translateY(-50%) scaleX(1.95) scaleY(0.75); }
 }
+/* the shotgun bang: punches out fast, hangs there burning, then tears away */
+@keyframes flameShootHuge {
+  0%   { opacity: 0.5; transform: translateY(-50%) scaleX(0.3)  scaleY(0.8); }
+  20%  { opacity: 1;   transform: translateY(-50%) scaleX(1.35) scaleY(1.5); }
+  45%  { opacity: 1;   transform: translateY(-50%) scaleX(1.9)  scaleY(1.3); }
+  72%  { opacity: 0.85;transform: translateY(-50%) scaleX(2.5)  scaleY(1.0); }
+  100% { opacity: 0;   transform: translateY(-50%) scaleX(3.1)  scaleY(0.7); }
+}
 
+/* the room lighting up: same flame chemistry, thrown at the whole screen */
 .fireglow {
+  --glowA: rgba(255,140,44,0.3); --glowB: rgba(255,64,12,0.1);
   position: fixed; left: 0; right: 0; bottom: -50px; height: 240px;
   z-index: 30; pointer-events: none; opacity: 0;
-  background: radial-gradient(56% 100% at 50% 100%,
-    rgba(255,140,44,0.72), rgba(255,64,12,0.26) 55%, transparent 80%);
+  background: radial-gradient(46% 100% at 50% 100%,
+    var(--glowA), var(--glowB) 55%, transparent 80%);
 }
+.fireglow.k-blue   { --glowA: rgba(80,165,255,0.3); --glowB: rgba(26,70,240,0.11); }
+.fireglow.k-white  { --glowA: rgba(255,246,228,0.34); --glowB: rgba(255,150,60,0.12); }
+.fireglow.k-violet { --glowA: rgba(186,120,255,0.29); --glowB: rgba(104,36,205,0.11); }
 .fireglow.on { animation: fglow 0.3s ease-out; }
-.fireglow.big { height: 320px; }
+.fireglow.big { height: 280px; }
 .fireglow.big.on { animation: fglowBig 0.36s ease-out; }
-@keyframes fglow { 0% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes fglowBig { 0% { opacity: 1; } 60% { opacity: 0.85; } 100% { opacity: 0; } }
+.fireglow.huge { height: 340px; }
+.fireglow.huge.on { animation: fglowHuge 0.46s ease-out; }
+@keyframes fglow { 0% { opacity: 0.72; } 100% { opacity: 0; } }
+@keyframes fglowBig { 0% { opacity: 0.82; } 60% { opacity: 0.62; } 100% { opacity: 0; } }
+@keyframes fglowHuge {
+  0% { opacity: 0.9; } 18% { opacity: 0.9; } 55% { opacity: 0.6; } 100% { opacity: 0; }
+}
 
 /* ---------------- CABIN WIPERS (rain + interior) ---------------- */
 .wiper {
@@ -1236,6 +1291,10 @@ body[data-theme="frost"] .pedal-pad {
 .ws-sub-mid { margin-top: 20px; }
 #wsShift { margin-top: 10px; }
 .ws-paddles { grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
+/* 5 flame colours: AUTO takes the full width, the four burns sit under it */
+.ws-flames { grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
+.ws-flames .ws-card:first-child { grid-column: 1 / -1; }
+@media (max-width: 540px) { .ws-flames { grid-template-columns: 1fr; } }
 @media (max-width: 540px) { .ws-paddles { grid-template-columns: 1fr; } }
 @media (max-width: 540px) { .ws-amb { grid-template-columns: 1fr; } }
 
@@ -1704,3 +1763,789 @@ body.night.tunnel .pedalbay { filter: brightness(0.78) saturate(0.85); }
 #tpEcho.on { color: var(--accent); border-color: var(--accent); }
 .tp-keys { display: flex; gap: 8px; flex: none; }
 #tpWide.on { color: var(--accent); border-color: var(--accent); }
+
+/* ================================================================
+   ENGINE SWAP · TRIALS · CONSEQUENCES · BUILD CARD
+   ================================================================ */
+
+/* ---- workshop: engine swap picker ---- */
+.ws-swap { margin-top: 10px; }
+.ws-swap select {
+  width: 100%; appearance: none;
+  padding: 11px 34px 11px 13px;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, var(--panel-hi), var(--panel-lo)),
+    var(--panel-lo);
+  border: 1px solid var(--edge-hi);
+  color: var(--text);
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  /* the chevron, drawn inline so nothing loads from off-origin */
+  background-image:
+    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  background-repeat: no-repeat, no-repeat;
+  background-position: right 11px center, 0 0;
+  background-size: 15px, auto;
+}
+.ws-swap select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ws-swap select.on { border-color: var(--accent); color: var(--accent); }
+.ws-swap-note {
+  margin: 8px 2px 0;
+  font-size: 10.5px; line-height: 1.55; color: var(--muted);
+}
+
+/* ---- workshop: trials + share + coming-soon ---- */
+.ws-share { margin-top: 20px; }
+.ws-share .chip-btn { width: 100%; justify-content: center; }
+.ws-soon {
+  margin-top: 20px; padding: 13px 15px;
+  border-radius: 14px;
+  border: 1px dashed var(--edge-hi);
+  background: var(--panel-lo);
+  opacity: 0.62;
+}
+.ws-soon-head { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+.ws-soon .ws-card-desc { display: block; }
+
+/* ---- cluster: the damage strip (only present in consequences mode) ---- */
+.dmg-strip {
+  display: none;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px; margin-top: 10px;
+}
+.dmg-strip.show { display: grid; }
+.dmg-bar {
+  --fill: 0%;
+  position: relative;
+  padding: 6px 8px 7px;
+  border-radius: 9px;
+  background: var(--panel-lo);
+  border: 1px solid var(--edge-hi);
+  overflow: hidden;
+}
+.dmg-bar span {
+  position: relative; z-index: 1;
+  font-size: 8.5px; font-weight: 700;
+  letter-spacing: 0.16em; color: var(--muted);
+}
+/* the fill itself — a bar that grows across the chip as things get worse */
+.dmg-bar i {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: var(--fill);
+  background: linear-gradient(90deg, rgba(120,200,140,0.16), rgba(120,200,140,0.34));
+  transition: width 0.18s linear, background 0.4s ease;
+}
+.dmg-bar.warn i { background: linear-gradient(90deg, rgba(230,180,60,0.2), rgba(230,180,60,0.44)); }
+.dmg-bar.bad i  { background: linear-gradient(90deg, rgba(226,76,50,0.24), rgba(226,76,50,0.56)); }
+.dmg-bar.bad span { color: #e2775a; }
+.dmg-bar.bad { animation: dmgPulse 1.1s ease-in-out infinite; }
+@keyframes dmgPulse { 50% { border-color: rgba(226,76,50,0.55); } }
+
+/* ---- the engine let go ---- */
+.blown-overlay .stall-title { color: #e2603f; }
+.blown-rebuild { margin-top: 12px; }
+
+/* ---- the build card ---- */
+.sc-card { min-width: 320px; max-width: 400px; }
+.sc-body { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.sc-name { font-size: 19px; font-weight: 800; letter-spacing: 0.01em; margin-top: 6px; }
+.sc-layout {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 0.14em; text-transform: uppercase; margin-top: 3px;
+}
+.sc-tip {
+  display: flex; justify-content: center;
+  width: 100%; margin: 6px 0 2px;
+  transform: scale(0.78); transform-origin: center;
+}
+.sc-specs {
+  display: grid; grid-template-columns: auto 1fr;
+  gap: 3px 14px; width: 100%; margin-top: 8px;
+  font-size: 11px;
+}
+.sc-specs dt { color: var(--muted); letter-spacing: 0.1em; font-size: 9px; align-self: center; }
+.sc-specs dd { margin: 0; text-align: right; font-weight: 600; }
+.sc-link { display: flex; gap: 8px; width: 100%; margin-top: 14px; }
+.sc-link input {
+  flex: 1; min-width: 0;
+  padding: 8px 10px; border-radius: 10px;
+  background: var(--panel-lo); border: 1px solid var(--edge-hi);
+  color: var(--muted); font: inherit; font-size: 10.5px;
+}
+.sc-link .chip-btn { flex: none; }
+
+/* ---- night flames: nothing else is lighting the street, so the fire
+        reads far brighter after dark — this is the one place the glow
+        is allowed to be bold ---- */
+body.night .tip i { filter: blur(1.5px) brightness(1.5) saturate(1.15); }
+body.night .tip.fire .barrel {
+  filter: drop-shadow(0 0 16px var(--glowNear)) drop-shadow(0 0 40px var(--glowFar));
+}
+body.night .tip.fire.big .barrel {
+  filter: drop-shadow(0 0 24px var(--glowNear)) drop-shadow(0 0 58px var(--glowFar));
+}
+body.night .tip.fire.huge .barrel {
+  filter: drop-shadow(0 0 34px var(--glowNear)) drop-shadow(0 0 84px var(--glowFar));
+}
+body.night .fireglow { --glowA: rgba(255,150,55,0.5); --glowB: rgba(255,70,16,0.19); }
+body.night .fireglow.k-blue   { --glowA: rgba(95,180,255,0.52); --glowB: rgba(30,80,245,0.2); }
+body.night .fireglow.k-white  { --glowA: rgba(255,248,235,0.56); --glowB: rgba(255,160,70,0.22); }
+body.night .fireglow.k-violet { --glowA: rgba(196,135,255,0.5); --glowB: rgba(115,42,215,0.2); }
+
+/* ================================================================
+   THE WORKSHOP — a full-screen bay, not a dialog
+   ================================================================
+   Only #workshop wears .ws-bay: the tape deck and the design studio keep
+   the small centred-modal treatment. Everything here is drawn with
+   gradients — no images load, so it costs nothing and themes cleanly.
+
+   The bay runs on its own palette rather than the cockpit's. A workshop is
+   a PLACE: cold strip lights, painted concrete, steel benches. It borrows
+   only the theme accent, so a build still reads as yours. */
+.ws-bay {
+  padding: 0;
+  background: rgba(6, 7, 9, 0.72);
+  --bay-floor: #17181b;
+  --bay-wall: #1b1d21;
+  --bay-steel: #23262b;
+  --bay-steel-hi: #2c3037;
+  --bay-line: rgba(255, 255, 255, 0.09);
+  --bay-line-hi: rgba(255, 255, 255, 0.16);
+  --bay-ink: #e8e9ec;
+  --bay-dim: #8b8f97;
+  --bay-hazard: #d8a326;
+}
+/* the light themes get a bright, clean, tiled service bay instead */
+body[data-theme="frost"] .ws-bay {
+  --bay-floor: #d8dce2;
+  --bay-wall: #e6e9ee;
+  --bay-steel: #f2f4f7;
+  --bay-steel-hi: #ffffff;
+  --bay-line: rgba(20, 26, 36, 0.12);
+  --bay-line-hi: rgba(20, 26, 36, 0.2);
+  --bay-ink: #171a1f;
+  --bay-dim: #5d646f;
+  --bay-hazard: #b8871a;
+}
+body[data-theme="heritage"] .ws-bay {
+  --bay-floor: #1a150e;
+  --bay-wall: #20190f;
+  --bay-steel: #292115;
+  --bay-steel-hi: #342a1b;
+  --bay-line: rgba(255, 232, 190, 0.1);
+  --bay-line-hi: rgba(255, 232, 190, 0.18);
+  --bay-ink: #efe6d6;
+  --bay-dim: #9c8f79;
+}
+
+/* the bay itself fills the screen: no rounding, no floating card */
+.ws-bay .ws-panel {
+  position: relative;
+  width: 100%; max-width: none;
+  height: 100dvh; max-height: none;
+  overflow: hidden;                /* the floor scrolls, the bay does not */
+  border: 0; border-radius: 0;
+  padding: 0;
+  color: var(--bay-ink);
+  transform: translateY(18px);
+  display: flex; flex-direction: column;
+  background: var(--bay-floor);    /* fallback if color-mix is unavailable */
+  background:
+    /* pooled light under each strip lamp */
+    radial-gradient(120% 46% at 20% 0%, rgba(255, 250, 235, 0.09), transparent 62%),
+    radial-gradient(120% 46% at 50% 0%, rgba(255, 250, 235, 0.11), transparent 62%),
+    radial-gradient(120% 46% at 80% 0%, rgba(255, 250, 235, 0.09), transparent 62%),
+    /* corrugated back wall */
+    repeating-linear-gradient(90deg,
+      var(--bay-wall) 0 26px,
+      color-mix(in srgb, var(--bay-wall) 88%, #000) 26px 28px,
+      var(--bay-wall) 28px 54px,
+      color-mix(in srgb, var(--bay-wall) 112%, #fff) 54px 55px),
+    var(--bay-floor);
+  box-shadow: none;
+}
+.ws-bay.open .ws-panel { transform: none; }
+
+/* ---- strip lights hung across the roof ---- */
+.bay-lights {
+  position: absolute; top: 0; left: 0; right: 0; height: 0;
+  display: flex; justify-content: space-around;
+  pointer-events: none; z-index: 2;
+}
+.bay-lights i {
+  width: min(260px, 22vw); height: 7px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, #6d7178, #f6f3ea 45%, #b9bcc2);
+  box-shadow: 0 12px 46px 6px rgba(255, 248, 230, 0.13);
+}
+body[data-theme="frost"] .bay-lights i {
+  background: linear-gradient(180deg, #b9bec7, #ffffff 45%, #cfd4dc);
+  box-shadow: 0 12px 40px 4px rgba(120, 140, 170, 0.22);
+}
+
+/* ---- the header: a painted sign across the top of the bay ---- */
+.ws-bay .ws-head {
+  position: relative; z-index: 3;
+  flex: none;
+  display: flex; align-items: center; gap: 18px;
+  padding: 20px clamp(18px, 3.4vw, 44px) 18px;
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--bay-steel-hi) 92%, transparent),
+      color-mix(in srgb, var(--bay-steel) 92%, transparent));
+  border-bottom: 1px solid var(--bay-line);
+  /* the hazard stripe every workshop has painted at the bay edge */
+  box-shadow:
+    0 3px 0 0 var(--bay-hazard),
+    0 4px 0 0 rgba(0, 0, 0, 0.55),
+    0 22px 44px -18px rgba(0, 0, 0, 0.7);
+}
+.ws-bay .ws-titles { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.ws-titles-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* the stencilled bay number, sprayed on the wall */
+.bay-no {
+  flex: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 50px; height: 50px; border-radius: 7px;
+  background: repeating-linear-gradient(45deg,
+    var(--bay-hazard) 0 7px, rgba(0, 0, 0, 0.82) 7px 14px);
+  font-size: 7.5px; font-weight: 800; letter-spacing: 0.16em;
+  color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.bay-no b { font-size: 17px; letter-spacing: 0.04em; line-height: 1; }
+.ws-bay .ws-title {
+  font-size: 15px; letter-spacing: 0.3em; font-weight: 800;
+  color: var(--bay-ink);
+}
+.ws-bay .ws-car {
+  font-size: 12px; letter-spacing: 0.06em;
+  color: var(--accent);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* the job card clipped to the bench */
+.bay-job {
+  margin-left: auto;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  padding: 7px 13px;
+  border-radius: 3px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--bay-steel-hi) 70%, #d9d3c2),
+    color-mix(in srgb, var(--bay-steel) 70%, #c6c0b0));
+  border: 1px solid var(--bay-line-hi);
+  box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.8);
+  transform: rotate(-1.1deg);
+}
+.job-lbl { font-size: 7px; font-weight: 800; letter-spacing: 0.24em; color: #4a453b; }
+.job-val { font-size: 11px; font-weight: 700; color: #23201a; }
+.ws-bay .ws-close {
+  flex: none; width: 40px; height: 40px; border-radius: 9px;
+  color: var(--bay-dim);
+  border: 1px solid var(--bay-line-hi);
+  background: linear-gradient(180deg, var(--bay-steel-hi), var(--bay-steel));
+}
+.ws-bay .ws-close:hover { color: var(--bay-ink); }
+
+/* ---- the floor: stations laid out across the bay ---- */
+.bay-floor {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(18px, 2.6vw, 34px) clamp(18px, 3.4vw, 44px) clamp(40px, 6vh, 72px);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: clamp(14px, 1.6vw, 22px);
+  align-content: start;
+  /* painted concrete: a wide slab grid with the odd oil stain */
+  background:
+    radial-gradient(40% 30% at 76% 18%, rgba(0, 0, 0, 0.16), transparent 70%),
+    radial-gradient(26% 20% at 22% 62%, rgba(0, 0, 0, 0.13), transparent 70%),
+    repeating-linear-gradient(0deg, transparent 0 148px, var(--bay-line) 148px 149px),
+    repeating-linear-gradient(90deg, transparent 0 148px, var(--bay-line) 148px 149px);
+}
+.stn-wide { grid-column: span 2; }
+@media (max-width: 760px) { .stn-wide { grid-column: span 1; } }
+
+/* each station is a steel plate bolted to the wall */
+.bay-stn {
+  position: relative;
+  padding: 16px 17px 18px;
+  border-radius: 5px;
+  border: 1px solid var(--bay-line-hi);
+  background:
+    linear-gradient(180deg, var(--bay-steel-hi), var(--bay-steel));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -14px 26px -18px rgba(0, 0, 0, 0.7),
+    0 14px 26px -18px rgba(0, 0, 0, 0.8);
+}
+/* four rivets, one per corner */
+.bay-stn::before {
+  content: ""; position: absolute; inset: 6px; border-radius: 3px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 2.5px at 0 0, var(--bay-line-hi) 0 60%, transparent 61%),
+    radial-gradient(circle 2.5px at 100% 0, var(--bay-line-hi) 0 60%, transparent 61%),
+    radial-gradient(circle 2.5px at 0 100%, var(--bay-line-hi) 0 60%, transparent 61%),
+    radial-gradient(circle 2.5px at 100% 100%, var(--bay-line-hi) 0 60%, transparent 61%);
+  background-repeat: no-repeat;
+}
+/* stencilled station heading with its number plate */
+.stn-head {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px 9px;
+  margin-bottom: 14px; padding-bottom: 11px;
+  border-bottom: 1px dashed var(--bay-line);
+  font-size: 11.5px; font-weight: 800; letter-spacing: 0.2em;
+  color: var(--bay-ink);
+}
+.stn-no {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 19px; padding: 0 5px; border-radius: 3px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 700; font-style: normal; letter-spacing: 0.02em;
+}
+.stn-head em {
+  flex-basis: 100%;
+  font-style: normal; font-weight: 500;
+  font-size: 10.5px; letter-spacing: 0.01em;
+  color: var(--bay-dim);
+}
+/* two-up inside a wide station */
+.stn-split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+@media (max-width: 760px) { .stn-split { grid-template-columns: 1fr; } }
+
+/* ---- controls, re-tuned for the bench ----
+   The stacked-panel margins these carried in the old scrolling list would
+   fight the grid, so inside a station spacing is uniform and local. */
+.bay-stn > * + *,
+.stn-split > div > * + * { margin-top: 14px; }
+.bay-stn .ws-exhausts,
+.bay-stn .ws-amb,
+.bay-stn .ws-pitch,
+.bay-stn .ws-tune,
+.bay-stn .ws-swap,
+.bay-stn .ws-share,
+.bay-stn .ws-soon,
+.bay-stn .ws-gearing { margin: 0; }
+.bay-stn > * + .ws-exhausts,
+.bay-stn > * + .ws-amb,
+.bay-stn > * + .ws-pitch,
+.bay-stn > * + .ws-tune,
+.bay-stn > * + .ws-swap,
+.bay-stn > * + .ws-share,
+.bay-stn > * + .ws-soon { margin-top: 14px; }
+.bay-stn .ws-exhausts { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.bay-stn .ws-amb { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.bay-stn .ws-flames { grid-template-columns: 1fr 1fr; }
+.bay-stn .ws-flames .ws-card:first-child { grid-column: 1 / -1; }
+.bay-stn .ws-tune { width: 100%; }
+
+/* cards read as tool-drawer fronts: flatter, squarer, brushed */
+.bay-stn .ws-card {
+  border-radius: 4px;
+  border-color: var(--bay-line-hi);
+  color: var(--bay-ink);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--bay-steel-hi) 82%, transparent),
+    color-mix(in srgb, var(--bay-steel) 88%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.bay-stn .ws-card:hover { transform: translateY(-1px); border-color: var(--accent); }
+.bay-stn .ws-card.on {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, var(--accent-soft),
+    color-mix(in srgb, var(--bay-steel) 88%, transparent));
+  /* the drawer that's pulled out gets a painted edge down its left side */
+  box-shadow: inset 3px 0 0 0 var(--accent), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.bay-stn .ws-card-desc { color: var(--bay-dim); }
+.bay-stn .ws-pitch-head label { color: var(--bay-dim); }
+.bay-stn .ws-pitch input[type="range"] {
+  background: color-mix(in srgb, var(--bay-floor) 80%, #000);
+  border-color: var(--bay-line-hi);
+}
+.bay-stn .ws-swap select {
+  border-radius: 4px;
+  color: var(--bay-ink);
+  border-color: var(--bay-line-hi);
+  background-image:
+    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, var(--bay-steel-hi), var(--bay-steel));
+}
+.bay-stn .ws-swap-note,
+.bay-stn .ws-pitch-scale span { color: var(--bay-dim); }
+.bay-stn .ws-soon { border-color: var(--bay-line-hi); background: rgba(0, 0, 0, 0.16); }
+.bay-stn .chip-btn {
+  width: 100%; justify-content: center;
+  border-radius: 4px;
+  border-color: var(--bay-line-hi);
+  background: linear-gradient(180deg, var(--bay-steel-hi), var(--bay-steel));
+  color: var(--bay-ink);
+}
+
+/* short viewports (and phones): one column, tighter plates */
+@media (max-width: 560px) {
+  .bay-floor { grid-template-columns: 1fr; }
+  .ws-bay .ws-head { gap: 12px; padding: 14px 16px 12px; }
+  .bay-job { display: none; }
+  .bay-no { width: 42px; height: 42px; }
+  .ws-bay .ws-title { font-size: 13px; letter-spacing: 0.22em; }
+}
+
+/* ================================================================
+   THE ELECTRIC CAR — one screen instead of two dials
+   ================================================================
+   The dials and the screen are siblings; .ev-dash on <body> swaps which one
+   exists. Everything else in the cluster — warning lamps, ignition, the foot
+   readouts — is shared, so only the middle of the dash changes. */
+.ev-screen { display: none; }
+body.ev-dash .gauges { display: none; }
+body.ev-dash .ev-screen { display: block; }
+body.ev-dash .shift-lights { display: none; }
+
+.ev-screen {
+  --evs: #7fe3d0;              /* the panel's own signal colour */
+  --evs-dim: #5d7f81;
+  --evs-bg: #05090c;
+  position: relative;
+  margin: 6px 0 4px;
+  padding: 3px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #2a2d33, #14161a);
+  box-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.evs-inner {
+  position: relative; z-index: 1;
+  border-radius: 13px;
+  padding: 16px 18px 14px;
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(127, 227, 208, 0.09), transparent 62%),
+    var(--evs-bg);
+  color: var(--evs);
+  overflow: hidden;
+}
+/* the sheen of a glass panel, and the faint scanline of a real display */
+.evs-glass {
+  position: absolute; inset: 3px; border-radius: 13px; z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(126deg, rgba(255, 255, 255, 0.07) 0 22%, transparent 46%),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
+}
+
+.evs-top {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.2em;
+  color: var(--evs-dim);
+}
+.evs-badge {
+  padding: 3px 8px; border-radius: 4px;
+  border: 1px solid currentColor;
+  color: var(--evs-dim);
+}
+.evs-badge[data-state="ready"]     { color: var(--evs); }
+.evs-badge[data-state="charging"]  { color: #8fd18a; }
+.evs-badge[data-state="v8-sim"]    { color: #e0a144; }
+.evs-badge[data-state="low-charge"]{ color: #e2775a; }
+.evs-badge[data-state="ludicrous"] {
+  color: #0a0d10; background: var(--evs); border-color: var(--evs);
+  animation: evsPulse 0.5s ease-in-out infinite;
+}
+@keyframes evsPulse { 50% { opacity: 0.55; } }
+.evs-name { color: var(--evs); }
+.evs-clock { margin-left: auto; letter-spacing: 0.1em; }
+
+/* the speed, which is most of the point of a screen this size */
+.evs-main {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; margin: 2px 0 10px;
+}
+.evs-speed { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.evs-speed b {
+  font-size: clamp(64px, 13vw, 118px); font-weight: 700; line-height: 0.92;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: #eafaf6;
+  text-shadow: 0 0 26px rgba(127, 227, 208, 0.32);
+}
+.evs-speed i { font-style: normal; font-size: 12px; color: var(--evs-dim); letter-spacing: 0.14em; }
+/* P R N D, the way a screen car does it */
+.evs-gear { display: flex; gap: 9px; padding-bottom: 8px; }
+.evs-gear span {
+  font-size: 15px; font-weight: 800; letter-spacing: 0.04em;
+  color: rgba(120, 150, 152, 0.4);
+  transition: color 0.15s ease, text-shadow 0.15s ease;
+}
+.evs-gear span.on { color: var(--evs); text-shadow: 0 0 14px rgba(127, 227, 208, 0.6); }
+
+/* power / regen, reading outward from the centre */
+.evs-power { margin-bottom: 12px; }
+.evs-meter {
+  position: relative; height: 9px; border-radius: 5px;
+  background: rgba(127, 227, 208, 0.09);
+  overflow: hidden;
+}
+.evs-meter i { position: absolute; top: 0; bottom: 0; width: 0; transition: width 0.08s linear; }
+.evs-regen { right: 50%; background: linear-gradient(270deg, #8fd18a, rgba(143, 209, 138, 0.25)); }
+.evs-drive { left: 50%; background: linear-gradient(90deg, var(--evs), rgba(127, 227, 208, 0.3)); }
+.evs-zero { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(127, 227, 208, 0.4); }
+.evs-meter-lbl {
+  display: flex; justify-content: space-between; margin-top: 5px;
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em; color: var(--evs-dim);
+}
+.evs-meter-lbl .mono { color: var(--evs); letter-spacing: 0.06em; font-size: 10px; }
+
+/* the four data cells along the bottom */
+.evs-foot {
+  display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 10px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(127, 227, 208, 0.14);
+}
+.evs-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.evs-cell label { font-size: 8px; font-weight: 700; letter-spacing: 0.18em; color: var(--evs-dim); }
+.evs-cell span { font-size: 12px; font-weight: 600; color: var(--evs); }
+.evs-batt { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "l l" "b p"; align-items: center; gap: 4px 8px; }
+.evs-batt label { grid-area: l; }
+.evs-batt-bar {
+  grid-area: b; height: 8px; border-radius: 4px;
+  background: rgba(127, 227, 208, 0.12);
+  border: 1px solid rgba(127, 227, 208, 0.25);
+  overflow: hidden;
+}
+.evs-batt-bar i {
+  display: block; height: 100%; width: 100%;
+  background: linear-gradient(90deg, rgba(127, 227, 208, 0.5), var(--evs));
+  transition: width 0.25s linear;
+}
+.evs-batt-bar i.low { background: linear-gradient(90deg, rgba(226, 119, 90, 0.5), #e2775a); }
+.evs-batt span { grid-area: p; }
+#evsBoostCell.live label, #evsBoostCell.live span { color: #eafaf6; }
+#evsBoostCell.cool span { color: var(--evs-dim); }
+
+/* ---- the two buttons only this car has ---- */
+.ev-btn.hide { display: none; }
+.ev-btn.cooling { opacity: 0.5; }
+.ev-btn.cooling em { letter-spacing: 0.06em; }
+
+/* ---- a mode this car cannot select ---- */
+.mode-btn.locked { opacity: 0.32; cursor: not-allowed; }
+.mode-btn.locked:hover { color: inherit; }
+
+/* ================================================================
+   …AND AT NIGHT IT IS BLINDING
+   ================================================================
+   Every other light in the car dims after dark. This one does the opposite,
+   because it is a screen and screens do not care how your eyes are doing.
+   It is meant to be slightly too much — that is the joke, and it is also
+   completely true to life. */
+body.night.ev-dash .evs-inner {
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(150, 255, 235, 0.2), transparent 62%),
+    #08131a;
+  box-shadow:
+    0 0 70px 12px rgba(127, 227, 208, 0.3),
+    0 0 180px 40px rgba(127, 227, 208, 0.14);
+}
+body.night.ev-dash .ev-screen { --evs: #b6fff0; --evs-dim: #78b6b2; }
+body.night.ev-dash .evs-speed b {
+  color: #ffffff;
+  text-shadow: 0 0 34px rgba(182, 255, 240, 0.9), 0 0 90px rgba(127, 227, 208, 0.55);
+}
+body.night.ev-dash .evs-gear span.on { text-shadow: 0 0 22px rgba(182, 255, 240, 0.95); }
+
+@media (max-width: 620px) {
+  .evs-foot { grid-template-columns: 1fr 1fr; }
+  .evs-main { flex-wrap: wrap; }
+}
+
+/* ================================================================
+   TURN SIGNALS
+   ================================================================ */
+.turnsig { display: flex; gap: 6px; margin-right: auto; }
+.turnsig.hide { display: none; }          /* race cars simply haven't got any */
+.tsig {
+  appearance: none; cursor: pointer;
+  width: 30px; height: 22px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tick-dim);
+  border: 1px solid var(--edge);
+  background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  transition: color 0.08s linear, border-color 0.2s ease, transform 0.12s ease;
+}
+.tsig:active { transform: scale(0.93); }
+/* armed but mid-blink: dim, so the stalk still reads as selected between flashes */
+.tsig.armed { border-color: rgba(110, 190, 120, 0.5); color: rgba(110, 190, 120, 0.45); }
+.tsig.lit {
+  color: #6ee07a;
+  border-color: #6ee07a;
+  background: linear-gradient(180deg, rgba(110, 224, 122, 0.22), var(--panel-lo));
+  box-shadow: 0 0 12px rgba(110, 224, 122, 0.45);
+}
+/* the screen car repeats them up on the panel instead */
+.evs-ind {
+  width: 0; height: 0; flex: none;
+  border-top: 6px solid transparent; border-bottom: 6px solid transparent;
+  opacity: 0.12; transition: opacity 0.08s linear;
+}
+.evs-ind-l { border-right: 9px solid #6ee07a; }
+.evs-ind-r { border-left: 9px solid #6ee07a; margin-left: 8px; }
+.evs-ind.on { opacity: 1; filter: drop-shadow(0 0 7px rgba(110, 224, 122, 0.85)); }
+
+/* ================================================================
+   RACE-CAR START PANEL
+   ================================================================
+   Bare alloy plate, engraved labels, three real toggles. It sits directly
+   above the starter because that's the order you use them in. */
+.race-panel {
+  display: flex; align-items: center; gap: 12px;
+  margin: 8px 0 2px; padding: 9px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--edge-hi);
+  background:
+    repeating-linear-gradient(97deg, rgba(255,255,255,0.028) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
+  box-shadow: inset 0 1px 0 var(--edge-hi);
+}
+.race-panel.hide { display: none; }
+.rp-label {
+  font-size: 8px; font-weight: 800; letter-spacing: 0.2em;
+  color: var(--muted); writing-mode: vertical-rl; transform: rotate(180deg);
+}
+.rp-switches { display: flex; gap: 14px; }
+.rsw {
+  appearance: none; cursor: pointer; background: none; border: 0; padding: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  font-family: inherit;
+}
+.rsw em {
+  font-style: normal; font-size: 7.5px; font-weight: 800; letter-spacing: 0.16em;
+  color: var(--muted);
+}
+.rsw.on em { color: var(--accent); }
+.rsw-master.on em { color: #e2603f; }
+/* the switch body: a slot in the plate with a lever that throws up when live */
+.rsw-body {
+  position: relative;
+  width: 22px; height: 30px; border-radius: 4px;
+  background: linear-gradient(180deg, #0a0b0d, #17191d);
+  border: 1px solid var(--edge-hi);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+}
+.rsw-lever {
+  position: absolute; left: 50%; width: 8px; height: 15px;
+  margin-left: -4px; border-radius: 3px;
+  bottom: 3px;
+  background: linear-gradient(180deg, #d6d9de, #7d8189 60%, #4a4d53);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  transform-origin: 50% 100%;
+  transform: rotate(0deg) translateY(0);
+  transition: transform 0.11s var(--ease-snap), background 0.2s ease;
+}
+.rsw.on .rsw-lever {
+  bottom: auto; top: 3px;
+  transform-origin: 50% 0%;
+  background: linear-gradient(180deg, #4a4d53, #7d8189 40%, #eceef1);
+}
+.rsw-master .rsw-lever { background: linear-gradient(180deg, #f0d6d2, #b8574a 60%, #6e2c23); }
+.rsw-master.on .rsw-lever { background: linear-gradient(180deg, #6e2c23, #c4604f 40%, #ffdcd6); }
+.rsw:active .rsw-body { transform: scale(0.95); }
+/* lit only once all three are live and the starter will actually do something */
+.rp-arm {
+  margin-left: auto;
+  font-size: 8px; font-weight: 800; letter-spacing: 0.2em;
+  color: var(--muted); opacity: 0.3;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+.race-panel.armed .rp-arm { color: var(--lamp-ok); opacity: 1; }
+.race-panel.armed { border-color: rgba(95, 174, 114, 0.4); }
+/* pressing the starter too early shakes the panel at you */
+.race-panel.nudge { animation: rpNudge 0.3s ease; }
+@keyframes rpNudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  60% { transform: translateX(3px); }
+}
+
+/* ================================================================
+   THE ELECTRIC CAR'S DIGITAL PLAYER
+   ================================================================
+   Where every other car has a polished exhaust tip, this one has a screen.
+   Deliberately the opposite of the tape deck: no mechanism, no texture, no
+   moving parts — a flat panel and four capacitive keys. */
+.exhaust.hide { display: none; }
+.dplayer {
+  display: flex; align-items: center; gap: 12px;
+  align-self: center; margin: 0 4px; min-height: 84px;
+}
+.dplayer.hide { display: none; }
+.dp-screen {
+  --dp: #7fe3d0;
+  width: 172px; padding: 9px 11px 8px;
+  border-radius: 9px;
+  background:
+    radial-gradient(120% 130% at 50% -20%, rgba(127, 227, 208, 0.1), transparent 65%),
+    #05090c;
+  border: 1px solid rgba(127, 227, 208, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 10px 22px -14px rgba(0, 0, 0, 0.9);
+}
+.dp-head { display: flex; align-items: center; gap: 6px; }
+.dp-src { font-size: 7px; font-weight: 800; letter-spacing: 0.22em; color: rgba(127, 227, 208, 0.5); }
+.dp-dot {
+  width: 5px; height: 5px; border-radius: 50%; margin-left: auto;
+  background: rgba(127, 227, 208, 0.22);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.dp-dot.live { background: var(--dp); box-shadow: 0 0 8px var(--dp); }
+.dp-title {
+  display: block; margin: 4px 0 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  color: #dff7f1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* the equaliser: twelve bars, frozen flat until something actually plays */
+.dp-eq { display: flex; align-items: flex-end; gap: 2px; height: 15px; }
+.dp-eq i {
+  flex: 1; height: 2px; border-radius: 1px;
+  background: rgba(127, 227, 208, 0.3);
+  transition: height 0.2s ease, background 0.2s ease;
+}
+.dp-eq.live i { background: var(--dp); animation: dpEq 0.9s ease-in-out infinite; }
+.dp-eq.live i:nth-child(2n)   { animation-duration: 1.25s; }
+.dp-eq.live i:nth-child(3n)   { animation-duration: 0.72s; }
+.dp-eq.live i:nth-child(4n)   { animation-duration: 1.5s;  }
+.dp-eq.live i:nth-child(5n)   { animation-duration: 1.05s; }
+.dp-eq.live i:nth-child(odd)  { animation-direction: alternate-reverse; }
+@keyframes dpEq { 0% { height: 2px; } 50% { height: 14px; } 100% { height: 4px; } }
+
+.dp-keys { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.dp-key {
+  appearance: none; cursor: pointer;
+  width: 32px; height: 26px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(127, 227, 208, 0.62);
+  border: 1px solid rgba(127, 227, 208, 0.2);
+  background: linear-gradient(180deg, rgba(127, 227, 208, 0.07), rgba(5, 9, 12, 0.7));
+  transition: color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.dp-key:hover { color: #b6fff0; border-color: rgba(127, 227, 208, 0.45); }
+.dp-key:active { transform: scale(0.93); }
+.dp-key.on { color: #05090c; background: #7fe3d0; border-color: #7fe3d0; }
+
+/* at night it lifts with the rest of the panel, because of course it does */
+body.night .dp-screen {
+  border-color: rgba(182, 255, 240, 0.4);
+  box-shadow: 0 0 26px 2px rgba(127, 227, 208, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+body.night .dp-screen { --dp: #b6fff0; }
+body.night .dp-title { color: #ffffff; text-shadow: 0 0 14px rgba(182, 255, 240, 0.7); }
+
+@media (max-width: 620px) {
+  .dp-screen { width: 140px; }
+}

@@ -82,6 +82,14 @@
     <!-- Gauge cluster -->
     <section class="cluster panel" id="cluster">
       <div class="warnrow">
+        <div class="turnsig" id="turnSig">
+          <button class="tsig tsig-l" id="tsigL" title="Left indicator (,)" aria-label="Left indicator">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M14 4v5h6v6h-6v5L4 12z"/></svg>
+          </button>
+          <button class="tsig tsig-r" id="tsigR" title="Right indicator (.)" aria-label="Right indicator">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M10 4v5H4v6h6v5l10-8z"/></svg>
+          </button>
+        </div>
         <div class="lamp" id="lampStall"><i></i>STALL</div>
         <div class="lamp" id="lampRev"><i></i>OVER-REV</div>
         <div class="lamp" id="lampGrip"><i></i>GRIP</div>
@@ -91,6 +99,11 @@
         <div class="lamp lamp-ok" id="lampCruise"><i></i>CRUISE</div>
         <div class="lamp lamp-ok" id="lampAuto"><i></i>AUTO</div>
         <div class="lamp lamp-ok" id="lampRun"><i></i>ENGINE</div>
+      </div>
+      <div class="dmg-strip" id="dmgStrip" aria-hidden="true">
+        <div class="dmg-bar" id="dmgEngine"><span>ENGINE</span><i></i></div>
+        <div class="dmg-bar" id="dmgClutch"><span>CLUTCH</span><i></i></div>
+        <div class="dmg-bar" id="dmgBrakes"><span>BRAKES</span><i></i></div>
       </div>
 
       <div class="gauges">
@@ -110,6 +123,72 @@
             <small id="gearSub">neutral</small>
           </div>
         </div>
+      </div>
+
+      <div class="ev-screen" id="evScreen" aria-hidden="true">
+        <div class="evs-glass" aria-hidden="true"></div>
+        <div class="evs-inner">
+          <div class="evs-top">
+            <i class="evs-ind evs-ind-l" id="evsIndL" aria-hidden="true"></i>
+            <span class="evs-badge" id="evsBadge">OFF</span>
+            <span class="evs-name" id="evsName">—</span>
+            <span class="evs-clock mono" id="evsClock">–:––</span>
+            <i class="evs-ind evs-ind-r" id="evsIndR" aria-hidden="true"></i>
+          </div>
+
+          <div class="evs-main">
+            <div class="evs-speed">
+              <b class="mono" id="evsSpeed">0</b>
+              <i class="mono" id="evsUnit">km/h</i>
+            </div>
+            <div class="evs-gear" id="evsGear">
+              <span data-g="P">P</span><span data-g="R">R</span><span data-g="N">N</span><span data-g="D">D</span>
+            </div>
+          </div>
+
+          <div class="evs-power">
+            <div class="evs-meter">
+              <i class="evs-regen" id="evsRegen"></i>
+              <i class="evs-drive" id="evsDrive"></i>
+              <u class="evs-zero"></u>
+            </div>
+            <div class="evs-meter-lbl">
+              <span>REGEN</span>
+              <span class="mono" id="evsKw">0 kW</span>
+              <span>POWER</span>
+            </div>
+          </div>
+
+          <div class="evs-foot">
+            <div class="evs-cell evs-batt">
+              <label>BATTERY</label>
+              <div class="evs-batt-bar"><i id="evsBattFill"></i></div>
+              <span class="mono" id="evsBattPct">100%</span>
+            </div>
+            <div class="evs-cell"><label>RANGE</label><span class="mono" id="evsRange">— km</span></div>
+            <div class="evs-cell"><label>MOTOR</label><span class="mono" id="evsRpm">0 rpm</span></div>
+            <div class="evs-cell" id="evsBoostCell"><label>LUDICROUS</label><span class="mono" id="evsBoostVal">READY</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="race-panel hide" id="racePanel">
+        <span class="rp-label">START PROCEDURE</span>
+        <div class="rp-switches">
+          <button class="rsw rsw-master" id="rswMaster" aria-pressed="false" title="Battery master isolator">
+            <span class="rsw-body"><i class="rsw-lever"></i></span>
+            <em>MASTER</em>
+          </button>
+          <button class="rsw" id="rswIgn" aria-pressed="false" title="Ignition / ECU">
+            <span class="rsw-body"><i class="rsw-lever"></i></span>
+            <em>IGN</em>
+          </button>
+          <button class="rsw" id="rswPump" aria-pressed="false" title="Fuel pump">
+            <span class="rsw-body"><i class="rsw-lever"></i></span>
+            <em>FUEL</em>
+          </button>
+        </div>
+        <span class="rp-arm" id="rpArm">ARMED</span>
       </div>
 
       <div class="cluster-foot">
@@ -145,6 +224,14 @@
         <button class="edrive-btn hide" id="edriveBtn" title="Start in EV / switch EV ⇄ V6 (H)">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
           <em id="edriveLbl">eDRIVE</em>
+        </button>
+        <button class="edrive-btn ev-btn hide" id="evBoostBtn" title="Ludicrous — +400 hp for five seconds (B)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+          <em id="evBoostLbl">LUDICROUS</em>
+        </button>
+        <button class="edrive-btn ev-btn hide" id="evV8Btn" title="Fake V8 through the speakers (J)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 3 10 3-8 2 3h5"/></svg>
+          <em id="evV8Lbl">V8 SOUND</em>
         </button>
         <div class="foot-readout mono">
           <div><label>RPM</label><span id="rpmNum">0</span></div>
@@ -247,6 +334,33 @@
     <div class="exhaust" id="exhaust" aria-hidden="true">
       <div class="tip" id="tipL"><span class="barrel"></span><i></i></div>
     </div>
+
+    <!-- the electric car has no pipe to put anything out of, so the space
+         under the dash goes to a screen instead of a tape mechanism -->
+    <div class="dplayer hide" id="dplayer">
+      <div class="dp-screen">
+        <div class="dp-head">
+          <span class="dp-src">STREAMING</span>
+          <span class="dp-dot" id="dpDot" aria-hidden="true"></span>
+        </div>
+        <span class="dp-title" id="dpTitle">NO SOURCE</span>
+        <div class="dp-eq" id="dpEq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="dp-keys">
+        <button class="dp-key" id="dpPrev" title="Previous track" aria-label="Previous track">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M6 5h2.5v14H6zM20 5v14L9.5 12z"/></svg>
+        </button>
+        <button class="dp-key dp-play" id="dpPlay" title="Play / pause" aria-label="Play or pause">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path id="dpPlayIcon" d="M7 4l13 8-13 8z"/></svg>
+        </button>
+        <button class="dp-key" id="dpNext" title="Next track" aria-label="Next track">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M15.5 5H18v14h-2.5zM4 5v14l10.5-7z"/></svg>
+        </button>
+        <button class="dp-key dp-lib" id="dpLib" title="Library (M)" aria-label="Library">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        </button>
+      </div>
+    </div>
   </footer>
 </div>
 
@@ -313,134 +427,243 @@
 </div>
 
 <!-- Workshop (modifications) screen -->
-<div class="workshop" id="workshop">
+<div class="workshop ws-bay" id="workshop">
   <div class="ws-panel">
+
+    <!-- strip lights hung over the bay -->
+    <div class="bay-lights" aria-hidden="true"><i></i><i></i><i></i></div>
+
     <div class="ws-head">
       <div class="ws-titles">
-        <span class="ws-title">WORKSHOP</span>
-        <span class="ws-car" id="wsCar">—</span>
+        <span class="bay-no" aria-hidden="true">BAY<b>01</b></span>
+        <div class="ws-titles-txt">
+          <span class="ws-title">WORKSHOP</span>
+          <span class="ws-car" id="wsCar">—</span>
+        </div>
+      </div>
+      <div class="bay-job" aria-hidden="true">
+        <span class="job-lbl">JOB CARD</span>
+        <span class="job-val mono" id="wsJob">—</span>
       </div>
       <button class="ws-close" id="wsClose" title="Back to cockpit">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <p class="ws-sub">Exhaust system for this car — fitted instantly, saved automatically.</p>
-    <div class="ws-exhausts" id="wsExhausts"></div>
-    <div class="ws-pitch">
-      <div class="ws-pitch-head">
-        <label for="wsPitch">EXHAUST PITCH</label>
-        <span class="mono" id="wsPitchVal">+0%</span>
-      </div>
-      <input type="range" id="wsPitch" min="0.7" max="1.3" step="0.01" value="1">
-      <div class="ws-pitch-scale"><span>deep</span><span>stock</span><span>shrill</span></div>
-    </div>
-    <div class="ws-pitch">
-      <div class="ws-pitch-head">
-        <label for="wsVol">EXHAUST VOLUME</label>
-        <span class="mono" id="wsVolVal">+0%</span>
-      </div>
-      <input type="range" id="wsVol" min="0.6" max="1.6" step="0.02" value="1">
-      <div class="ws-pitch-scale"><span>hushed</span><span>stock</span><span>deafening</span></div>
-    </div>
-    <div class="ws-pitch">
-      <div class="ws-pitch-head">
-        <label for="wsTone">EXHAUST TONE</label>
-        <span class="mono" id="wsToneVal">stock</span>
-      </div>
-      <input type="range" id="wsTone" min="-800" max="1200" step="50" value="0">
-      <div class="ws-pitch-scale"><span>muffled</span><span>stock</span><span>piercing</span></div>
-    </div>
-    <div class="ws-pitch">
-      <div class="ws-pitch-head">
-        <label for="wsPop">POPS &amp; BANGS</label>
-        <span class="mono" id="wsPopVal">×1.0</span>
-      </div>
-      <input type="range" id="wsPop" min="0" max="2" step="0.1" value="1">
-      <div class="ws-pitch-scale"><span>none</span><span>stock</span><span>warzone</span></div>
-    </div>
-    <div class="ws-pitch ws-gearing">
-      <div class="ws-pitch-head">
-        <label for="wsGear">FINAL DRIVE</label>
-        <span class="mono" id="wsGearVal">3.40</span>
-      </div>
-      <input type="range" id="wsGear" min="0.7" max="1.3" step="0.01" value="1">
-      <div class="ws-pitch-scale"><span>top speed</span><span>stock</span><span>acceleration</span></div>
-    </div>
-    <div class="ws-pitch">
-      <div class="ws-pitch-head">
-        <label for="wsRev">REV SPEED</label>
-        <span class="mono" id="wsRevVal">stock</span>
-      </div>
-      <input type="range" id="wsRev" min="0.5" max="3" step="0.05" value="1">
-      <div class="ws-pitch-scale"><span>heavy flywheel</span><span>stock</span><span>instant</span></div>
-    </div>
-    <p class="ws-sub ws-sub-mid">Shifter feel — the sound of every gear change.</p>
-    <div class="ws-amb" id="wsShift">
-      <button class="ws-card" data-shift="stock">
-        <span class="ws-card-name">STOCK LEVER</span>
-        <span class="ws-card-desc">The factory shifter — a soft, rubber-bushed thunk.</span>
-      </button>
-      <button class="ws-card" data-shift="click">
-        <span class="ws-card-name">SHORT SHIFTER</span>
-        <span class="ws-card-desc">Tight mechanical detent — a crisp, tactile k-chk into every gear.</span>
-      </button>
-      <button class="ws-card" data-shift="metal">
-        <span class="ws-card-name">OPEN GATE</span>
-        <span class="ws-card-desc">Exposed metal gate — the ball knob snicks home and the plate rings.</span>
-      </button>
-    </div>
-    <p class="ws-sub ws-sub-mid">Paddle feel — the click behind the wheel in sequential mode.</p>
-    <div class="ws-amb ws-paddles" id="wsPaddle">
-      <button class="ws-card" data-paddle="stock">
-        <span class="ws-card-name">STOCK PADDLE</span>
-        <span class="ws-card-desc">Silent — no click at all, just the gearbox.</span>
-      </button>
-      <button class="ws-card" data-paddle="mech">
-        <span class="ws-card-name">EXPOSED LINKAGE</span>
-        <span class="ws-card-desc">Machined titanium, hypercar-grade — a watch-precise double click with a hair of spring ring.</span>
-      </button>
-      <button class="ws-card" data-paddle="metal">
-        <span class="ws-card-name">ALLOY PADDLE</span>
-        <span class="ws-card-desc">Solid metal on the column — one dense clack with a short, dull ring.</span>
-      </button>
-      <button class="ws-card" data-paddle="carbon">
-        <span class="ws-card-name">REAL PADDLE</span>
-        <span class="ws-card-desc">An actual recorded paddle click — works even with the car off.</span>
-      </button>
-    </div>
-    <button class="ws-card ws-tune" id="wsTune">
-      <span class="ws-card-name">RACE TUNE</span>
-      <span class="ws-card-desc">ECU flash: +25% power, +400 rpm redline, needle buried past the paint.</span>
-    </button>
-    <button class="ws-card ws-tune" id="wsAids">
-      <span class="ws-card-name">DRIVER AIDS — ON</span>
-      <span class="ws-card-desc">ABS + traction control. Switch off for wheelspin, flaring revs and brake lockups.</span>
-    </button>
-    <div class="ws-pitch ws-launch">
-      <div class="ws-pitch-head">
-        <label for="wsLtTgt">LAUNCH TARGET</label>
-        <span class="mono" id="wsLtVal">0–100 km/h</span>
-      </div>
-      <input type="range" id="wsLtTgt" min="30" max="300" step="10" value="100">
-      <div class="ws-pitch-scale"><span>sprint</span><span></span><span>flat out</span></div>
-    </div>
-    <button class="ws-card ws-tune" id="wsLtGo">
-      <span class="ws-card-name">LAUNCH TIMER</span>
-      <span class="ws-card-desc">Countdown, then floor it — clocks you from standstill to your target speed. Hotkey <kbd>L</kbd>.</span>
-    </button>
-    <div class="ws-amb">
-      <button class="ws-card" id="cabinBtn">
-        <span class="ws-card-name">CABIN</span>
-        <span class="ws-card-desc">Hear it from inside — windows up, bass through the floor. Hotkey <kbd>V</kbd>.</span>
-      </button>
-      <button class="ws-card" id="trafBtn">
-        <span class="ws-card-name">TRAFFIC</span>
-        <span class="ws-card-desc">Cars drift past while you idle — and husss by as you overtake them.</span>
-      </button>
-      <button class="ws-card" id="rainBtn">
-        <span class="ws-card-name">RAIN</span>
-        <span class="ws-card-desc">Steady rain, tire spray, puddle splashes. Distant echo in tunnels.</span>
-      </button>
+
+    <div class="bay-floor">
+
+      <section class="bay-stn stn-wide">
+        <h3 class="stn-head"><i class="stn-no">01</i>EXHAUST SYSTEM<em>Fitted instantly, saved automatically.</em></h3>
+        <div class="ws-exhausts" id="wsExhausts"></div>
+      </section>
+
+      <section class="bay-stn">
+        <h3 class="stn-head"><i class="stn-no">02</i>SOUND BENCH<em>The voice itself.</em></h3>
+        <div class="ws-pitch">
+          <div class="ws-pitch-head">
+            <label for="wsPitch">EXHAUST PITCH</label>
+            <span class="mono" id="wsPitchVal">+0%</span>
+          </div>
+          <input type="range" id="wsPitch" min="0.7" max="1.3" step="0.01" value="1">
+          <div class="ws-pitch-scale"><span>deep</span><span>stock</span><span>shrill</span></div>
+        </div>
+        <div class="ws-pitch">
+          <div class="ws-pitch-head">
+            <label for="wsVol">EXHAUST VOLUME</label>
+            <span class="mono" id="wsVolVal">+0%</span>
+          </div>
+          <input type="range" id="wsVol" min="0.6" max="1.6" step="0.02" value="1">
+          <div class="ws-pitch-scale"><span>hushed</span><span>stock</span><span>deafening</span></div>
+        </div>
+        <div class="ws-pitch">
+          <div class="ws-pitch-head">
+            <label for="wsTone">EXHAUST TONE</label>
+            <span class="mono" id="wsToneVal">stock</span>
+          </div>
+          <input type="range" id="wsTone" min="-800" max="1200" step="50" value="0">
+          <div class="ws-pitch-scale"><span>muffled</span><span>stock</span><span>piercing</span></div>
+        </div>
+      </section>
+
+      <section class="bay-stn">
+        <h3 class="stn-head"><i class="stn-no">03</i>ENGINE SWAP<em>Any engine in the garage, in this chassis.</em></h3>
+        <div class="ws-swap">
+          <select id="wsSwap" aria-label="Engine swap"></select>
+          <p class="ws-swap-note" id="wsSwapNote">Factory engine, as delivered.</p>
+        </div>
+      </section>
+
+      <section class="bay-stn">
+        <h3 class="stn-head"><i class="stn-no">04</i>DRIVETRAIN<em>Gearing and flywheel.</em></h3>
+        <div class="ws-pitch ws-gearing">
+          <div class="ws-pitch-head">
+            <label for="wsGear">FINAL DRIVE</label>
+            <span class="mono" id="wsGearVal">3.40</span>
+          </div>
+          <input type="range" id="wsGear" min="0.7" max="1.3" step="0.01" value="1">
+          <div class="ws-pitch-scale"><span>top speed</span><span>stock</span><span>acceleration</span></div>
+        </div>
+        <div class="ws-pitch">
+          <div class="ws-pitch-head">
+            <label for="wsRev">REV SPEED</label>
+            <span class="mono" id="wsRevVal">stock</span>
+          </div>
+          <input type="range" id="wsRev" min="0.5" max="3" step="0.05" value="1">
+          <div class="ws-pitch-scale"><span>heavy flywheel</span><span>stock</span><span>instant</span></div>
+        </div>
+      </section>
+
+      <section class="bay-stn stn-wide">
+        <h3 class="stn-head"><i class="stn-no">05</i>FIRE &amp; BANGS<em>What comes out of the back.</em></h3>
+        <div class="stn-split">
+          <div>
+            <div class="ws-pitch">
+              <div class="ws-pitch-head">
+                <label for="wsPop">POPS &amp; BANGS</label>
+                <span class="mono" id="wsPopVal">×1.0</span>
+              </div>
+              <input type="range" id="wsPop" min="0" max="2" step="0.1" value="1">
+              <div class="ws-pitch-scale"><span>none</span><span>stock</span><span>warzone</span></div>
+            </div>
+            <div class="ws-pitch">
+              <div class="ws-pitch-head">
+                <label for="wsFlame">FLAME SIZE</label>
+                <span class="mono" id="wsFlameVal">×1.0</span>
+              </div>
+              <input type="range" id="wsFlame" min="0" max="2" step="0.1" value="1">
+              <div class="ws-pitch-scale"><span>none</span><span>stock</span><span>flamethrower</span></div>
+            </div>
+          </div>
+          <div class="ws-amb ws-flames" id="wsFlameCol">
+            <button class="ws-card" data-flame="auto">
+              <span class="ws-card-name">AUTO</span>
+              <span class="ws-card-desc">Let the fitted system and the size of the bang decide, like a real car.</span>
+            </button>
+            <button class="ws-card" data-flame="orange">
+              <span class="ws-card-name">RICH ORANGE</span>
+              <span class="ws-card-desc">Fuel-heavy and sooty. The classic overrun torch — glowing carbon, deep and warm.</span>
+            </button>
+            <button class="ws-card" data-flame="blue">
+              <span class="ws-card-name">LEAN BLUE</span>
+              <span class="ws-card-desc">A lean charge lighting under pressure in a red-hot pipe. No soot — just the flame front.</span>
+            </button>
+            <button class="ws-card" data-flame="white">
+              <span class="ws-card-name">WHITE HOT</span>
+              <span class="ws-card-desc">Big slugs going off all at once. The core washes out to white before the edges catch up.</span>
+            </button>
+            <button class="ws-card" data-flame="violet">
+              <span class="ws-card-name">VIOLET</span>
+              <span class="ws-card-desc">The thin, clean fringe off long straight pipes at night. Barely there, unmistakable.</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="bay-stn">
+        <h3 class="stn-head"><i class="stn-no">06</i>SHIFTER<em>The sound of every gear change.</em></h3>
+        <div class="ws-amb" id="wsShift">
+          <button class="ws-card" data-shift="stock">
+            <span class="ws-card-name">STOCK LEVER</span>
+            <span class="ws-card-desc">The factory shifter — a soft, rubber-bushed thunk.</span>
+          </button>
+          <button class="ws-card" data-shift="click">
+            <span class="ws-card-name">SHORT SHIFTER</span>
+            <span class="ws-card-desc">Tight mechanical detent — a crisp, tactile k-chk into every gear.</span>
+          </button>
+          <button class="ws-card" data-shift="metal">
+            <span class="ws-card-name">OPEN GATE</span>
+            <span class="ws-card-desc">Exposed metal gate — the ball knob snicks home and the plate rings.</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="bay-stn">
+        <h3 class="stn-head"><i class="stn-no">07</i>PADDLES<em>The click behind the wheel.</em></h3>
+        <div class="ws-amb ws-paddles" id="wsPaddle">
+          <button class="ws-card" data-paddle="stock">
+            <span class="ws-card-name">STOCK PADDLE</span>
+            <span class="ws-card-desc">Silent — no click at all, just the gearbox.</span>
+          </button>
+          <button class="ws-card" data-paddle="mech">
+            <span class="ws-card-name">EXPOSED LINKAGE</span>
+            <span class="ws-card-desc">Machined titanium, hypercar-grade — a watch-precise double click with a hair of spring ring.</span>
+          </button>
+          <button class="ws-card" data-paddle="metal">
+            <span class="ws-card-name">ALLOY PADDLE</span>
+            <span class="ws-card-desc">Solid metal on the column — one dense clack with a short, dull ring.</span>
+          </button>
+          <button class="ws-card" data-paddle="carbon">
+            <span class="ws-card-name">REAL PADDLE</span>
+            <span class="ws-card-desc">An actual recorded paddle click — works even with the car off.</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="bay-stn">
+        <h3 class="stn-head"><i class="stn-no">08</i>ECU &amp; SETUP<em>Flash it, then decide how much rope you get.</em></h3>
+        <button class="ws-card ws-tune" id="wsTune">
+          <span class="ws-card-name">RACE TUNE</span>
+          <span class="ws-card-desc">ECU flash: +25% power, +400 rpm redline, needle buried past the paint.</span>
+        </button>
+        <button class="ws-card ws-tune" id="wsAids">
+          <span class="ws-card-name">DRIVER AIDS — ON</span>
+          <span class="ws-card-desc">ABS + traction control. Switch off for wheelspin, flaring revs and brake lockups.</span>
+        </button>
+        <button class="ws-card ws-tune" id="wsDmg">
+          <span class="ws-card-name">CONSEQUENCES — OFF</span>
+          <span class="ws-card-desc">Switch on and the car stops being indestructible: over-rev it and the engine lets go, slip the clutch and it glazes, lean on the brakes and they fade.</span>
+        </button>
+      </section>
+
+      <section class="bay-stn">
+        <h3 class="stn-head"><i class="stn-no">09</i>TEST STRIP<em>Out of the bay, onto the clock.</em></h3>
+        <div class="ws-pitch ws-launch">
+          <div class="ws-pitch-head">
+            <label for="wsLtTgt">LAUNCH TARGET</label>
+            <span class="mono" id="wsLtVal">0–100 km/h</span>
+          </div>
+          <input type="range" id="wsLtTgt" min="30" max="300" step="10" value="100">
+          <div class="ws-pitch-scale"><span>sprint</span><span></span><span>flat out</span></div>
+        </div>
+        <button class="ws-card ws-tune" id="wsLtGo">
+          <span class="ws-card-name">LAUNCH TIMER</span>
+          <span class="ws-card-desc">Countdown, then floor it — clocks you from standstill to your target speed. Hotkey <kbd>L</kbd>.</span>
+        </button>
+      </section>
+
+      <section class="bay-stn">
+        <h3 class="stn-head"><i class="stn-no">10</i>CONDITIONS<em>The world outside the roller door.</em></h3>
+        <div class="ws-amb">
+          <button class="ws-card" id="cabinBtn">
+            <span class="ws-card-name">CABIN</span>
+            <span class="ws-card-desc">Hear it from inside — windows up, bass through the floor. Hotkey <kbd>V</kbd>.</span>
+          </button>
+          <button class="ws-card" id="trafBtn">
+            <span class="ws-card-name">TRAFFIC</span>
+            <span class="ws-card-desc">Cars drift past while you idle — and husss by as you overtake them.</span>
+          </button>
+          <button class="ws-card" id="rainBtn">
+            <span class="ws-card-name">RAIN</span>
+            <span class="ws-card-desc">Steady rain, tire spray, puddle splashes. Distant echo in tunnels.</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="bay-stn">
+        <h3 class="stn-head"><i class="stn-no">11</i>PAPERWORK<em>Hand the build to someone else.</em></h3>
+        <div class="ws-share">
+          <button class="chip-btn mono" id="wsShare">SHARE THIS BUILD</button>
+          <p class="ws-swap-note" id="wsShareNote">Copies a link that rebuilds this exact car, engine and all.</p>
+        </div>
+        <div class="ws-soon">
+          <div class="ws-soon-head">
+            <span class="ws-card-name">REV RECORDER</span>
+            <span class="cc-soon">COMING SOON</span>
+          </div>
+          <span class="ws-card-desc">Record ten seconds of throttle, loop it, then stack another car on top. Build a choir.</span>
+        </div>
+      </section>
+
     </div>
   </div>
 </div>
@@ -590,6 +813,28 @@
 </div>
 
 <!-- Launch timer popup -->
+<div class="ltimer speccard" id="speccard">
+  <div class="lt-card sc-card">
+    <div class="lt-head">
+      <span class="lt-title">BUILD CARD</span>
+      <button class="ws-close lt-close" id="scClose" title="Close">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="sc-body">
+      <span class="sc-name" id="scName">—</span>
+      <span class="sc-layout" id="scLayout">—</span>
+      <div class="sc-tip"><div class="exhaust" id="scExhaust"><div class="tip" id="scTip"><span class="barrel"></span><i></i></div></div></div>
+      <dl class="sc-specs mono" id="scSpecs"></dl>
+    </div>
+    <div class="sc-link">
+      <input type="text" id="scUrl" readonly aria-label="Build link">
+      <button class="chip-btn mono" id="scCopy">COPY</button>
+    </div>
+    <p class="ws-swap-note" id="scNote">Anyone opening this link gets your exact car, engine and workshop settings.</p>
+  </div>
+</div>
+
 <div class="ltimer" id="ltimer">
   <div class="lt-card">
     <div class="lt-head">
@@ -618,6 +863,14 @@
 </div>
 
 <!-- Stall overlay -->
+<div class="stall-overlay blown-overlay" id="blownOverlay">
+  <div class="stall-card">
+    <span class="stall-title">ENGINE LET GO</span>
+    <span class="stall-body">That was a money shift. Nothing in there turns any more.</span>
+    <button class="chip-btn mono blown-rebuild" id="blownRebuild">REBUILD ENGINE</button>
+  </div>
+</div>
+
 <div class="stall-overlay" id="stallOverlay">
   <div class="stall-card">
     <span class="stall-title">ENGINE STALLED</span>

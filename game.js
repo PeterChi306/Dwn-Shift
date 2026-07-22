@@ -26,6 +26,7 @@ const CARS = [
   },
   {
     id: "peel", name: "Peel Pico", tag: "10 horsepower. all of them.", layout: "1-cyl · 49cc",
+    indicator: "relay",   // one relay, and you can hear it think
     cyl: 1, idle: 1700, max: 6800, cut: 7000, inertia: 0.05, noPop: true,
     curve: [[0, 7], [1700, 10], [3500, 13], [5200, 14], [6200, 12], [6800, 10], [7200, 6]],
     mass: 120, finalDrive: 4.8, clutchCap: 25, cdA: 0.8, brakeMax: 1500,
@@ -48,6 +49,7 @@ const CARS = [
   },
   {
     id: "strada", name: "Strada Corsa V10", tag: "formula screamer", layout: "V10",
+    race: true,   // formula car: no lights, no road registration
     cyl: 10, idle: 1400, max: 12200, cut: 12500, inertia: 0.16,
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 280, dur: 0.6,  fires: 4, flare: 1.0,  flareT: 0.9 },
@@ -66,6 +68,7 @@ const CARS = [
   },
   {
     id: "t50", name: "Dunsfold T.50", tag: "12,100 rpm V12 · ground-effect fan", layout: "V12 · 3.9L NA · 986kg",
+    indicator: "luxury",   // obsessively damped, like the rest of it
     cyl: 12, idle: 1000, max: 11500, cut: 12100, inertia: 0.09,   // lightest crank ever fitted to a road car
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 270, dur: 0.52, fires: 4, flare: 0.98, flareT: 0.85 },
@@ -99,6 +102,7 @@ const CARS = [
   },
   {
     id: "veleno", name: "Maranello 812", tag: "front-engined V12 thoroughbred", layout: "V12 · 6.5L NA",
+    indicator: "luxury",   // front-engined GT: deep and damped
     cyl: 12, idle: 900, max: 8900, cut: 9250, inertia: 0.20,
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 235, dur: 0.72, fires: 4, flare: 0.88, flareT: 0.9 },
@@ -136,6 +140,7 @@ const CARS = [
   },
   {
     id: "gintani", name: "Sant'Agata SVJ Gintani", tag: "straight-pipe V12 · fireworks", layout: "V12 · 6.5L open pipes",
+    crackle: "hard",   // open pipes, no muffling left to soften anything
     cyl: 12, idle: 950, max: 9000, cut: 9350, inertia: 0.19, shiftLights: true,
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 232, dur: 0.92, fires: 5, flare: 1.0, flareT: 1.2, whine: 1290 },
@@ -173,6 +178,8 @@ const CARS = [
   },
   {
     id: "huayrar", name: "San Cesario R", tag: "the best-sounding car in the world", layout: "V12 · 6.0L NA · open megaphone",
+    race: true,   // track-only: never had indicators to begin with
+    crackle: "dry",   // open megaphones ring rather than thump
     cyl: 12, idle: 1100, max: 8750, cut: 9000, inertia: 0.10,  // race-spec V12, near-zero flywheel
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 240, dur: 0.66, fires: 5, flare: 1.0,  flareT: 1.0 },
@@ -286,6 +293,7 @@ const CARS = [
   },
   {
     id: "kaminari", name: "Kaminari 13R", tag: "twin-rotor screamer", layout: "2-rotor · 1.3L",
+    crackle: "wet",   // rotaries pool fuel and gurgle it out
     cyl: 4, idle: 850, max: 9000, cut: 9300, inertia: 0.13,  // near-zero rotating mass: revs instantly
     start: { rpm: 300, dur: 0.86, fires: 2, flare: 0.85, flareT: 0.7, whine: 1420 },
     twoStage: true, ignKey: true,   // old rotary: key to ON, wait for the pump, then crank
@@ -303,6 +311,8 @@ const CARS = [
   },
   {
     id: "kodiak", name: "Kodiak TD", tag: "workhorse truck", layout: "I4 diesel",
+    indicator: "relay",   // a truck relay you can hear from outside
+    crackle: "lazy",   // a diesel workhorse does not crackle
     cyl: 4, idle: 750, max: 4400, cut: 4550, inertia: 0.55, noPop: true,
     twoStage: true, ignKey: true,   // diesel: glow plugs have to warm before it will fire
     curve: [[0, 120], [700, 195], [1300, 255], [1900, 278], [2800, 258], [3600, 214],
@@ -315,6 +325,7 @@ const CARS = [
   },
   {
     id: "tempest", name: "Tempest MkIV", tag: "single big turbo", layout: "I6",
+    crackle: "hard",   // one big single dumping fuel into a hot turbine — it BANGS
     cyl: 6, idle: 850, max: 7600, cut: 7800, inertia: 0.33,
     start: { rpm: 265, dur: 0.7,  fires: 3, flare: 0.85, flareT: 0.8, grit: 1.2 },
     twoStage: true, ignKey: true,   // 90s ECU + fuel pump prime before the starter
@@ -329,6 +340,8 @@ const CARS = [
   },
   {
     id: "tempest3k", name: "Tempest 3000R", tag: "3000 hp drag missile", layout: "I6 · 98mm single",
+    race: true,   // drag car: a battery isolator and a big red button
+    crackle: "hard",   // 3000hp and a 98mm single: gunshots, nothing subtle
     cyl: 6, idle: 1100, max: 9800, cut: 10200, inertia: 0.3, shiftLights: true,
     curve: [[0, 120], [1500, 260], [3000, 420], [5000, 560], [7000, 600], [8500, 580],
             [9800, 520], [10500, 300]],
@@ -347,6 +360,8 @@ const CARS = [
   },
   {
     id: "hellion", name: "Hellion 6.2 SC", tag: "supercharged muscle", layout: "V8",
+    indicator: "relay",   // muscle car, real flasher can
+    crackle: "lazy",   // blown muscle just lopes and putters
     cyl: 8, idle: 680, max: 6400, cut: 6550, inertia: 0.44,
     start: { rpm: 230, dur: 0.66, fires: 3, flare: 0.9,  flareT: 0.8, grit: 1.15 },
     twoStage: true, ignKey: true,   // ignition on, let the pump build, then crank
@@ -360,6 +375,7 @@ const CARS = [
   },
   {
     id: "vandal", name: "Vandal 4.0 TT", tag: "twin-turbo bruiser", layout: "V8 · twin turbo",
+    crackle: "hard",   // twin-turbo V8 bruiser
     cyl: 8, idle: 700, max: 7000, cut: 7200, inertia: 0.38,
     curve: [[0, 180], [700, 340], [2000, 520], [3500, 580], [5000, 560], [6200, 520],
             [7000, 470], [7500, 300]],
@@ -378,6 +394,7 @@ const CARS = [
   },
   {
     id: "affalter", name: "Affalterbach 63 S", tag: "hot-vee biturbo brawler", layout: "V8 · biturbo",
+    indicator: "crisp",
     cyl: 8, idle: 650, max: 7000, cut: 7200, inertia: 0.4,
     curve: [[0, 200], [700, 380], [2000, 700], [3500, 780], [5000, 750], [6200, 690],
             [7000, 600], [7500, 380]],
@@ -398,6 +415,8 @@ const CARS = [
   },
   {
     id: "woking765", name: "Woking 765LT", tag: "longtail savage · flat-plane TT", layout: "V8 · 4.0L twin turbo",
+    indicator: "crisp",
+    crackle: "dry",   // longtail race system: dry and vicious
     cyl: 8, idle: 800, max: 8100, cut: 8500, inertia: 0.22,   // LT flywheel — throttle like a switch
     bootRich: true,          // full supercar dash boot on the key
     curve: [[0, 110], [800, 230], [2500, 360], [4500, 400], [5500, 405], [7000, 400],
@@ -432,6 +451,7 @@ const CARS = [
   },
   {
     id: "falkner", name: "Falkner S6", tag: "howling straight-six", layout: "I6 NA",
+    indicator: "crisp",
     cyl: 6, idle: 850, max: 8000, cut: 8250, inertia: 0.26,
     twoStage: true, ignKey: true,
     curve: [[0, 80], [900, 160], [2500, 220], [4500, 262], [6000, 270], [7200, 258],
@@ -447,6 +467,8 @@ const CARS = [
   },
   {
     id: "bavaria", name: "Bavaria M58", tag: "twin-turbo six · check engine soon", layout: "I6 · twin turbo",
+    indicator: "crisp",
+    crackle: "wet",   // tuned six on a rich map, gurgling on overrun
     cyl: 6, idle: 750, max: 7200, cut: 7400, inertia: 0.3, cel: true,
     twoStage: true, ignKey: true,   // old barrel lock — key to ON, then hold it over
     curve: [[0, 120], [800, 260], [2000, 480], [3500, 520], [5500, 500], [6500, 470],
@@ -466,6 +488,8 @@ const CARS = [
   },
   {
     id: "zuffen", name: "Zuffenhausen 4.0 RS", tag: "9k flat-six howl", layout: "F6 · 4.0L NA",
+    indicator: "crisp",   // the satisfying one — dry, tight, perfect
+    crackle: "dry",   // thin race pipes, hot and metallic
     cyl: 6, idle: 900, max: 9000, cut: 9250, inertia: 0.2, shiftLights: true,
     curve: [[0, 90], [1000, 200], [3000, 320], [5000, 400], [6500, 450], [8000, 465],
             [9000, 430], [9600, 280]],
@@ -482,6 +506,7 @@ const CARS = [
   },
   {
     id: "hexen", name: "Hexen 5.2 FP", tag: "flat-plane screamer", layout: "V8 NA · flat-plane",
+    crackle: "dry",   // flat-plane and race-piped: dry ticking
     cyl: 8, idle: 800, max: 8250, cut: 8500, inertia: 0.3,
     bootRich: true,          // full supercar dash boot on the key
     curve: [[0, 110], [800, 230], [3000, 380], [5000, 480], [6500, 530], [7500, 520],
@@ -498,6 +523,7 @@ const CARS = [
   },
   {
     id: "kirin", name: "Kirin V6-H", tag: "hybrid torque-fill", layout: "V6 · hybrid",
+    indicator: "ev",   // hybrid: the cluster speaker does it
     cyl: 6, idle: 750, max: 8500, cut: 8800, inertia: 0.24, shiftLights: true,
     curve: [[0, 90], [800, 180], [2500, 280], [4500, 330], [6500, 345], [7800, 330],
             [8500, 300], [9100, 180]],
@@ -557,6 +583,7 @@ const CARS = [
   },
   {
     id: "f458", name: "Maranello 458 Spider", tag: "the last pure NA V8 · top down", layout: "V8 · 4.5L flat-plane",
+    crackle: "dry",   // the famous 458 lift: sharp, dry, metallic
     cyl: 8, idle: 900, max: 9000, cut: 9250, inertia: 0.17, shiftLights: true,
     bootRich: true,          // full supercar dash boot on the key
     twoStage: true,          // press once to wake it, again to fire the V8
@@ -593,7 +620,57 @@ const CARS = [
     },
   },
   {
+    id: "sf90", name: "Maranello SF90", tag: "1000 cv plug-in hybrid · 3 e-motors", layout: "V8 · 4.0L biturbo + 3 e-motors",
+    crackle: "hard",   // hot-vee turbos in the exhaust stream: it cracks hard
+    cyl: 8, idle: 850, max: 8000, cut: 8200, inertia: 0.16, shiftLights: true, awd: true,
+    bootRich: true,          // full supercar dash boot on the key
+    start: { rpm: 280, dur: 0.62, fires: 4, flare: 0.9, flareT: 0.8 },
+    /* the F154FA: 780 cv from the engine alone, and unlike the 458 the torque
+       arrives in a wall — 800 Nm plateaued from 6000 and boost holding it flat
+       through the middle. The e-motors fill everything under 2500 (see
+       evForce), which is why the curve can start soft and still launch. */
+    curve: [[0, 210], [1500, 480], [2500, 660], [4000, 780], [6000, 800], [7000, 785],
+            [8000, 700], [8600, 460]],
+    // the real car's 8-speed DCT is 30% closer-stacked than a 7-speed; the
+    // garage runs 6 ratios everywhere, so these are squeezed to match the feel
+    ratios: { R: -3.2, 1: 3.3, 2: 2.15, 3: 1.62, 4: 1.28, 5: 1.03, 6: 0.84 },
+    mass: 1670, finalDrive: 3.7, clutchCap: 1750, cdA: 0.57, brakeMax: 16500, grip: 2.15,
+    asp: "turbo", pops: 1.6, boostMax: 0.82, spool: 2300, spoolRate: 2.9, psiMax: 28,
+    whistleMul: 0.6, whistleFreqMul: 1.0, turboBreath: 1.1, breathHz: 1500,
+    tachMax: 9, redK: 8, kmhMax: 340, mphMax: 211,
+    // plug-in hybrid: the two front e-motors alone move it in silence to
+    // ~135 km/h, then you light the V8 yourself (H / eDrive button)
+    edrive: true, evCapKmh: 135, evForce: 11000, badge: "eDRIVE", fireLbl: "FIRE V8",
+    dash: { accent: "#f5c518", face: "dark" },
+    /* the 90° hot-vee flat-plane V8 with the turbos sitting INSIDE the vee.
+       Same 180° crank as the 458, so the 2nd order still owns the voice — but
+       two turbines in the exhaust stream eat the upper harmonics the naked 458
+       screams with. The result is the 458's bark with the top end pressed flat:
+       harder, deeper, industrial, with a whistle over the top and the wall of
+       boost doing the work the revs used to. It shoves rather than shrieks. */
+    sound: {
+      layers: [
+        ["sine",     0.5,   0.28, 0.10],   // deep chest — the boosted bottom end
+        ["square",   0.5,   0.26, 0.08],   // hot-vee gravel under the bark
+        ["sawtooth", 0.995, 0.22, 0.26],   // unison low…
+        ["sawtooth", 1,     0.48, 0.50],   // …center voice…
+        ["sawtooth", 1.006, 0.24, 0.28],   // …unison high — 3-voice chorus
+        ["sawtooth", 1.5,   0.05, 0.12],   // flat-plane even fire: little between-note
+        ["sawtooth", 2.01,  0.22, 0.50],   // THE flat-plane order — still the backbone
+        ["sawtooth", 3.02,  0.08, 0.30],   // intake howl, turbo-damped vs the 458
+        ["sawtooth", 4.03,  0.0,  0.16],   // metallic edge, muted by the turbines
+        ["triangle", 5.04,  0.0,  0.09],   // faint shimmer — the turbos ate the rest
+      ],
+      // turbos in the vee = a lower, tighter resonator set than the open 458
+      formants: [[240, 1.0, 4.5], [1350, 2.0, 5.5], [3100, 2.4, 4.5]],
+      loadDrive: 0.6, noiseMul: 1.2, volTrim: 1.24, scream: 3600,
+      drive: 0.72, pulseDepth: 0.15, raspMul: 1.35,
+    },
+  },
+  {
     id: "kaze", name: "Kaze 787", tag: "quad-rotor Le Mans legend", layout: "4-rotor · 2.6L",
+    race: true,   // Le Mans prototype — master, ignition, pump, GO
+    crackle: "wet",   // four rotors, endlessly wet and burbly
     cyl: 8, idle: 1100, max: 9000, cut: 9300, inertia: 0.11,  // R26B: pure response
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 320, dur: 0.72, fires: 3, flare: 0.95, flareT: 0.8, whine: 1500 },
@@ -615,6 +692,7 @@ const CARS = [
   {
     id: "ionia", name: "Ionia ZR", tag: "silent slingshot", layout: "dual-motor EV",
     ev: true, awd: true, grip: 2.9, noPop: true,               // launch-compound tires
+    screen: true,            // no dials at all — one panel across the whole dash
     cyl: 2, idle: 0, max: 18000, cut: 18500, inertia: 0.09,
     curve: [[0, 1420], [4000, 1420], [8000, 1050], [12000, 700], [16000, 470], [19000, 300]],
     mass: 2100, finalDrive: 6.5,
@@ -629,6 +707,7 @@ const CARS = [
   },
   {
     id: "molsheim", name: "Molsheim 16.4", tag: "quad-turbo hypercar", layout: "W16 · quad turbo",
+    indicator: "luxury",   // a quad-turbo grand tourer clicks like a bank vault
     awd: true,
     cyl: 16, idle: 800, max: 7100, cut: 7300, inertia: 0.5,
     bootRich: true,          // full supercar dash boot on the key
@@ -656,6 +735,8 @@ const CARS = [
   },
   {
     id: "absolut", name: "Ängelholm Absolut", tag: "twin-turbo top-speed missile · 0-400-0", layout: "V8 · 5.0L flat-plane twin turbo",
+    indicator: "luxury",   // hand-built: everything is over-engineered
+    crackle: "hard",   // big twins, long plumbing, huge reports
     cyl: 8, idle: 820, max: 8500, cut: 8700, inertia: 0.15,   // flat crank, feathery response
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 245, dur: 0.78, fires: 4, flare: 0.8,  flareT: 0.7 },
@@ -696,6 +777,57 @@ const CAR = {
   mass: 1150, wheelR: 0.312, finalDrive: 4.4, eff: 0.85,
   ratios: DEFAULT_RATIOS, cdA: 0.6, roll: 145, brakeMax: 10500, clutchCap: 300,
 };
+
+/* ---------------- engine swap ----------------
+   Chassis and engine are already separate data, so a swap is just: take the
+   car you picked, throw away everything that belongs to the ENGINE, and bolt
+   the donor's engine in its place. The result keeps the chassis' id, so the
+   workshop mods, the save file and the garage highlight all still key off the
+   car you actually chose.
+
+   The split below is the whole feature. Anything about how the engine makes
+   and delivers power moves with it (including the gauge scales — a 12,100 rpm
+   V12 in a diesel truck needs the truck's tacho re-marked, or the needle just
+   pins). Anything about the car AROUND the engine stays: mass, ratios, grip,
+   brakes, aero, the dashboard, the shape of the exhaust tip. */
+const ENGINE_FIELDS = [
+  "cyl", "idle", "max", "cut", "inertia", "curve", "asp", "pops", "sound",
+  "revRate", "start", "camAt", "cel", "noPop", "ev", "crackle",
+  "boostMax", "spool", "spoolRate", "psiMax", "whistleMul", "whistleFreqMul",
+  "turboBreath", "breathHz", "turboChop", "whineMult", "flutter",
+  "tachMax", "redK", "shiftLights",
+  "edrive", "evCapKmh", "evForce", "badge", "fireLbl",
+];
+
+/* the engine currently bolted into `chassis` — the car itself when stock */
+function swapEngineInto(chassis) {
+  const donorId = ((S && S.mods && S.mods[chassis.id]) || {}).swap;
+  if (!donorId || donorId === chassis.id) return chassis;
+  const donor = CARS.find(c => c.id === donorId);
+  if (!donor) return chassis;
+
+  const car = { ...chassis, swapFrom: donor.id };
+  for (const k of ENGINE_FIELDS) {
+    delete car[k];                       // clear first: an NA donor must not
+    if (donor[k] !== undefined) car[k] = donor[k];   // inherit turbo plumbing
+  }
+  car.layout = donor.layout;
+  car.tag = donor.name + " engine · swapped";
+
+  // the lump itself has weight — a V12 in a city hatch sits on the nose and
+  // you feel it, a small four in a big GT lightens it
+  car.mass = Math.round(clamp(chassis.mass + (donor.cyl - chassis.cyl) * 14,
+                              chassis.mass * 0.82, chassis.mass * 1.3));
+  // a stock clutch will not hold a race V12. Size it to what the donor
+  // actually makes, or the swap just smokes the plates and hunts.
+  const peak = Math.max(...car.curve.map(p => p[1])) * (1 + (car.boostMax || 0));
+  car.clutchCap = Math.max(chassis.clutchCap, Math.round(peak * 1.45));
+  // top-speed marking follows whichever runs out first: the chassis' aero or
+  // the engine's ability to pull the gearing
+  car.kmhMax = Math.max(chassis.kmhMax, donor.kmhMax);
+  car.mphMax = Math.max(chassis.mphMax, donor.mphMax);
+  return car;
+}
 
 function applyCar(c) {
   const m = (S && S.mods && S.mods[c.id]) || {};
@@ -788,37 +920,55 @@ const EXHAUSTS = {
   touring: {
     name: "Touring", desc: "Extra muffling, long tailpipes. Quieter than stock — deep and distant.",
     volMul: 0.78, bright: -260, raspAdd: -0.2, popMul: 0.5, look: "touring",
+    flameRich: true,          // long cold pipes: whatever survives is sooty
+    crackle: "lazy",          // muffled to a soft putter
   },
   loud: {
     name: "Open Pipe", desc: "Barely muffled straight-through. Everything, much louder.",
     volMul: 1.45, driveAdd: 0.16, raspAdd: 0.45, popMul: 1.35, look: "open",
+    flameRich: true,          // barely muffled and running rich — big orange torch
+    crackle: "hard",          // nothing in the way: real cracks and bangs
   },
   titanium: {
     name: "Full Titanium", desc: "Featherweight race system, burnt-blue tips. Dry metallic ring that hardens with revs.",
     volMul: 1.18, formantMul: 1.35, bright: 1800, raspAdd: 0.3, driveAdd: 0.06, popMul: 1.2, look: "ti",
+    flameLean: true,          // thin-wall Ti soaks up heat: burns clean blue/violet
+    crackle: "dry",           // thin hot wall rings — klklklkl, not pap
   },
   screamer: {
     name: "Screamer", desc: "Thin-wall high-flow pipes. Rings bright and metallic up top.",
     volMul: 1.08, formantMul: 1.6, bright: 2400, raspAdd: 0.2, popMul: 1.1, look: "screamer",
+    flameLean: true,          // high-flow and glowing hot — clean, thin flame front
+    crackle: "dry",
   },
   decat: {
     name: "De-Cat Straight", desc: "Cats in the bin. Filthy, gravelly, louder everywhere. Smells like victory.",
     volMul: 1.3, driveAdd: 0.12, raspAdd: 0.55, bright: 600, popMul: 1.5, look: "decat",
+    flameRich: true,          // no cats, filthy mixture — the sootiest flame of the lot
+    crackle: "wet",           // rich and filthy: it gurgles before it cracks
   },
   antilag: {
     name: "Anti-Lag", desc: "Fuel in the pipes. Bangs on every shift, flames, constant crackle.",
     volMul: 1.12, popMul: 1.7, burble: true, bright: 300, forcePops: 1.6, look: "antilag",
+    crackle: "war",           // fuel straight into a glowing pipe, constantly
   },
 };
 
 function curMod() {
   let m = S.mods[CC.id];
   if (!m) { m = { ex: "stock", pitch: 1, gear: 1, tune: false, abs: true }; S.mods[CC.id] = m; }
+  // pitch used to be defaulted only when the entry was created from scratch,
+  // so any mods object that arrived without one (an older save, or a shared
+  // build link that omitted it) left the slider reading NaN
+  if (m.pitch === undefined) m.pitch = 1;
   if (m.gear === undefined) m.gear = 1;
   if (m.rev === undefined) m.rev = 1;
   if (m.vol === undefined) m.vol = 1;
   if (m.tone === undefined) m.tone = 0;
   if (m.pop === undefined) m.pop = 1;
+  if (m.swap === undefined) m.swap = "";       // "" = the engine it came with
+  if (m.flame === undefined) m.flame = "auto";
+  if (m.flameSize === undefined) m.flameSize = 1;
   if (m.tune === undefined) m.tune = false;
   if (m.abs === undefined) m.abs = true;
   if (m.shift === undefined) m.shift = "stock";
@@ -855,6 +1005,14 @@ const S = {
   spinV: 0, lockup: false,
   traffic: false, rain: false, passT: 2, splashT: 2, wiperT: 0.7, wiperDir: 1,
   night: false, cricketT: 2, lampT: 1.5,
+  dmgOn: false,                        // consequences mode — opt-in, see DMG
+  // --- electric car only (see the EV DASH section) ---
+  evBoost: 0, evCool: 0,               // ludicrous-mode timer / cooldown, seconds
+  evV8: false,                         // the fake exhaust note
+  batt: 1,                             // 0..1 state of charge
+  powerW: 0,                           // instantaneous drive power, watts (+ / regen −)
+  simGear: 1, simRpm: 800, simCut: 0,  // the pretend gearbox behind the fake V8
+  race: { master: false, ign: false, pump: false },   // race-car start-up panel
   cruise: { on: false, set: 0, i: 0 },
   station: null,
   sweep: -1,
@@ -879,6 +1037,186 @@ function torqueAt(rpm) {
 }
 
 /* ================================================================
+   THE ELECTRIC CAR
+   ================================================================
+   Three things make an EV a different machine rather than a quiet one, and
+   all three live here:
+
+   1. IT MAKES NO SOUND. Not a quiet sound — none. There is no combustion,
+      no exhaust and (in this car) no inverter whine piped into the cabin, so
+      the powertrain contributes literally nothing to the mix. What you hear
+      accelerating is tyres and air, and that is the entire point of it.
+
+   2. LUDICROUS. A five-second overboost. It's specified in POWER, not
+      torque, which matters: power is what you feel at speed, and converting
+      it to torque means the shove goes UP as the revs fall — exactly like
+      the real thing pinning you at 60 and still pinning you at 120.
+
+   3. THE FAKE V8. A complete pretend drivetrain — eight cylinders, six
+      speeds, shift points, an overrun — running on top of a car that has
+      none of those things. It's driven entirely off road speed, so it
+      upshifts as you accelerate and blips as you slow, and it is of course
+      completely fraudulent. That's the joke, and the real ones do it too. */
+
+/* the pretend engine: a lazy, gravelly cross-plane V8 */
+const V8SIM = {
+  cyl: 8, idle: 750, max: 7000, cut: 7200,
+  camAt: 0,
+  ratios: [3.4, 2.05, 1.48, 1.12, 0.9, 0.74], final: 3.9,
+  up: 6500, down: 2600,               // virtual shift points
+  sound: {
+    layers: [
+      ["sine",     0.5,   0.34, 0.12],   // cross-plane chest
+      ["square",   0.5,   0.3,  0.1 ],   // the burble/lope
+      ["sawtooth", 0.995, 0.2,  0.26],
+      ["sawtooth", 1,     0.46, 0.5 ],
+      ["sawtooth", 1.007, 0.22, 0.28],
+      ["sawtooth", 1.5,   0.14, 0.24],   // cross-plane half-order — the woffle
+      ["sawtooth", 2.01,  0.12, 0.3 ],
+      ["sawtooth", 3.02,  0.04, 0.18],
+    ],
+    formants: [[130, 0.9, 5], [620, 1.6, 5.5], [1700, 2.0, 4]],
+    loadDrive: 0.5, noiseMul: 1.1, volTrim: 1.15, scream: 1800,
+    drive: 0.7, pulseDepth: 0.3, pulseType: "sawtooth", raspMul: 1.4, jitter: 1.2,
+  },
+};
+
+/* is this car actually electric right now? (a swapped-in V12 makes it not) */
+function isEv() { return !!CC.ev; }
+/* does this car wear the screen dash? (that's the shell, so it survives swaps) */
+function hasScreen() { return !!CC.screen; }
+/* the fake V8 only exists on an electric car, and only when switched on */
+function v8SimOn() { return isEv() && S.evV8; }
+
+/* what the ENGINE VOICE should sound like, and at what rpm — normally the
+   car itself, but the fake V8 substitutes a whole different machine */
+function voiceCar() { return v8SimOn() ? V8SIM : CC; }
+function voiceRpm() { return v8SimOn() ? S.simRpm : Math.max(S.rpm, 0); }
+function voiceMax() { return v8SimOn() ? V8SIM.max : ENG.max; }
+
+/* ---- ludicrous mode ----
+   +400 hp for five seconds, then twenty to think about what you've done.
+   Converted from power to torque at the current motor speed, with a floor on
+   the divisor so it can't divide by zero into infinity off the line, and a
+   ceiling so a standing start doesn't simply detonate the tyres. */
+const EV_BOOST_HP = 400, EV_BOOST_S = 5, EV_COOL_S = 20;
+
+function evBoostNm(rpm) {
+  if (S.evBoost <= 0) return 0;
+  const w = Math.max(rpm, 1200) * (Math.PI / 30);       // rad/s
+  return Math.min(760, EV_BOOST_HP * 745.7 / w);
+}
+
+function toggleEvBoost() {
+  if (!isEv()) return;
+  initAudio();
+  if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+  if (S.evBoost > 0 || S.evCool > 0) return;            // already lit, or recharging
+  if (!S.engineOn) { sfxBeep(220, 0.2, 0.12); return; }
+  if (S.batt <= 0.02) { sfxBeep(220, 0.3, 0.14); return; }
+  S.evBoost = EV_BOOST_S;
+  sfxEvBoost();
+  sayEvent("ludicrous", "Ludicrous", { cool: 6 });
+  updateEvUi();
+}
+
+function toggleEvV8() {
+  if (!isEv()) return;
+  initAudio();
+  if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+  S.evV8 = !S.evV8;
+  S.simGear = 1; S.simRpm = V8SIM.idle; S.simCut = 0;
+  buildEngineVoice(voiceCar());     // swap the whole oscillator stack over
+  applyFormants();
+  if (S.evV8) sfxEvV8On();
+  else sfxClunk(0.35);
+  updateEvUi();
+  save();
+}
+
+/* the pretend gearbox. rpm comes from road speed through a virtual ratio, so
+   it climbs as you accelerate, drops on an upshift, and falls back toward
+   idle when you stop — all without touching the real drivetrain. */
+function evSimTick(dt) {
+  if (!v8SimOn()) return;
+  const sp = Math.abs(S.v);
+  const wheelRps = sp / CAR.wheelR / (2 * Math.PI);
+  const rpmFor = (g) => wheelRps * V8SIM.ratios[g - 1] * V8SIM.final * 60;
+
+  S.simCut = Math.max(0, S.simCut - dt);
+  if (sp < 0.6) S.simGear = 1;                    // rolled to a stop: back to 1st
+  else {
+    if (S.simGear < 6 && rpmFor(S.simGear) > V8SIM.up) {
+      S.simGear++;
+      S.simCut = 0.11;                             // the ignition-cut lurch
+      sfxShift(0.55);
+      if (S.throttle > 0.3) sfxPop(0.4, undefined, "crack");   // the upshift bark
+    } else if (S.simGear > 1 && rpmFor(S.simGear) < V8SIM.down) {
+      S.simGear--;
+      if (S.throttle < 0.1 && sp > 8) sfxCrackle(1.1);         // downshift crackle
+    }
+  }
+  const target = sp < 0.6
+    ? V8SIM.idle + S.throttle * (V8SIM.max - V8SIM.idle) * 0.85   // revving parked
+    : clamp(rpmFor(S.simGear), V8SIM.idle, V8SIM.cut);
+  // the flywheel it doesn't have: chase the target rather than snapping to it
+  const rate = S.simCut > 0 ? 9 : (target > S.simRpm ? 5.5 : 3.4);
+  S.simRpm += (target - S.simRpm) * Math.min(1, rate * dt);
+  if (S.simCut > 0) S.simRpm -= 2600 * dt;
+  S.simRpm = clamp(S.simRpm, V8SIM.idle * 0.8, V8SIM.cut);
+}
+
+/* ---- battery ----
+   Drains on the power actually delivered, takes some back under regen, and
+   fills up while it sits in Park — so you can empty it doing launches and
+   then wait, which is exactly the deal a real one offers. */
+const EV_KWH = 100;
+
+function evBattTick(dt) {
+  if (!isEv()) { S.batt = 1; return; }
+  const kw = S.powerW / 1000;
+  if (S.batt <= 0 && kw > 0) return;
+  let dSoc = -(kw * dt / 3600) / EV_KWH;
+  if (kw < 0) dSoc *= 0.6;                       // regen is never free
+  if (S.mode === "auto" && S.autoSel === "P" && S.engineOn)
+    dSoc += dt * (1 / (14 * 60));                // ~14 min on the charger
+  S.batt = clamp(S.batt + dSoc, 0, 1);
+}
+
+/* the little bit of theatre when ludicrous arms: a rising sweep and a thump,
+   as close as an electric car gets to sounding pleased with itself */
+function sfxEvBoost() {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const o = ctx.createOscillator(); o.type = "sawtooth";
+  o.frequency.setValueAtTime(140, t);
+  o.frequency.exponentialRampToValueAtTime(1750, t + 0.45);
+  const f = ctx.createBiquadFilter(); f.type = "bandpass";
+  f.frequency.setValueAtTime(400, t); f.Q.value = 3.5;
+  f.frequency.exponentialRampToValueAtTime(3400, t + 0.45);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.12, t + 0.12);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+  o.connect(f); f.connect(g); g.connect(AU.sfx);
+  o.start(t); o.stop(t + 0.65);
+  const k = ctx.createOscillator(); k.type = "sine";
+  k.frequency.setValueAtTime(88, t); k.frequency.exponentialRampToValueAtTime(34, t + 0.3);
+  const kg = ctx.createGain();
+  kg.gain.setValueAtTime(0.5, t); kg.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+  k.connect(kg); kg.connect(AU.sfx); k.start(t); k.stop(t + 0.36);
+}
+
+/* switching the fake note on: the speakers clearing their throat */
+function sfxEvV8On() {
+  if (!AU.ready) return;
+  const t = AU.ctx.currentTime;
+  sfxPop(0.28, t, "putter");
+  sfxPop(0.22, t + 0.09, "putter");
+  sfxPop(0.3, t + 0.2, "crack");
+}
+
+/* ================================================================
    AUDIO — everything synthesized, no files
    ================================================================ */
 
@@ -895,9 +1233,17 @@ function initAudio() {
   // --- output routing: dry + tunnel reverb (convolver) + slapback echo,
   //     glued by a final compressor so loud pops never clip ---
   AU.comp = ctx.createDynamicsCompressor();
-  AU.comp.threshold.value = -12; AU.comp.ratio.value = 4;
-  AU.comp.attack.value = 0.003; AU.comp.release.value = 0.25;
-  AU.comp.connect(ctx.destination);
+  AU.comp.threshold.value = -14; AU.comp.ratio.value = 8;
+  AU.comp.attack.value = 0.002; AU.comp.release.value = 0.22;
+  AU.comp.knee.value = 6;
+  // a second, faster stage catches the transients the first one rides over —
+  // a bang is 2ms of peak, and without this it lands on the recording as a
+  // hard clip rather than a loud pop
+  AU.limiter = ctx.createDynamicsCompressor();
+  AU.limiter.threshold.value = -2.5; AU.limiter.ratio.value = 20;
+  AU.limiter.attack.value = 0.001; AU.limiter.release.value = 0.09;
+  AU.limiter.knee.value = 0;
+  AU.comp.connect(AU.limiter); AU.limiter.connect(ctx.destination);
 
   // cabin stage: interior mode seals the highs behind glass and lets the
   // low end boom through the body structure
@@ -929,12 +1275,25 @@ function initAudio() {
   // pop bus: pops take the normal path PLUS their own hot sends into the
   // reverb and echo, so gunshot crackle rings down the tunnel harder than
   // the engine note does
-  AU.popBus = ctx.createGain(); AU.popBus.gain.value = 1.7;
+  AU.popBus = ctx.createGain(); AU.popBus.gain.value = 1.35;
   AU.popBus.connect(AU.master);
   AU.popRev = ctx.createGain(); AU.popRev.gain.value = 0;
   AU.popBus.connect(AU.popRev); AU.popRev.connect(AU.conv);
   AU.popEcho = ctx.createGain(); AU.popEcho.gain.value = 0;
   AU.popBus.connect(AU.popEcho); AU.popEcho.connect(AU.echo);
+
+  // sfx bus: EVERY one-shot component sound (doors, indicators, wipers,
+  // starters, horns, clunks, chimes, gunshots off the traffic…) rides this.
+  // It reaches the room the normal way through the master, PLUS its own hot
+  // sends into the convolver and the slap delay — without those, a 60ms door
+  // click puts almost nothing into a 3.4s tail and the tunnel sounds like it
+  // only echoes the engine. Now the whole car rings down the concrete.
+  AU.sfx = ctx.createGain(); AU.sfx.gain.value = 1;
+  AU.sfx.connect(AU.master);
+  AU.sfxRev = ctx.createGain(); AU.sfxRev.gain.value = 0;
+  AU.sfx.connect(AU.sfxRev); AU.sfxRev.connect(AU.conv);
+  AU.sfxEcho = ctx.createGain(); AU.sfxEcho.gain.value = 0;
+  AU.sfx.connect(AU.sfxEcho); AU.sfxEcho.connect(AU.echo);
 
   // --- engine voice chain: (per-car oscillators) → soft clip → lowpass ---
   AU.engGain = ctx.createGain(); AU.engGain.gain.value = 0;
@@ -976,13 +1335,13 @@ function initAudio() {
   // --- turbo whistle / supercharger gear whine ---
   AU.whine = ctx.createOscillator(); AU.whine.type = "sine"; AU.whine.frequency.value = 800;
   AU.whineG = ctx.createGain(); AU.whineG.gain.value = 0;
-  AU.whine.connect(AU.whineG); AU.whineG.connect(AU.master); AU.whine.start();
+  AU.whine.connect(AU.whineG); AU.whineG.connect(AU.sfx); AU.whine.start();
 
   // second whistle for sequential setups — the high-rpm pair sings its own,
   // higher note that fades in as stage two comes online
   AU.whine2 = ctx.createOscillator(); AU.whine2.type = "sine"; AU.whine2.frequency.value = 1200;
   AU.whine2G = ctx.createGain(); AU.whine2G.gain.value = 0;
-  AU.whine2.connect(AU.whine2G); AU.whine2G.connect(AU.master); AU.whine2.start();
+  AU.whine2.connect(AU.whine2G); AU.whine2G.connect(AU.sfx); AU.whine2.start();
 
   // whistle modulation: chops a big single's whistle into "zu-zu-zu" under
   // boost, and pulses the blower whine into "yiii-yiii" at the top of the tach
@@ -995,8 +1354,8 @@ function initAudio() {
   // "zing" survives — hangs over the V8 like a TRX at full send
   AU.scHp = ctx.createBiquadFilter(); AU.scHp.type = "highpass";
   AU.scHp.frequency.value = 900; AU.scHp.Q.value = 0.7;
-  AU.scG = ctx.createGain(); AU.scG.gain.value = 0;
-  AU.scHp.connect(AU.scG); AU.scG.connect(AU.master);
+  AU.blowG = ctx.createGain(); AU.blowG.gain.value = 0;
+  AU.scHp.connect(AU.blowG); AU.blowG.connect(AU.sfx);
   AU.scOscs = [["sawtooth", 1, 0.5], ["sawtooth", 1.011, 0.35],
                ["sine", 2.02, 0.55], ["sine", 3.01, 0.2]].map(([type, mult, g]) => {
     const o = ctx.createOscillator(); o.type = type; o.frequency.value = 2000;
@@ -1014,7 +1373,7 @@ function initAudio() {
   const nsrc = ctx.createBufferSource(); nsrc.buffer = nbuf; nsrc.loop = true;
   AU.nbp = ctx.createBiquadFilter(); AU.nbp.type = "bandpass"; AU.nbp.frequency.value = 900; AU.nbp.Q.value = 0.6;
   AU.nGain = ctx.createGain(); AU.nGain.gain.value = 0;
-  nsrc.connect(AU.nbp); AU.nbp.connect(AU.nGain); AU.nGain.connect(AU.master); nsrc.start();
+  nsrc.connect(AU.nbp); AU.nbp.connect(AU.nGain); AU.nGain.connect(AU.sfx); nsrc.start();
 
   // exhaust rasp: narrow noise band riding the firing frequency — reads as
   // combustion texture rather than synthesizer tone
@@ -1028,7 +1387,7 @@ function initAudio() {
   const tbsrc = ctx.createBufferSource(); tbsrc.buffer = nbuf; tbsrc.loop = true; tbsrc.playbackRate.value = 1.05;
   AU.tbBp = ctx.createBiquadFilter(); AU.tbBp.type = "bandpass"; AU.tbBp.frequency.value = 1400; AU.tbBp.Q.value = 0.8;
   AU.tbG = ctx.createGain(); AU.tbG.gain.value = 0;
-  tbsrc.connect(AU.tbBp); AU.tbBp.connect(AU.tbG); AU.tbG.connect(AU.master); tbsrc.start();
+  tbsrc.connect(AU.tbBp); AU.tbBp.connect(AU.tbG); AU.tbG.connect(AU.sfx); tbsrc.start();
 
   // --- wind / road ---
   const wsrc = ctx.createBufferSource(); wsrc.buffer = nbuf; wsrc.loop = true; wsrc.playbackRate.value = 0.6;
@@ -1047,15 +1406,15 @@ function initAudio() {
   const ssrc = ctx.createBufferSource(); ssrc.buffer = nbuf; ssrc.loop = true; ssrc.playbackRate.value = 0.9;
   AU.scBp = ctx.createBiquadFilter(); AU.scBp.type = "bandpass"; AU.scBp.frequency.value = 950; AU.scBp.Q.value = 1.1;
   AU.scG = ctx.createGain(); AU.scG.gain.value = 0;
-  ssrc.connect(AU.scBp); AU.scBp.connect(AU.scG); AU.scG.connect(AU.master); ssrc.start();
+  ssrc.connect(AU.scBp); AU.scBp.connect(AU.scG); AU.scG.connect(AU.sfx); ssrc.start();
 
   // --- ambience bus: traffic & rain live outside the car mix, with a fixed
   //     send into the tunnel reverb so they echo when the tunnel is on ---
   AU.amb = ctx.createGain(); AU.amb.gain.value = 1;
   AU.ambLp = ctx.createBiquadFilter(); AU.ambLp.type = "lowpass"; AU.ambLp.frequency.value = 20000;
   AU.amb.connect(AU.ambLp); AU.ambLp.connect(AU.comp);
-  const ambSend = ctx.createGain(); ambSend.gain.value = 0.9;
-  AU.ambLp.connect(ambSend); ambSend.connect(AU.conv);
+  AU.ambSend = ctx.createGain(); AU.ambSend.gain.value = 0.5;
+  AU.ambLp.connect(AU.ambSend); AU.ambSend.connect(AU.conv);
 
   // distant road hum (traffic bed)
   const th = ctx.createBufferSource(); th.buffer = nbuf; th.loop = true; th.playbackRate.value = 0.5;
@@ -1078,7 +1437,7 @@ function initAudio() {
   const sw = ctx.createBufferSource(); sw.buffer = nbuf; sw.loop = true; sw.playbackRate.value = 1.3;
   const swHp = ctx.createBiquadFilter(); swHp.type = "highpass"; swHp.frequency.value = 1700;
   AU.sprayG = ctx.createGain(); AU.sprayG.gain.value = 0;
-  sw.connect(swHp); swHp.connect(AU.sprayG); AU.sprayG.connect(AU.master); sw.start();
+  sw.connect(swHp); swHp.connect(AU.sprayG); AU.sprayG.connect(AU.sfx); sw.start();
 
   // --- echo mode: its OWN convolver at full wet (the shared tunnel one is
   //     gated by AU.wet, which strangled the effect) + a big fed-back slap ---
@@ -1115,12 +1474,12 @@ function initAudio() {
   const glfoG = ctx.createGain(); glfoG.gain.value = 400;
   glfo.connect(glfoG); glfoG.connect(gbp.frequency);
   AU.grindGain = ctx.createGain(); AU.grindGain.gain.value = 0;
-  gsrc.connect(gbp); gsaw.connect(gbp); gbp.connect(AU.grindGain); AU.grindGain.connect(AU.master);
+  gsrc.connect(gbp); gsaw.connect(gbp); gbp.connect(AU.grindGain); AU.grindGain.connect(AU.sfx);
   gsrc.start(); gsaw.start(); glfo.start();
 
   AU.ready = true;
   loadPshift();                          // the recorded paddle click
-  buildEngineVoice(CC);
+  buildEngineVoice(voiceCar());
   applyTunnel();
   applyCabin();
   updateMasterGain();
@@ -1157,7 +1516,7 @@ function makeTunnelIR(ctx) {
 /* pipe resonances for the current car — Screamer shifts them up the spectrum */
 function applyFormants() {
   if (!AU.ready) return;
-  const fs = CC.sound.formants || [];
+  const fs = voiceCar().sound.formants || [];
   const fm = curEx().formantMul || 1;
   AU.formants.forEach((p, i) => {
     const [fq, q, db] = fs[i] || [1000, 1, 0];
@@ -1173,6 +1532,10 @@ function applyTunnel() {
   AU.echoWet.gain.setTargetAtTime(on ? 0.42 : 0, t, 0.15);
   AU.popRev.gain.setTargetAtTime(on ? 1.3 : 0.3, t, 0.15);
   AU.popEcho.gain.setTargetAtTime(on ? 0.9 : 0, t, 0.15);
+  // …and every other sound the car makes rings down the tube with it
+  AU.sfxRev.gain.setTargetAtTime(on ? 0.62 : 0.12, t, 0.15);
+  AU.sfxEcho.gain.setTargetAtTime(on ? 0.34 : 0, t, 0.15);
+  AU.ambSend.gain.setTargetAtTime(on ? 1.0 : 0.4, t, 0.15);
 }
 
 /* swap the oscillator stack to the selected car's sound profile.
@@ -1196,10 +1559,369 @@ function buildEngineVoice(car) {
   }
 }
 
+/* ================================================================
+   TURN SIGNALS
+   ================================================================
+   A car's indicator is the sound you hear more than any other and think
+   about least, and every manufacturer voices it differently on purpose. Five
+   families, and which one a car gets says as much about it as its engine:
+
+     relay    A real bimetallic flasher: a strip of metal heating, bending,
+              slamming a contact shut and springing back. Loud, warm, and
+              slightly uneven — "TOCK ... tik". Anything old enough to have
+              a key barrel gets this.
+     luxury   The expensive one. Deep, damped, and wooden, with a resonance
+              behind it like a switch in a cabinet — "tonk ... tonk". No
+              relay is involved; it's a speaker imitating a nicer relay.
+     crisp    Precise, tight and clean. The satisfying one — a watch escape-
+              ment rather than a machine.
+     digital  Modern supercar: two short pitched blips through the cluster
+              speaker. Obviously synthesized, and obviously deliberate.
+     ev       The electric car's: soft, warm and rounded, a low two-tone
+              "boop ... bop". No mechanism at all, just a nice noise.
+
+   Race cars get NOTHING — see RACE_CARS below. There is no indicator on a
+   car with no road registration, so there's no lamp and no stalk either.
+
+   These are interior sounds, so they use the pedal helpers (straight to the
+   master, no tunnel echo) and get louder with the windows up. */
+
+const IND = { side: 0, on: false, t: 0 };     // -1 left, 0 off, 1 right
+const IND_PERIOD = 0.38;                      // ~79 flashes/min, near enough to legal
+
+/* what this car's indicator sounds like — null if it hasn't got one */
+function indVoice() {
+  if (CC.race) return null;                   // no lights, no stalk, no sound
+  if (CC.indicator) return CC.indicator;
+  if (CC.ev || CC.edrive) return "ev";
+  return CC.ignKey ? "relay" : "digital";     // key barrel = old enough for a real relay
+}
+
+function sfxIndicator(voice, on) {
+  if (!AU.ready) return;
+  const t = AU.ctx.currentTime;
+  const k = (S.cabin ? 2.1 : 1) * (on ? 1 : 0.72);   // the return stroke is always softer
+
+  switch (voice) {
+    case "relay":
+      // the contact slamming shut, then the strip itself ringing
+      pedNoise(t, 0.15 * k, { rate: 1.1, f: 900, q: 2, dec: 0.014 });
+      pedTone(t, 0.13 * k, { f: on ? 184 : 210, f2: 92, dec: 0.028 });
+      pedNoise(t + 0.004, 0.035 * k, { rate: 1.7, f: 2600, q: 6, dec: 0.03 });
+      break;
+    case "luxury":
+      // heavily damped, and the cabinet behind it rings for a moment
+      pedNoise(t, 0.07 * k, { rate: 0.5, type: "lowpass", f: 300, q: 0.8, dec: 0.05, at: 0.005 });
+      pedTone(t, 0.14 * k, { f: on ? 268 : 244, f2: 118, dec: 0.075 });
+      pedNoise(t + 0.006, 0.05 * k, { rate: 0.9, f: 430, q: 7.5, dec: 0.1, at: 0.008 });
+      break;
+    case "crisp":
+      // tight, dry and precise — nothing rings, nothing lingers
+      pedNoise(t, 0.14 * k, { rate: 1.9, f: on ? 2200 : 2600, q: 3, dec: 0.009 });
+      pedTone(t, 0.1 * k, { f: on ? 150 : 168, f2: 96, dec: 0.022 });
+      break;
+    case "ev":
+      // no mechanism at all: a warm rounded two-tone, soft on both edges
+      pedTone(t, 0.13 * k, { f: on ? 615 : 512, f2: on ? 690 : 470, dec: 0.085, wave: "sine" });
+      pedTone(t, 0.075 * k, { f: on ? 158 : 132, f2: on ? 172 : 122, dec: 0.075, wave: "sine" });
+      break;
+    default:   // digital
+      pedTone(t, 0.1 * k, { f: on ? 1520 : 1240, f2: on ? 1500 : 1230, dec: 0.028, wave: "sine" });
+      pedTone(t + 0.028, 0.075 * k, { f: on ? 2280 : 1860, f2: on ? 2260 : 1850, dec: 0.024, wave: "sine" });
+      pedNoise(t, 0.03 * k, { rate: 2, f: 3400, q: 4, dec: 0.006 });
+  }
+}
+
+/* the stalk. Same side again cancels; the other side just swaps over. */
+function setIndicator(side) {
+  if (!indVoice()) return;                    // race car: there is no stalk
+  initAudio();
+  if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+  IND.side = IND.side === side ? 0 : side;
+  IND.on = false;
+  IND.t = IND.side ? IND_PERIOD : 0;          // fire the first flash immediately
+  if (!IND.side) updateIndicatorUi();
+}
+
+function indicatorTick(dt) {
+  const voice = indVoice();
+  if (!IND.side || !voice) {
+    if (IND.on) { IND.on = false; updateIndicatorUi(); }
+    return;
+  }
+  IND.t += dt;
+  if (IND.t >= IND_PERIOD) {
+    IND.t -= IND_PERIOD;
+    IND.on = !IND.on;
+    sfxIndicator(voice, IND.on);
+    updateIndicatorUi();
+  }
+}
+
+function updateIndicatorUi() {
+  const has = !!indVoice();
+  $("turnSig").classList.toggle("hide", !has);
+  $("tsigL").classList.toggle("lit", has && IND.side === -1 && IND.on);
+  $("tsigR").classList.toggle("lit", has && IND.side === 1 && IND.on);
+  $("tsigL").classList.toggle("armed", has && IND.side === -1);
+  $("tsigR").classList.toggle("armed", has && IND.side === 1);
+  // the screen car repeats them up on the panel instead of in the lamp row
+  if (hasScreen()) {
+    $("evsIndL").classList.toggle("on", IND.side === -1 && IND.on);
+    $("evsIndR").classList.toggle("on", IND.side === 1 && IND.on);
+  }
+}
+
+/* ================================================================
+   RACE-CAR START-UP
+   ================================================================
+   A race car has no key and no convenience. It has a panel of toggles that
+   must be thrown in order, because each one feeds the next: the master
+   isolator connects the battery, the ignition wakes the ECU, and only then
+   is there anything to run the fuel pump. Throw them out of order and
+   nothing happens, which is exactly what happens in the real car.
+
+   Only once all three are live does the starter button do anything. */
+const RACE_SWITCHES = ["master", "ign", "pump"];
+
+function raceReady() { return RACE_SWITCHES.every(k => S.race[k]); }
+
+function sfxRaceToggle(on) {
+  if (!AU.ready) return;
+  const t = AU.ctx.currentTime;
+  const k = S.cabin ? 1.9 : 1;
+  // a proper toggle is two events a few ms apart: the lever going over
+  // centre, then the contact landing
+  pedNoise(t, 0.16 * k, { rate: 2.1, f: on ? 1900 : 1650, q: 2.2, dec: 0.009 });
+  pedNoise(t + 0.012, 0.13 * k, { rate: 0.6, type: "lowpass", f: 420, q: 0.9, dec: 0.045 });
+  pedTone(t + 0.012, 0.12 * k, { f: on ? 208 : 178, f2: 84, dec: 0.05 });
+  // the alloy switch panel ringing behind it
+  pedNoise(t + 0.014, 0.04 * k, { rate: 1.5, f: 3100, q: 9, dec: 0.07 });
+}
+
+function sfxRaceDeny() {
+  if (!AU.ready) return;
+  const t = AU.ctx.currentTime;
+  pedNoise(t, 0.09, { rate: 1.4, f: 700, q: 4, dec: 0.05 });   // a dead switch going nowhere
+}
+
+/* the pump priming: a hard whirr that rises, holds, then settles to the bed
+   you stop hearing after ten seconds */
+function sfxFuelPrime() {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const o = ctx.createOscillator(); o.type = "sawtooth";
+  o.frequency.setValueAtTime(72, t);
+  o.frequency.exponentialRampToValueAtTime(168, t + 0.32);
+  o.frequency.setValueAtTime(168, t + 1.5);
+  o.frequency.exponentialRampToValueAtTime(126, t + 2.1);
+  const f = ctx.createBiquadFilter(); f.type = "bandpass";
+  f.frequency.value = 900; f.Q.value = 1.6;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.075, t + 0.18);
+  g.gain.setValueAtTime(0.075, t + 1.5);
+  g.gain.exponentialRampToValueAtTime(0.018, t + 2.2);
+  o.connect(f); f.connect(g); g.connect(AU.master);
+  o.start(t); o.stop(t + 2.3);
+  // the hiss of fuel actually moving
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.loop = true;
+  const nf = ctx.createBiquadFilter(); nf.type = "bandpass";
+  nf.frequency.value = 2400; nf.Q.value = 0.9;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.0001, t);
+  ng.gain.linearRampToValueAtTime(0.02, t + 0.2);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+  n.connect(nf); nf.connect(ng); ng.connect(AU.master);
+  n.start(t); n.stop(t + 2.3);
+}
+
+function raceSwitch(which) {
+  if (!CC.race) return;
+  initAudio();
+  if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+  const i = RACE_SWITCHES.indexOf(which);
+  const on = !S.race[which];
+
+  if (on) {
+    // every switch downstream of a dead one does nothing at all
+    if (RACE_SWITCHES.slice(0, i).some(k => !S.race[k])) { sfxRaceDeny(); return; }
+    S.race[which] = true;
+    sfxRaceToggle(true);
+    if (which === "ign") {
+      S.acc = true; S.stalled = false; S.rpm = 0; S.sweep = 0;
+      $("stallOverlay").classList.remove("show");
+      $("lampStall").classList.remove("lit", "blink");
+      sfxAccOn(CC);
+      accBedStart(1);
+    }
+    if (which === "pump") sfxFuelPrime();
+  } else {
+    // pulling a switch drops everything it was feeding
+    for (const k of RACE_SWITCHES.slice(i)) S.race[k] = false;
+    sfxRaceToggle(false);
+    if (i <= RACE_SWITCHES.indexOf("ign")) {
+      S.acc = false;
+      if (S.engineOn || S.cranking) killRaceEngine();
+      accBedStop(0.3);
+    }
+  }
+  updateRunLamp();
+  updateRaceUi();
+}
+
+function killRaceEngine() {
+  S.crankSeq = (S.crankSeq || 0) + 1;
+  clearTimeout(S.crankTimer); S.crankTimer = 0;
+  S.engineOn = false; S.cranking = false; S.rpm = 0; S.boost = 0;
+  $("ignition").classList.remove("cranking");
+  sfxClunk(0.6);
+}
+
+function updateRaceUi() {
+  const race = !!CC.race;
+  $("racePanel").classList.toggle("hide", !race);
+  if (!race) return;
+  for (const k of RACE_SWITCHES) {
+    const el = $("rsw" + k[0].toUpperCase() + k.slice(1));
+    el.classList.toggle("on", !!S.race[k]);
+    el.setAttribute("aria-pressed", String(!!S.race[k]));
+  }
+  $("racePanel").classList.toggle("armed", raceReady());
+}
+
+function resetRaceSwitches() {
+  S.race = { master: false, ign: false, pump: false };
+  updateRaceUi();
+}
+
+/* ================================================================
+   PEDAL MECHANICS
+   ================================================================
+   A real car's pedals are noisy, and you only notice how noisy once they're
+   missing. Three separate events per pedal, because that's what your foot
+   actually produces:
+
+     press    coming off the top stop — a click, then the pedal itself moving
+     floor    hitting the bottom stop — a dull rubber-on-metal thud
+     release  the return spring snapping it back against the upper stop
+
+   The brake gets the extra one nobody thinks about until they hear it: the
+   vacuum booster. Pressing pulls air through it (a soft falling "shhk"),
+   releasing lets it refill (a shorter rising one). It's most of why a brake
+   pedal sounds so different from a throttle.
+
+   These live INSIDE the car, so they go straight to the master rather than
+   the sfx bus — a pedal click has no business ringing down a tunnel — and
+   they get a good deal louder with the windows up. */
+
+function pedNoise(t, lvl, o) {
+  const ctx = AU.ctx;
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
+  n.playbackRate.value = o.rate || 1;
+  const f = ctx.createBiquadFilter();
+  f.type = o.type || "bandpass";
+  f.frequency.setValueAtTime(o.f, t);
+  f.Q.value = o.q === undefined ? 1 : o.q;
+  if (o.f2) f.frequency.exponentialRampToValueAtTime(o.f2, t + o.dec);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(lvl, t + (o.at || 0.002));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + o.dec);
+  n.connect(f); f.connect(g); g.connect(AU.master);
+  n.start(t); n.stop(t + o.dec + 0.02);
+}
+
+function pedTone(t, lvl, o) {
+  const ctx = AU.ctx;
+  const s = ctx.createOscillator(); s.type = o.wave || "sine";
+  s.frequency.setValueAtTime(o.f, t);
+  s.frequency.exponentialRampToValueAtTime(o.f2, t + o.dec);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(lvl, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + o.dec);
+  s.connect(g); g.connect(AU.master);
+  s.start(t); s.stop(t + o.dec + 0.02);
+}
+
+/* which: "gas" | "brake" | "clutch"   event: "press" | "floor" | "release" */
+function sfxPedal(which, event, force = 1) {
+  if (!AU.ready) return;
+  const t = AU.ctx.currentTime;
+  // windows up puts your ear a foot from the pedal box
+  const k = force * (S.cabin ? 2.3 : 1) * 0.9;
+
+  if (which === "gas") {
+    if (event === "press") {
+      pedNoise(t, 0.05 * k, { rate: 1.5, f: 1500, q: 1.2, dec: 0.011 });
+      pedTone(t, 0.05 * k, { f: 152, f2: 88, dec: 0.045 });
+    } else if (event === "floor") {
+      // the kickdown stop: soft, rubbery, and definitely the end of travel
+      pedNoise(t, 0.07 * k, { rate: 0.55, type: "lowpass", f: 260, q: 0.8, dec: 0.06 });
+      pedTone(t, 0.065 * k, { f: 92, f2: 48, dec: 0.075 });
+    } else {
+      // the return spring throwing it back at the top stop — sharper than the press
+      pedNoise(t, 0.055 * k, { rate: 1.9, f: 2200, q: 1.5, dec: 0.009 });
+      pedTone(t, 0.042 * k, { f: 196, f2: 104, dec: 0.038 });
+    }
+    return;
+  }
+
+  if (which === "brake") {
+    if (event === "press") {
+      pedNoise(t, 0.05 * k, { rate: 2.1, f: 2700, q: 2, dec: 0.007 });   // light switch
+      // the booster drawing down — a falling breath, not a hiss
+      pedNoise(t, 0.075 * k, { rate: 0.9, f: 900, f2: 300, q: 1.2, dec: 0.19, at: 0.02 });
+      pedTone(t, 0.07 * k, { f: 124, f2: 60, dec: 0.07 });
+    } else if (event === "floor") {
+      pedNoise(t, 0.055 * k, { rate: 0.7, f: 470, q: 6, dec: 0.13, at: 0.01 });  // pivot creak
+      pedTone(t, 0.075 * k, { f: 88, f2: 42, dec: 0.09 });
+    } else {
+      pedNoise(t, 0.06 * k, { rate: 0.9, f: 340, f2: 1100, q: 1.1, dec: 0.14, at: 0.012 });
+      pedNoise(t, 0.04 * k, { rate: 2.3, f: 3000, q: 2, dec: 0.006 });
+    }
+    return;
+  }
+
+  // the clutch: the heaviest spring of the three, and the only one with a
+  // release bearing behind it
+  if (event === "press") {
+    pedNoise(t, 0.05 * k, { rate: 0.8, f: 700, q: 3.2, dec: 0.09, at: 0.012 });
+    pedTone(t, 0.05 * k, { f: 118, f2: 62, dec: 0.06 });
+  } else if (event === "floor") {
+    pedTone(t, 0.06 * k, { f: 84, f2: 44, dec: 0.08 });
+  } else {
+    pedNoise(t, 0.055 * k, { rate: 1.6, f: 1700, q: 1.4, dec: 0.014 });
+    pedTone(t, 0.05 * k, { f: 168, f2: 92, dec: 0.05 });
+  }
+}
+
+/* edge-detect the driver's foot. This watches S.in — the pedal INPUT, i.e.
+   what the foot is doing — rather than the smoothed actuator position, so a
+   stab registers the moment it happens instead of when the ramp catches up. */
+const PED_ON = 0.06, PED_FLOOR = 0.93;
+const PEDALS = [["gas", "gas"], ["brake", "brake"], ["clutch", "clutch"]];
+
+function pedalSfxTick() {
+  if (!AU.ready) return;
+  if (!S._pedPrev) S._pedPrev = { gas: 0, brake: 0, clutch: 0 };
+  for (const [key, which] of PEDALS) {
+    const now = S.in[key] || 0, was = S._pedPrev[key];
+    if (was < PED_ON && now >= PED_ON) sfxPedal(which, "press", clamp(now, 0.35, 1));
+    else if (was >= PED_ON && now < PED_ON) sfxPedal(which, "release", 1);
+    if (was < PED_FLOOR && now >= PED_FLOOR) sfxPedal(which, "floor", 1);
+    S._pedPrev[key] = now;
+  }
+}
+
 function audioTick() {
   if (!AU.ready) return;
   const t = AU.ctx.currentTime, k = 0.03;
-  const rpm = Math.max(S.rpm, 0);
+  // the engine VOICE is not always this car's engine: with the fake V8
+  // switched on, an electric car sings through a pretend eight instead
+  const VC = voiceCar();
+  const rpm = voiceRpm();
+  const vMax = voiceMax();
   const ex = curEx();
 
   // flyby: true Doppler (we synthesize the frequencies, so just bend them),
@@ -1218,10 +1940,10 @@ function audioTick() {
 
   // firing freq × per-car octave drop (f0Mul) × pitch mod × Doppler
   const cm = curMod();
-  const f0 = (rpm / 60) * (CC.cyl / 2) * (CC.sound.f0Mul || 1) * cm.pitch * dop;
-  const rFrac = clamp(rpm / ENG.max, 0, 1);
+  const f0 = (rpm / 60) * (VC.cyl / 2) * (VC.sound.f0Mul || 1) * cm.pitch * dop;
+  const rFrac = clamp(rpm / vMax, 0, 1);
   const gCurve = Math.pow(rFrac, 1.6);             // how far "up the rev range" the voice is
-  const jm = CC.sound.jitter || 1;       // per-car mechanical looseness
+  const jm = VC.sound.jitter || 1;       // per-car mechanical looseness
   for (const L of AU.oscs) {
     // each voice wanders independently — fast flutter plus a slow random-walk
     // drift; coherent motion sounds digital, independent motion sounds alive
@@ -1234,43 +1956,46 @@ function audioTick() {
 
   const running = S.engineOn && !S.cranking;
   const load = S.effThrottle;
-  const onCam = CC.camAt && rpm > CC.camAt;        // VTEC-style switchover
-  const trim = (CC.sound.volTrim || 1) * (ex.volMul || 1) * cm.vol;
+  const onCam = VC.camAt && rpm > VC.camAt;        // VTEC-style switchover
+  const trim = (VC.sound.volTrim || 1) * (ex.volMul || 1) * cm.vol;
   const blipBoost = S.blip > 0 ? 1.4 : 1;          // downshift blips shout
   // idleVol lifts the voice near idle and fades out as revs climb — the
   // quad-rotor idles LOUD, like the real thing at a standstill
-  const idleLift = (CC.sound.idleVol || 0) * clamp(1.35 - rpm / (ENG.idle * 2.6), 0, 1);
-  const vol = running
-    ? (CC.ev
-        ? 0.02 + load * 0.14 + rFrac * 0.2        // EV: near-silent until it moves
-        : 0.10 + idleLift + load * 0.30 + rFrac * 0.13 + (onCam ? 0.04 : 0)) * trim * 0.8 * blipBoost
+  const idleLift = (VC.sound.idleVol || 0) * clamp(1.35 - rpm / ((VC.idle || ENG.idle) * 2.6), 0, 1);
+  // An electric car has no combustion voice at all — no firing, no exhaust,
+  // no intake. What's left is a whisper of inverter (below) plus tyres and
+  // air. The only other exception is the fake V8, and that isn't the car,
+  // that's the stereo.
+  const mute = isEv() && !v8SimOn();
+  const vol = running && !mute
+    ? (0.10 + idleLift + load * 0.30 + rFrac * 0.13 + (onCam ? 0.04 : 0)) * trim * 0.8 * blipBoost
     : 0;
   AU.engGain.gain.setTargetAtTime(vol, t, 0.05);
 
   // combustion throb — strong at idle, smooths out with revs
-  const drive = (CC.sound.drive || 0.5) + (ex.driveAdd || 0);
+  const drive = (VC.sound.drive || 0.5) + (ex.driveAdd || 0);
   // load-sensitive saturation: barks under power, settles on a lift
-  const dl = CC.sound.loadDrive || 0;
+  const dl = VC.sound.loadDrive || 0;
   AU.mixIn.gain.setTargetAtTime(drive * (1 + dl * (load - 0.3)), t, 0.05);
-  const pd = (CC.sound.pulseDepth || 0.15) * (1 - rFrac * 0.6);
-  AU.pulse.frequency.setTargetAtTime(Math.max(3, f0 / (CC.sound.pulseDiv || 1)), t, k);
-  AU.pulseG.gain.setTargetAtTime(running ? drive * pd * 0.5 : 0, t, 0.05);
+  const pd = (VC.sound.pulseDepth || 0.15) * (1 - rFrac * 0.6);
+  AU.pulse.frequency.setTargetAtTime(Math.max(3, f0 / (VC.sound.pulseDiv || 1)), t, k);
+  AU.pulseG.gain.setTargetAtTime(running && !mute ? drive * pd * 0.5 : 0, t, 0.05);
 
   // exhaust rasp band riding the firing frequency
   AU.raspBp.frequency.setTargetAtTime(clamp(f0 * 1.5, 90, 5500), t, k);
   AU.raspG.gain.setTargetAtTime(
-    running ? (0.02 + load * 0.10 + rFrac * 0.03) * (CC.sound.raspMul || 1) * (1 + (ex.raspAdd || 0)) : 0,
+    running && !mute ? (0.02 + load * 0.10 + rFrac * 0.03) * (VC.sound.raspMul || 1) * (1 + (ex.raspAdd || 0)) : 0,
     t, k);
   // "scream" opens the filter with revs alone — the intake howl waking up
   AU.lp.frequency.setTargetAtTime(
     Math.max(110,
-      ((150 + load * 2700 + rpm * 0.45 + (onCam ? 1500 : 0) + (CC.sound.scream || 0) * rFrac * rFrac
-        + (ex.bright || 0) + (S.blip > 0 ? 1500 : 0)) * (CC.sound.lpMul || 1) + cm.tone) * flyLp),
+      ((150 + load * 2700 + rpm * 0.45 + (onCam ? 1500 : 0) + (VC.sound.scream || 0) * rFrac * rFrac
+        + (ex.bright || 0) + (S.blip > 0 ? 1500 : 0)) * (VC.sound.lpMul || 1) + cm.tone) * flyLp),
     t, k);
 
-  const nMul = CC.sound.noiseMul || 1;
+  const nMul = VC.sound.noiseMul || 1;
   const boostHiss = CC.asp === "turbo" ? S.boost * 0.09 : 0;
-  AU.nGain.gain.setTargetAtTime(running ? (load * 0.10 + rpm / 90000) * nMul + boostHiss : 0, t, k);
+  AU.nGain.gain.setTargetAtTime(running && !mute ? (load * 0.10 + rpm / 90000) * nMul + boostHiss : 0, t, k);
   AU.nbp.frequency.setTargetAtTime(500 + rpm * 0.35, t, k);
 
   // forced-induction whine
@@ -1304,9 +2029,11 @@ function audioTick() {
     wf = (220 + Math.abs(S.v) * 55 + rpm * 0.04) * dop;
     wg = S.boost * 0.05 + (S.brake > 0.2 && Math.abs(S.v) > 2 ? 0.045 : 0);
   } else if (running && CC.ev) {
-    // the whole car IS the whine — pure rising inverter note
-    wf = (400 + rpm * 0.35) * dop;
-    wg = 0.02 + load * 0.045 + rFrac * 0.035 + (S.brake > 0.2 && Math.abs(S.v) > 2 ? 0.04 : 0);
+    // Just a hint of inverter. Not the old rising wail — about a third of it,
+    // sitting under the tyres rather than over them, so you can tell the car
+    // is doing something without it becoming the sound of the car.
+    wf = (400 + rpm * 0.32) * dop;
+    wg = 0.005 + load * 0.014 + rFrac * 0.009 + (S.brake > 0.2 && Math.abs(S.v) > 2 ? 0.009 : 0);
   } else if (CC.edrive && S.powered && S.eDrive === "ev") {
     // eDrive gliding: barely-there inverter whisper that tracks road speed
     const sp = Math.abs(S.v);
@@ -1339,16 +2066,27 @@ function audioTick() {
   AU.tbG.gain.setTargetAtTime(tbG, t, 0.05);
   for (const s of AU.scOscs)
     s.o.frequency.setTargetAtTime(Math.min(12000, wf * s.mult), t, k);
-  AU.scG.gain.setTargetAtTime(scg, t, 0.05);
+  AU.blowG.gain.setTargetAtTime(scg, t, 0.05);
 
   const sp = Math.abs(S.v);
   // wind: gentle low rumble at town speeds, then the rush piles on hard past
   // ~60 mph (27 m/s) the way real wind noise suddenly owns the cabin
   const rush = clamp((sp - 24) / 28, 0, 1);
-  AU.wGain.gain.setTargetAtTime(Math.min(0.20, sp * 0.0035) + rush * 0.14, t, 0.1);
+  // Inside the car, wind is most of what you hear at speed — a broad roar off
+  // the A-pillar and mirrors that buries everything else on a motorway. From
+  // outside it's just air moving past, so the cabin gets the lion's share of
+  // the lift rather than turning the whole mix into a gale.
+  const cabW = S.cabin ? 1.6 : 1;
+  // gusting: a slow random walk, a few percent either way. Dead-steady wind
+  // is the giveaway that it's a noise generator and not moving air.
+  S.gust = clamp((S.gust || 0) * 0.994 + (Math.random() - 0.5) * 0.016, -0.14, 0.14);
+  const gust = 1 + S.gust * clamp(sp / 30, 0, 1);
+  AU.wGain.gain.setTargetAtTime((Math.min(0.26, sp * 0.0045) + rush * 0.19) * cabW * gust, t, 0.1);
   AU.wlp.frequency.setTargetAtTime(220 + sp * 26, t, 0.1);
-  AU.rushG.gain.setTargetAtTime(Math.pow(rush, 1.5) * 0.5, t, 0.15);
-  AU.rushBp.frequency.setTargetAtTime(500 + sp * 14, t, 0.2);
+  AU.rushG.gain.setTargetAtTime(Math.pow(rush, 1.5) * 0.66 * cabW * gust, t, 0.15);
+  // with the glass up you lose the top of the hiss and keep the roar, so the
+  // band sits lower — that's what makes it read as "inside" rather than louder
+  AU.rushBp.frequency.setTargetAtTime((S.cabin ? 380 : 500) + sp * (S.cabin ? 10 : 14), t, 0.2);
 
   AU.grindGain.gain.setTargetAtTime(S.grinding ? 0.22 : 0, t, 0.02);
 
@@ -1430,7 +2168,7 @@ function sfxSplash(amp) {
     g.gain.setValueAtTime(0.001, t + dt);
     g.gain.linearRampToValueAtTime(amp * k, t + dt + 0.03);
     g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.3);
-    n.connect(f); f.connect(g); g.connect(AU.master);
+    n.connect(f); f.connect(g); g.connect(AU.sfx);
     n.start(t + dt); n.stop(t + dt + 0.35);
   });
 }
@@ -1454,7 +2192,7 @@ function sfxWiper(dir) {
   const p = ctx.createStereoPanner();
   p.pan.setValueAtTime(0.7 * dir, t);
   p.pan.linearRampToValueAtTime(-0.7 * dir, t + dur);           // travels across the windshield
-  n.connect(f); f.connect(g); g.connect(p); p.connect(AU.master);
+  n.connect(f); f.connect(g); g.connect(p); p.connect(AU.sfx);
   n.start(t); n.stop(t + dur + 0.04);
 
   // the soft "thunk" of the arm hitting its stop at the end of the wipe
@@ -1464,7 +2202,7 @@ function sfxWiper(dir) {
   const tg = ctx.createGain();
   tg.gain.setValueAtTime(0.14, t + dur);
   tg.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.1);
-  th.connect(tg); tg.connect(AU.master); th.start(t + dur); th.stop(t + dur + 0.12);
+  th.connect(tg); tg.connect(AU.sfx); th.start(t + dur); th.stop(t + dur + 0.12);
 }
 
 function sfxClunk(strength = 1) {
@@ -1475,14 +2213,14 @@ function sfxClunk(strength = 1) {
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.5 * strength, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-  o.connect(g); g.connect(AU.master); o.start(t); o.stop(t + 0.14);
+  o.connect(g); g.connect(AU.sfx); o.start(t); o.stop(t + 0.14);
 
   const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
   const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 700;
   const ng = ctx.createGain();
   ng.gain.setValueAtTime(0.28 * strength, t);
   ng.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-  n.connect(f); f.connect(ng); ng.connect(AU.master); n.start(t); n.stop(t + 0.08);
+  n.connect(f); f.connect(ng); ng.connect(AU.sfx); n.start(t); n.stop(t + 0.08);
 }
 
 /* every gear change routes through the workshop's shifter-feel choice —
@@ -1520,7 +2258,7 @@ function sfxPaddleReal(strength = 1) {
     // gains presence; outside, it's just one more sound in the open air
     const g = ctx.createGain();
     g.gain.value = (S.cabin ? 2.4 : 1.3) * strength;
-    s.connect(g); g.connect(S.cabin ? AU.comp : AU.master); s.start();
+    s.connect(g); g.connect(S.cabin ? AU.comp : AU.sfx); s.start();
     return;
   }
   if (!AU.pshiftEls)                     // engine not running / audio not booted
@@ -1560,7 +2298,7 @@ function sfxDogEngage(strength = 1) {
   const g = ctx.createGain();
   g.gain.setValueAtTime(1.1 * strength, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-  n.connect(f); f.connect(g); g.connect(AU.master); n.start(t); n.stop(t + 0.07);
+  n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t); n.stop(t + 0.07);
   // hard metallic ring — short, damped by the oil
   [[2100, 0.16, 0.09], [3300, 0.08, 0.06]].forEach(([hz, amp, dur]) => {
     const o = ctx.createOscillator(); o.type = "sine";
@@ -1568,7 +2306,7 @@ function sfxDogEngage(strength = 1) {
     const og = ctx.createGain();
     og.gain.setValueAtTime(amp * strength, t + 0.006);
     og.gain.exponentialRampToValueAtTime(0.001, t + 0.006 + dur);
-    o.connect(og); og.connect(AU.master); o.start(t + 0.006); o.stop(t + 0.006 + dur + 0.02);
+    o.connect(og); og.connect(AU.sfx); o.start(t + 0.006); o.stop(t + 0.006 + dur + 0.02);
   });
   // the thud through the tub — you feel this one
   const k = ctx.createOscillator(); k.type = "sine"; k.frequency.setValueAtTime(200, t);
@@ -1576,7 +2314,7 @@ function sfxDogEngage(strength = 1) {
   const kg = ctx.createGain();
   kg.gain.setValueAtTime(0.7 * strength, t);
   kg.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-  k.connect(kg); kg.connect(AU.master); k.start(t); k.stop(t + 0.14);
+  k.connect(kg); kg.connect(AU.sfx); k.start(t); k.stop(t + 0.14);
 }
 
 /* exposed machined linkage, Pagani-grade: a LOUD, watch-precise double click
@@ -1591,7 +2329,7 @@ function sfxPaddleMech(strength = 1) {
   const sg = ctx.createGain();
   sg.gain.setValueAtTime(0.85 * strength, t);
   sg.gain.exponentialRampToValueAtTime(0.001, t + 0.022);
-  s.connect(sf); sf.connect(sg); sg.connect(AU.master); s.start(t); s.stop(t + 0.035);
+  s.connect(sf); sf.connect(sg); sg.connect(AU.sfx); s.start(t); s.stop(t + 0.035);
   // the two-stage detent: pull… CLACK
   [[0, 3200, 0.7], [0.03, 4200, 0.95]].forEach(([dt, hz, amp]) => {
     const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 2.2;
@@ -1599,7 +2337,7 @@ function sfxPaddleMech(strength = 1) {
     const g = ctx.createGain();
     g.gain.setValueAtTime(amp * strength, t + dt);
     g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.04);
-    n.connect(f); f.connect(g); g.connect(AU.master); n.start(t + dt); n.stop(t + dt + 0.055);
+    n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t + dt); n.stop(t + dt + 0.055);
   });
   // bright spring ring — sings for a moment after the clack
   [[5600, 0.11], [7400, 0.05]].forEach(([hz, amp]) => {
@@ -1607,7 +2345,7 @@ function sfxPaddleMech(strength = 1) {
     const og = ctx.createGain();
     og.gain.setValueAtTime(amp * strength, t + 0.03);
     og.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-    o.connect(og); og.connect(AU.master); o.start(t + 0.03); o.stop(t + 0.22);
+    o.connect(og); og.connect(AU.sfx); o.start(t + 0.03); o.stop(t + 0.22);
   });
   // the knock through the steering column — weight behind the click
   const k = ctx.createOscillator(); k.type = "sine"; k.frequency.setValueAtTime(420, t + 0.03);
@@ -1615,7 +2353,7 @@ function sfxPaddleMech(strength = 1) {
   const kg = ctx.createGain();
   kg.gain.setValueAtTime(0.42 * strength, t + 0.03);
   kg.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-  k.connect(kg); kg.connect(AU.master); k.start(t + 0.03); k.stop(t + 0.12);
+  k.connect(kg); kg.connect(AU.sfx); k.start(t + 0.03); k.stop(t + 0.12);
 }
 
 /* solid alloy paddle on the column: one BIG dense metal clack — real impact,
@@ -1629,14 +2367,14 @@ function sfxPaddleMetal(strength = 1) {
   const g = ctx.createGain();
   g.gain.setValueAtTime(1.0 * strength, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-  n.connect(f); f.connect(g); g.connect(AU.master); n.start(t); n.stop(t + 0.08);
+  n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t); n.stop(t + 0.08);
   // crisp top on the strike
   const h = ctx.createBufferSource(); h.buffer = AU.noiseBuf; h.playbackRate.value = 2.4;
   const hf = ctx.createBiquadFilter(); hf.type = "highpass"; hf.frequency.value = 3200;
   const hg = ctx.createGain();
   hg.gain.setValueAtTime(0.5 * strength, t);
   hg.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
-  h.connect(hf); hf.connect(hg); hg.connect(AU.master); h.start(t); h.stop(t + 0.045);
+  h.connect(hf); hf.connect(hg); hg.connect(AU.sfx); h.start(t); h.stop(t + 0.045);
   // the alloy rings — louder, longer
   [[2600, 0.18], [3900, 0.1], [5200, 0.04]].forEach(([hz, amp]) => {
     const o = ctx.createOscillator(); o.type = "sine";
@@ -1644,7 +2382,7 @@ function sfxPaddleMetal(strength = 1) {
     const og = ctx.createGain();
     og.gain.setValueAtTime(amp * strength, t + 0.008);
     og.gain.exponentialRampToValueAtTime(0.001, t + 0.19);
-    o.connect(og); og.connect(AU.master); o.start(t + 0.008); o.stop(t + 0.21);
+    o.connect(og); og.connect(AU.sfx); o.start(t + 0.008); o.stop(t + 0.21);
   });
   // deep thump of the paddle hitting its stop
   const k = ctx.createOscillator(); k.type = "sine"; k.frequency.setValueAtTime(170, t);
@@ -1652,7 +2390,7 @@ function sfxPaddleMetal(strength = 1) {
   const kg = ctx.createGain();
   kg.gain.setValueAtTime(0.55 * strength, t);
   kg.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
-  k.connect(kg); kg.connect(AU.master); k.start(t); k.stop(t + 0.13);
+  k.connect(kg); kg.connect(AU.sfx); k.start(t); k.stop(t + 0.13);
 }
 
 /* crisp mechanical detent — "k-CHK", a short-shifter with a tight spring:
@@ -1666,7 +2404,7 @@ function sfxShiftClick(strength = 1) {
     const g = ctx.createGain();
     g.gain.setValueAtTime(amp * strength, t + dt);
     g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.045);
-    n.connect(f); f.connect(g); g.connect(AU.master);
+    n.connect(f); f.connect(g); g.connect(AU.sfx);
     n.start(t + dt); n.stop(t + dt + 0.06);
   });
   const o = ctx.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(180, t + 0.045);
@@ -1674,7 +2412,7 @@ function sfxShiftClick(strength = 1) {
   const og = ctx.createGain();
   og.gain.setValueAtTime(0.2 * strength, t + 0.045);
   og.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
-  o.connect(og); og.connect(AU.master); o.start(t + 0.045); o.stop(t + 0.13);
+  o.connect(og); og.connect(AU.sfx); o.start(t + 0.045); o.stop(t + 0.13);
 }
 
 /* open-gate metal snick — the ball knob through an exposed gate: a bright
@@ -1687,21 +2425,21 @@ function sfxShiftMetal(strength = 1) {
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.45 * strength, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-  n.connect(f); f.connect(g); g.connect(AU.master); n.start(t); n.stop(t + 0.07);
+  n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t); n.stop(t + 0.07);
   [[3150, 0.085], [4680, 0.05]].forEach(([hz, amp]) => {
     const o = ctx.createOscillator(); o.type = "sine";
     o.frequency.value = hz * (0.98 + Math.random() * 0.04);
     const og = ctx.createGain();
     og.gain.setValueAtTime(amp * strength, t + 0.01);
     og.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-    o.connect(og); og.connect(AU.master); o.start(t + 0.01); o.stop(t + 0.25);
+    o.connect(og); og.connect(AU.sfx); o.start(t + 0.01); o.stop(t + 0.25);
   });
   const o2 = ctx.createOscillator(); o2.type = "sine"; o2.frequency.setValueAtTime(140, t);
   o2.frequency.exponentialRampToValueAtTime(60, t + 0.07);
   const g2 = ctx.createGain();
   g2.gain.setValueAtTime(0.28 * strength, t);
   g2.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-  o2.connect(g2); g2.connect(AU.master); o2.start(t); o2.stop(t + 0.11);
+  o2.connect(g2); g2.connect(AU.sfx); o2.start(t); o2.stop(t + 0.11);
 }
 
 /* the starter button itself: a proper tactile switch. A crisp plastic tick as
@@ -1716,7 +2454,7 @@ function sfxIgnClick(amp = 1) {
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.5 * amp, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.022);
-  n.connect(f); f.connect(g); g.connect(AU.master); n.start(t); n.stop(t + 0.04);
+  n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t); n.stop(t + 0.04);
   // the bright snap — short, dry, no ring
   const o = ctx.createOscillator(); o.type = "square";
   o.frequency.setValueAtTime(2400, t);
@@ -1724,7 +2462,7 @@ function sfxIgnClick(amp = 1) {
   const og = ctx.createGain();
   og.gain.setValueAtTime(0.16 * amp, t);
   og.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
-  o.connect(og); og.connect(AU.master); o.start(t); o.stop(t + 0.045);
+  o.connect(og); og.connect(AU.sfx); o.start(t); o.stop(t + 0.045);
   // the knock into the panel — the bit you feel
   const k = ctx.createOscillator(); k.type = "sine";
   k.frequency.setValueAtTime(320, t);
@@ -1732,7 +2470,7 @@ function sfxIgnClick(amp = 1) {
   const kg = ctx.createGain();
   kg.gain.setValueAtTime(0.3 * amp, t);
   kg.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
-  k.connect(kg); kg.connect(AU.master); k.start(t); k.stop(t + 0.09);
+  k.connect(kg); kg.connect(AU.sfx); k.start(t); k.stop(t + 0.09);
 }
 
 /* an old barrel lock instead of a button: the wafers dragging round as the
@@ -1753,7 +2491,7 @@ function sfxKeyTurn(dir = 1) {
   sg.gain.setValueAtTime(0.001, t);
   sg.gain.linearRampToValueAtTime(0.16, t + 0.015);
   sg.gain.exponentialRampToValueAtTime(0.001, t + (back ? 0.05 : 0.08));
-  s.connect(sf); sf.connect(sg); sg.connect(AU.master); s.start(t); s.stop(t + 0.12);
+  s.connect(sf); sf.connect(sg); sg.connect(AU.sfx); s.start(t); s.stop(t + 0.12);
   // the detent dropping home
   const dt = back ? 0.05 : 0.08;
   const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.8;
@@ -1761,7 +2499,7 @@ function sfxKeyTurn(dir = 1) {
   const ng = ctx.createGain();
   ng.gain.setValueAtTime(0.4, t + dt);
   ng.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.03);
-  n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(t + dt); n.stop(t + dt + 0.05);
+  n.connect(nf); nf.connect(ng); ng.connect(AU.sfx); n.start(t + dt); n.stop(t + dt + 0.05);
   // the lump of the mechanism landing — cheap, heavy, mechanical
   const k = ctx.createOscillator(); k.type = "sine";
   k.frequency.setValueAtTime(380, t + dt);
@@ -1769,14 +2507,14 @@ function sfxKeyTurn(dir = 1) {
   const kg = ctx.createGain();
   kg.gain.setValueAtTime(0.3, t + dt);
   kg.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.08);
-  k.connect(kg); kg.connect(AU.master); k.start(t + dt); k.stop(t + dt + 0.1);
+  k.connect(kg); kg.connect(AU.sfx); k.start(t + dt); k.stop(t + dt + 0.1);
   // a little steel ring off the barrel
   const o = ctx.createOscillator(); o.type = "triangle";
   o.frequency.value = back ? 1420 : 1180;
   const og = ctx.createGain();
   og.gain.setValueAtTime(0.05, t + dt + 0.004);
   og.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.09);
-  o.connect(og); og.connect(AU.master); o.start(t + dt + 0.004); o.stop(t + dt + 0.11);
+  o.connect(og); og.connect(AU.sfx); o.start(t + dt + 0.004); o.stop(t + dt + 0.11);
 }
 
 /* the red cover: a sprung aluminium lid on a machined hinge. Flipping it up
@@ -1790,7 +2528,7 @@ function sfxCapFlip(open = true) {
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.42, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
-  n.connect(f); f.connect(g); g.connect(AU.master); n.start(t); n.stop(t + 0.05);
+  n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t); n.stop(t + 0.05);
   // spring twang — thin metal, quickly damped
   [[1750, 0.1], [2620, 0.05]].forEach(([hz, amp]) => {
     const o = ctx.createOscillator(); o.type = "triangle";
@@ -1799,7 +2537,7 @@ function sfxCapFlip(open = true) {
     const og = ctx.createGain();
     og.gain.setValueAtTime(amp, t + 0.004);
     og.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
-    o.connect(og); og.connect(AU.master); o.start(t + 0.004); o.stop(t + 0.13);
+    o.connect(og); og.connect(AU.sfx); o.start(t + 0.004); o.stop(t + 0.13);
   });
   // the lid arriving at its stop a beat later
   const dt = open ? 0.11 : 0.07;
@@ -1809,13 +2547,13 @@ function sfxCapFlip(open = true) {
   const kg = ctx.createGain();
   kg.gain.setValueAtTime(0.34, t + dt);
   kg.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.08);
-  k.connect(kg); kg.connect(AU.master); k.start(t + dt); k.stop(t + dt + 0.1);
+  k.connect(kg); kg.connect(AU.sfx); k.start(t + dt); k.stop(t + dt + 0.1);
   const c = ctx.createBufferSource(); c.buffer = AU.noiseBuf; c.playbackRate.value = 1.7;
   const cf = ctx.createBiquadFilter(); cf.type = "bandpass"; cf.frequency.value = 2100; cf.Q.value = 0.9;
   const cg = ctx.createGain();
   cg.gain.setValueAtTime(0.3, t + dt);
   cg.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.035);
-  c.connect(cf); cf.connect(cg); cg.connect(AU.master); c.start(t + dt); c.stop(t + dt + 0.05);
+  c.connect(cf); cf.connect(cg); cg.connect(AU.sfx); c.start(t + dt); c.stop(t + dt + 0.05);
 }
 
 /* first press: electronics live. The main relay clacks in, the in-tank fuel
@@ -1890,7 +2628,7 @@ function accBedStart(loud = 1) {
   const fanG = ctx.createGain();
   fanG.gain.setValueAtTime(0.0001, t);
   fanG.gain.linearRampToValueAtTime(0.115 * loud, t + 0.85);
-  fan.connect(fanF); fanF.connect(fanG); fanG.connect(AU.master);
+  fan.connect(fanF); fanF.connect(fanG); fanG.connect(AU.sfx);
   fan.start(t);
   bed.nodes.push(fan); bed.gains.push(fanG);
 
@@ -1907,7 +2645,7 @@ function accBedStart(loud = 1) {
   const bladeG = ctx.createGain();
   bladeG.gain.setValueAtTime(0.0001, t);
   bladeG.gain.linearRampToValueAtTime(0.062 * loud, t + 0.9);
-  blade.connect(bladeF); bladeF.connect(bladeG); bladeG.connect(AU.master);
+  blade.connect(bladeF); bladeF.connect(bladeG); bladeG.connect(AU.sfx);
   blade.start(t);
   bed.nodes.push(blade, wob); bed.gains.push(bladeG);
 
@@ -1918,7 +2656,7 @@ function accBedStart(loud = 1) {
   const blowG = ctx.createGain();
   blowG.gain.setValueAtTime(0.0001, t + 0.3);
   blowG.gain.linearRampToValueAtTime(0.05 * loud, t + 1.4);
-  blow.connect(blowF); blowF.connect(blowG); blowG.connect(AU.master);
+  blow.connect(blowF); blowF.connect(blowG); blowG.connect(AU.sfx);
   blow.start(t + 0.3);
   bed.nodes.push(blow); bed.gains.push(blowG);
 
@@ -1927,7 +2665,7 @@ function accBedStart(loud = 1) {
   const humG = ctx.createGain();
   humG.gain.setValueAtTime(0.0001, t);
   humG.gain.linearRampToValueAtTime(0.02 * loud, t + 0.4);
-  hum.connect(humG); humG.connect(AU.master); hum.start(t);
+  hum.connect(humG); humG.connect(AU.sfx); hum.start(t);
   bed.nodes.push(hum); bed.gains.push(humG);
 
   AU.accBed = bed;
@@ -1963,7 +2701,7 @@ function sfxAbsTest(at) {
   mg.gain.linearRampToValueAtTime(0.045, at + 0.04);
   mg.gain.setValueAtTime(0.045, at + 0.22);
   mg.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
-  m.connect(mf); mf.connect(mg); mg.connect(AU.master);
+  m.connect(mf); mf.connect(mg); mg.connect(AU.sfx);
   m.start(at); m.stop(at + 0.34);
   // the valve block ticking through its channels
   for (let i = 0; i < 5; i++) {
@@ -1974,7 +2712,7 @@ function sfxAbsTest(at) {
     const ng = ctx.createGain();
     ng.gain.setValueAtTime(0.05, tt);
     ng.gain.exponentialRampToValueAtTime(0.0001, tt + 0.014);
-    n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(tt); n.stop(tt + 0.02);
+    n.connect(nf); nf.connect(ng); ng.connect(AU.sfx); n.start(tt); n.stop(tt + 0.02);
   }
 }
 
@@ -1991,7 +2729,7 @@ function sfxInjectorTicks(at, n = 9) {
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.026, tt);
     g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.01);
-    s.connect(f); f.connect(g); g.connect(AU.master); s.start(tt); s.stop(tt + 0.015);
+    s.connect(f); f.connect(g); g.connect(AU.sfx); s.start(tt); s.stop(tt + 0.015);
   }
 }
 
@@ -2039,7 +2777,7 @@ function clusterBeep(at, hz = 2100, dur = 0.055, amp = 0.05) {
   g.gain.linearRampToValueAtTime(amp, at + 0.006);
   g.gain.setValueAtTime(amp, at + dur - 0.008);
   g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-  g.connect(AU.master);
+  g.connect(AU.sfx);
   [[1, 1], [3, 0.22], [5, 0.07]].forEach(([mul, lvl]) => {
     const o = ctx.createOscillator(); o.type = "sine";
     o.frequency.value = hz * mul;
@@ -2071,14 +2809,14 @@ function sfxAccRich(c) {
   ampG.gain.setValueAtTime(0.0001, amp0);
   ampG.gain.linearRampToValueAtTime(0.3, amp0 + 0.008);
   ampG.gain.exponentialRampToValueAtTime(0.0001, amp0 + 0.16);
-  amp.connect(ampG); ampG.connect(AU.master); amp.start(amp0); amp.stop(amp0 + 0.2);
+  amp.connect(ampG); ampG.connect(AU.sfx); amp.start(amp0); amp.stop(amp0 + 0.2);
   // the tiny relay contact that does it
   const rc = ctx.createBufferSource(); rc.buffer = AU.noiseBuf; rc.playbackRate.value = 1.9;
   const rcF = ctx.createBiquadFilter(); rcF.type = "bandpass"; rcF.frequency.value = 2700; rcF.Q.value = 2;
   const rcG = ctx.createGain();
   rcG.gain.setValueAtTime(0.13, amp0);
   rcG.gain.exponentialRampToValueAtTime(0.0001, amp0 + 0.018);
-  rc.connect(rcF); rcF.connect(rcG); rcG.connect(AU.master); rc.start(amp0); rc.stop(amp0 + 0.03);
+  rc.connect(rcF); rcF.connect(rcG); rcG.connect(AU.sfx); rc.start(amp0); rc.stop(amp0 + 0.03);
 
   /* --- the TFT dash lighting up: a soft rising swell, no transient. The
          cluster arriving rather than switching. --- */
@@ -2091,7 +2829,7 @@ function sfxAccRich(c) {
     g.gain.setValueAtTime(0.0001, tft0 + i * 0.05);
     g.gain.linearRampToValueAtTime(lvl, tft0 + 0.28 + i * 0.05);
     g.gain.exponentialRampToValueAtTime(0.0001, tft0 + 0.95);
-    o.connect(g); g.connect(AU.master); o.start(tft0 + i * 0.05); o.stop(tft0 + 1.0);
+    o.connect(g); g.connect(AU.sfx); o.start(tft0 + i * 0.05); o.stop(tft0 + 1.0);
   });
 
   /* --- the needles sweeping to their stops and back. Stepper motors under
@@ -2110,7 +2848,7 @@ function sfxAccRich(c) {
   nswG.gain.linearRampToValueAtTime(0.026, sw0 + 0.06);
   nswG.gain.setValueAtTime(0.026, sw0 + 0.86);
   nswG.gain.exponentialRampToValueAtTime(0.0001, sw0 + 0.95);
-  nsw.connect(nswF); nswF.connect(nswG); nswG.connect(AU.master);
+  nsw.connect(nswF); nswF.connect(nswG); nswG.connect(AU.sfx);
   nsw.start(sw0); nsw.stop(sw0 + 1.0);
   // both needles hitting their stops, then landing back on zero
   [[sw0 + 0.42, 0.06], [sw0 + 0.45, 0.05], [sw0 + 0.9, 0.045], [sw0 + 0.93, 0.04]]
@@ -2121,7 +2859,7 @@ function sfxAccRich(c) {
       const ng = ctx.createGain();
       ng.gain.setValueAtTime(lvl, at);
       ng.gain.exponentialRampToValueAtTime(0.0001, at + 0.02);
-      n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(at); n.stop(at + 0.03);
+      n.connect(nf); nf.connect(ng); ng.connect(AU.sfx); n.start(at); n.stop(at + 0.03);
     });
 
   /* --- the exhaust bypass valves cycling on their self-test. Two actuator
@@ -2141,7 +2879,7 @@ function sfxAccRich(c) {
     vg.gain.linearRampToValueAtTime(0.03 * loud, v0 + 0.03);
     vg.gain.setValueAtTime(0.03 * loud, v0 + 0.1);
     vg.gain.exponentialRampToValueAtTime(0.0001, v0 + 0.15);
-    v.connect(vf); vf.connect(vg); vg.connect(AU.master); v.start(v0); v.stop(v0 + 0.18);
+    v.connect(vf); vf.connect(vg); vg.connect(AU.sfx); v.start(v0); v.stop(v0 + 0.18);
     // the plate seating — a dull metallic clack that rings down the pipe
     const seat = v0 + 0.14;
     const k = ctx.createOscillator(); k.type = "sine";
@@ -2150,14 +2888,14 @@ function sfxAccRich(c) {
     const kg = ctx.createGain();
     kg.gain.setValueAtTime(0.16 * loud, seat);
     kg.gain.exponentialRampToValueAtTime(0.0001, seat + 0.1);
-    k.connect(kg); kg.connect(AU.master); k.start(seat); k.stop(seat + 0.12);
+    k.connect(kg); kg.connect(AU.sfx); k.start(seat); k.stop(seat + 0.12);
     const kn = ctx.createBufferSource(); kn.buffer = AU.noiseBuf; kn.playbackRate.value = 1.4;
     const knF = ctx.createBiquadFilter(); knF.type = "bandpass";
     knF.frequency.value = 1700; knF.Q.value = 1.1;
     const knG = ctx.createGain();
     knG.gain.setValueAtTime(0.14 * loud, seat);
     knG.gain.exponentialRampToValueAtTime(0.0001, seat + 0.045);
-    kn.connect(knF); knF.connect(knG); knG.connect(AU.master); kn.start(seat); kn.stop(seat + 0.06);
+    kn.connect(knF); knF.connect(knG); knG.connect(AU.sfx); kn.start(seat); kn.stop(seat + 0.06);
   });
 
   /* --- and the belt reminder, because it always does --- */
@@ -2185,12 +2923,12 @@ function sfxAccOn(c) {
   const rg = ctx.createGain();
   rg.gain.setValueAtTime(0.55, t);
   rg.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
-  r.connect(rf); rf.connect(rg); rg.connect(AU.master); r.start(t); r.stop(t + 0.05);
+  r.connect(rf); rf.connect(rg); rg.connect(AU.sfx); r.start(t); r.stop(t + 0.05);
   const rk = ctx.createOscillator(); rk.type = "sine";
   rk.frequency.setValueAtTime(260, t); rk.frequency.exponentialRampToValueAtTime(90, t + 0.06);
   const rkg = ctx.createGain();
   rkg.gain.setValueAtTime(0.36, t); rkg.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-  rk.connect(rkg); rkg.connect(AU.master); rk.start(t); rk.stop(t + 0.1);
+  rk.connect(rkg); rkg.connect(AU.sfx); rk.start(t); rk.stop(t + 0.1);
 
   /* --- the cluster coming up: a short energising swell, the electrical
          equivalent of a screen catching light --- */
@@ -2202,7 +2940,7 @@ function sfxAccOn(c) {
   eng.gain.setValueAtTime(0.001, t + 0.02);
   eng.gain.linearRampToValueAtTime(0.05, t + 0.1);
   eng.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-  en.connect(enf); enf.connect(eng); eng.connect(AU.master);
+  en.connect(enf); enf.connect(eng); eng.connect(AU.sfx);
   en.start(t + 0.02); en.stop(t + 0.4);
   // the mains hum that lives under a live dashboard until you stop noticing it
   const hum = ctx.createOscillator(); hum.type = "triangle"; hum.frequency.value = 118;
@@ -2210,7 +2948,7 @@ function sfxAccOn(c) {
   humG.gain.setValueAtTime(0.001, t + 0.03);
   humG.gain.linearRampToValueAtTime(0.018, t + 0.2);
   humG.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
-  hum.connect(humG); humG.connect(AU.master); hum.start(t + 0.03); hum.stop(t + 1.6);
+  hum.connect(humG); humG.connect(AU.sfx); hum.start(t + 0.03); hum.stop(t + 1.6);
 
   /* --- ECU self-test: three quick beeps as the warning lamps sweep --- */
   if (modern) {
@@ -2237,7 +2975,7 @@ function sfxAccOn(c) {
   pg.gain.linearRampToValueAtTime(0.08, p0 + 0.09);
   pg.gain.setValueAtTime(0.08, p0 + pDur - 0.3);
   pg.gain.exponentialRampToValueAtTime(0.001, p0 + pDur);
-  p.connect(pf); pf.connect(pg); pg.connect(AU.master);
+  p.connect(pf); pf.connect(pg); pg.connect(AU.sfx);
   p.start(p0); p.stop(p0 + pDur + 0.05);
   // the hiss of fuel actually moving with it
   const h = ctx.createBufferSource(); h.buffer = AU.noiseBuf; h.loop = true; h.playbackRate.value = 1.1;
@@ -2246,7 +2984,7 @@ function sfxAccOn(c) {
   hg.gain.setValueAtTime(0.001, p0);
   hg.gain.linearRampToValueAtTime(0.03, p0 + 0.12);
   hg.gain.exponentialRampToValueAtTime(0.001, p0 + pDur);
-  h.connect(hf); hf.connect(hg); hg.connect(AU.master);
+  h.connect(hf); hf.connect(hg); hg.connect(AU.sfx);
   h.start(p0); h.stop(p0 + pDur + 0.05);
 
   /* --- drive-by-wire throttle sweeping itself open and shut --- */
@@ -2262,7 +3000,7 @@ function sfxAccOn(c) {
   svg.gain.linearRampToValueAtTime(0.028, s0 + 0.04);
   svg.gain.setValueAtTime(0.028, s0 + 0.24);
   svg.gain.exponentialRampToValueAtTime(0.001, s0 + 0.32);
-  sv.connect(svf); svf.connect(svg); svg.connect(AU.master);
+  sv.connect(svf); svf.connect(svg); svg.connect(AU.sfx);
   sv.start(s0); sv.stop(s0 + 0.36);
   }
 
@@ -2288,7 +3026,7 @@ function sfxAccOn(c) {
     const ng = ctx.createGain();
     ng.gain.setValueAtTime(0.11 - i * 0.015, t + dt);
     ng.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.022);
-    n.connect(nf); nf.connect(ng); ng.connect(AU.master);
+    n.connect(nf); nf.connect(ng); ng.connect(AU.sfx);
     n.start(t + dt); n.stop(t + dt + 0.035);
   });
 
@@ -2374,7 +3112,7 @@ function sfxCrank(p, amp = 1) {
   const dur = p.dur;
   /* everything the starter makes goes through one bus, so letting go of the
      button can cut it off mid-turn the way releasing a real key does */
-  const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(AU.master);
+  const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(AU.sfx);
   const chug = (p.cyl / 2) * (p.rpm / 60);      // compressions per second
 
   /* --- the solenoid throwing the pinion into the ring gear --- */
@@ -2505,7 +3243,7 @@ function sfxCatch(p, amp = 1) {
   const bxG = ctx.createGain();
   bxG.gain.setValueAtTime(0.055, t);
   bxG.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-  bx.connect(bxF); bxF.connect(bxG); bxG.connect(AU.master);
+  bx.connect(bxF); bxF.connect(bxG); bxG.connect(AU.sfx);
   bx.start(t); bx.stop(t + 0.25);
 
   /* --- the ragged first fires. Intervals close up as the crank speeds,
@@ -2520,7 +3258,7 @@ function sfxCatch(p, amp = 1) {
     const ng = ctx.createGain();
     ng.gain.setValueAtTime(0.34 * lvl, tt);
     ng.gain.exponentialRampToValueAtTime(0.001, tt + 0.055);
-    n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(tt); n.stop(tt + 0.07);
+    n.connect(nf); nf.connect(ng); ng.connect(AU.sfx); n.start(tt); n.stop(tt + 0.07);
     // the body of the combustion — a fat, fast-falling low tone
     const o = ctx.createOscillator(); o.type = "sawtooth";
     o.frequency.setValueAtTime(150 + Math.random() * 50, tt);
@@ -2531,7 +3269,7 @@ function sfxCatch(p, amp = 1) {
     const og = ctx.createGain();
     og.gain.setValueAtTime(0.4 * lvl, tt);
     og.gain.exponentialRampToValueAtTime(0.001, tt + 0.12);
-    o.connect(of); of.connect(og); og.connect(AU.master); o.start(tt); o.stop(tt + 0.14);
+    o.connect(of); of.connect(og); og.connect(AU.sfx); o.start(tt); o.stop(tt + 0.14);
     // and the punch in the chest
     const k = ctx.createOscillator(); k.type = "sine";
     k.frequency.setValueAtTime(120, tt);
@@ -2539,7 +3277,7 @@ function sfxCatch(p, amp = 1) {
     const kg = ctx.createGain();
     kg.gain.setValueAtTime(0.38 * lvl, tt);
     kg.gain.exponentialRampToValueAtTime(0.001, tt + 0.1);
-    k.connect(kg); kg.connect(AU.master); k.start(tt); k.stop(tt + 0.12);
+    k.connect(kg); kg.connect(AU.sfx); k.start(tt); k.stop(tt + 0.12);
     dt += gap;
     gap *= 0.72;                              // the fires close up into a run
   }
@@ -2555,7 +3293,7 @@ function sfxCatch(p, amp = 1) {
   ag.gain.setValueAtTime(0.001, t);
   ag.gain.linearRampToValueAtTime(0.1 * hard, t + 0.16);
   ag.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
-  air.connect(af); af.connect(ag); ag.connect(AU.master);
+  air.connect(af); af.connect(ag); ag.connect(AU.sfx);
   air.start(t); air.stop(t + 0.85);
 }
 
@@ -2569,7 +3307,7 @@ function sfxBlowoff() {
     const g = ctx.createGain();
     g.gain.setValueAtTime(amp, t + dt);
     g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.1);
-    n.connect(f); f.connect(g); g.connect(AU.master);
+    n.connect(f); f.connect(g); g.connect(AU.sfx);
     n.start(t + dt); n.stop(t + dt + 0.13);
   });
 }
@@ -2587,7 +3325,7 @@ function sfxSeqEngage() {
   g.gain.setValueAtTime(0.001, t);
   g.gain.linearRampToValueAtTime(0.14, t + 0.08);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
-  n.connect(f); f.connect(g); g.connect(AU.master);
+  n.connect(f); f.connect(g); g.connect(AU.sfx);
   n.start(t); n.stop(t + 0.42);
 }
 
@@ -2623,7 +3361,7 @@ function sfxFlutter(boost) {
   env.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.connect(f); f.connect(chop);
   n.connect(nf); nf.connect(ng); ng.connect(chop);
-  chop.connect(env); env.connect(AU.master);
+  chop.connect(env); env.connect(AU.sfx);
   o.start(t); am.start(t); n.start(t);
   o.stop(t + dur + 0.05); am.stop(t + dur + 0.05); n.stop(t + dur + 0.05);
 }
@@ -2637,7 +3375,7 @@ function sfxBeep(hz, dur, amp) {
   g.gain.setValueAtTime(0.001, t);
   g.gain.linearRampToValueAtTime(amp, t + 0.01);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g); g.connect(AU.master); o.start(t); o.stop(t + dur + 0.05);
+  o.connect(g); g.connect(AU.sfx); o.start(t); o.stop(t + dur + 0.05);
 }
 
 /* soft two-note power-on chime for the EV */
@@ -2650,7 +3388,7 @@ function sfxChime(amp = 1) {
     g.gain.setValueAtTime(0.001, t + dt);
     g.gain.linearRampToValueAtTime(0.14 * amp, t + dt + 0.03);
     g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.45);
-    o.connect(g); g.connect(AU.master); o.start(t + dt); o.stop(t + dt + 0.5);
+    o.connect(g); g.connect(AU.sfx); o.start(t + dt); o.stop(t + dt + 0.5);
   });
 }
 
@@ -2666,13 +3404,13 @@ function sfxChimeFerrari(amp = 1) {
     g.gain.setValueAtTime(0.001, t + dt);
     g.gain.linearRampToValueAtTime(0.085 * amp, t + dt + 0.06);
     g.gain.exponentialRampToValueAtTime(0.001, t + dt + dur);
-    o.connect(g); g.connect(AU.master); o.start(t + dt); o.stop(t + dt + dur + 0.05);
+    o.connect(g); g.connect(AU.sfx); o.start(t + dt); o.stop(t + dt + dur + 0.05);
     const s = ctx.createOscillator(); s.type = "sine"; s.frequency.value = hz * 2;
     const sg = ctx.createGain();
     sg.gain.setValueAtTime(0.001, t + dt);
     sg.gain.linearRampToValueAtTime(0.022 * amp, t + dt + 0.09);
     sg.gain.exponentialRampToValueAtTime(0.001, t + dt + dur);
-    s.connect(sg); sg.connect(AU.master); s.start(t + dt); s.stop(t + dt + dur + 0.05);
+    s.connect(sg); sg.connect(AU.sfx); s.start(t + dt); s.stop(t + dt + dur + 0.05);
   });
   // the warm swell underneath — C3 rising to G3 as everything comes alive
   const b = ctx.createOscillator(); b.type = "sine"; b.frequency.setValueAtTime(130.8, t);
@@ -2681,7 +3419,7 @@ function sfxChimeFerrari(amp = 1) {
   bg.gain.setValueAtTime(0.001, t);
   bg.gain.linearRampToValueAtTime(0.05 * amp, t + 0.3);
   bg.gain.exponentialRampToValueAtTime(0.001, t + 0.95);
-  b.connect(bg); bg.connect(AU.master); b.start(t); b.stop(t + 1);
+  b.connect(bg); bg.connect(AU.sfx); b.start(t); b.stop(t + 1);
 }
 
 /* the hybrid transformation: the e-motor spins the V6 straight to speed and
@@ -2699,7 +3437,7 @@ function sfxHybridFire() {
   ng.gain.setValueAtTime(0.001, t);
   ng.gain.linearRampToValueAtTime(0.09, t + 0.05);
   ng.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
-  n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(t); n.stop(t + 0.38);
+  n.connect(nf); nf.connect(ng); ng.connect(AU.sfx); n.start(t); n.stop(t + 0.38);
   // muted first-fire swell — low, round, quickly folded into the running note
   const o = ctx.createOscillator(); o.type = "triangle";
   o.frequency.setValueAtTime(110, t);
@@ -2712,7 +3450,7 @@ function sfxHybridFire() {
   og.gain.setValueAtTime(0.001, t);
   og.gain.linearRampToValueAtTime(0.16, t + 0.05);
   og.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
-  o.connect(of); of.connect(og); og.connect(AU.master); o.start(t); o.stop(t + 0.38);
+  o.connect(of); of.connect(og); og.connect(AU.sfx); o.start(t); o.stop(t + 0.38);
 }
 
 /* wind blast as the car passes the flyby listener */
@@ -2725,73 +3463,222 @@ function sfxWhoosh(amp) {
   g.gain.setValueAtTime(0.001, t);
   g.gain.linearRampToValueAtTime(amp, t + 0.1);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
-  n.connect(f); f.connect(g); g.connect(AU.master);
+  n.connect(f); f.connect(g); g.connect(AU.sfx);
   n.start(t); n.stop(t + 0.7);
 }
 
-/* single exhaust pop — the building block of crackle & burble.
-   soft = rounded idle chuff ("huo") — no crack, lower, longer */
-function sfxPop(amp, when, soft) {
-  if (!AU.ready) return;
-  const ctx = AU.ctx, t = when || ctx.currentTime;
-  amp = Math.min(1.7, amp * 2.6);         // hot — the output compressor catches the peaks
+/* ================================================================
+   EXHAUST POPS — five voices, not one voice with a volume knob
+   ================================================================
+   Overrun noise is not a single sound played at different levels. What you
+   hear depends on what the unburnt fuel is doing, and in what kind of pipe:
+
+     putter   "p p p p"      Barely any fuel, low pressure, cold-ish pipe.
+                             Round chuffs with no transient at all — the
+                             lazy putter of a big lazy engine on trailing
+                             throttle. All body, no crack.
+     gurgle   "plplplpl"     Fuel pooling and boiling off in the pipe. The
+                             wet one. A high-Q resonance sweeping DOWN as
+                             the slug burns is what makes it sound liquid,
+                             and it always arrives as a stuttered double tap
+                             — that second tap is the "l" in "pl".
+     tick     "klklklkl"     Thin-wall race pipe, glowing hot, very little
+                             fuel. Dry, high, metallic, almost no low end —
+                             more like a stone bouncing down a drainpipe.
+     crack    "pap!"         The everyday pop: a real slug lighting cleanly.
+                             Snap on the front, body behind it, thump under.
+     bang     "BANG!"        A big single turbo dumping fuel into a red-hot
+                             exhaust. Built like an actual gunshot report:
+                             an instantaneous click, a deep chest thump, and
+                             a long tail of the pipe and the street ringing.
+
+   All five are assembled from the same four ingredients — a noise BODY, a
+   SNAP on the front, a pitched THUMP underneath, and a resonant RING behind
+   — and the character is entirely in the balance between them.
+
+   Note where the loudness lives. Every voice is weighted toward the thump
+   and body rather than the snap, because a real pop hits you in the chest.
+   Pushing 2–4 kHz to make a synthesized pop "loud" is exactly what makes it
+   sound like static, and it's what made these hurt to record before. */
+const POP_VOICES = {
+  putter: {
+    gain: 2.2, max: 1.25,
+    body:  { rate: [0.28, 0.5], type: "lowpass", f: [110, 240], q: 0.7,
+             dec: [0.075, 0.115], len: 0.2, lvl: 1.0 },
+    thump: { f0: 66, f1: 28, dec: 0.12, len: 0.15, lvl: 1.05 },
+  },
+  gurgle: {
+    gain: 2.3, max: 1.3, double: [0.014, 0.028, 0.62],   // gap min/max, level
+    // the swept high-Q bandpass IS the wetness — hold it still and it's a tick
+    body:  { rate: [0.45, 0.75], type: "bandpass", f: [700, 820], f2: [150, 200],
+             q: 6.5, dec: [0.05, 0.08], len: 0.15, lvl: 1.2 },
+    snap:  { rate: 1.0, f: 900, q: 1.0, dec: 0.013, len: 0.03, lvl: 0.24 },
+    thump: { f0: 132, f1: 44, dec: 0.08, len: 0.11, lvl: 0.72 },
+  },
+  tick: {
+    gain: 2.0, max: 1.2,
+    body:  { rate: [1.2, 1.75], type: "highpass", f: [1050, 1400], q: 0.7,
+             dec: [0.012, 0.022], len: 0.06, lvl: 0.9 },
+    snap:  { rate: 1.9, f: 3000, q: 1.4, dec: 0.008, len: 0.02, lvl: 0.5 },
+    thump: { f0: 155, f1: 70, dec: 0.032, len: 0.05, lvl: 0.3 },
+    ring:  { rate: 1.4, f: [2300, 2700], q: 9, dec: 0.07, len: 0.1, lvl: 0.2, at: 0.004 },
+  },
+  crack: {
+    gain: 2.9, max: 1.7,
+    body:  { rate: [0.45, 0.9], type: "lowpass", f: [300, 660], q: 0.9,
+             dec: [0.045, 0.095], len: 0.15, lvl: 1.05 },
+    snap:  { rate: 1.35, f: 1800, q: 0.8, dec: 0.02, len: 0.035, lvl: 0.52 },
+    thump: { f0: 95, f1: 34, dec: 0.115, len: 0.14, lvl: 1.1 },
+  },
+  bang: {
+    gain: 3.6, max: 2.5,
+    // the instantaneous crack of the report — 2ms, and gone
+    click: { rate: 2.2, f: 2600, q: 0.5, dec: 0.0035, len: 0.012, lvl: 0.7 },
+    body:  { rate: [0.26, 0.46], type: "lowpass", f: [180, 430], q: 0.9,
+             dec: [0.14, 0.2], len: 0.45, lvl: 1.35 },
+    snap:  { rate: 1.5, f: 2000, q: 0.6, dec: 0.03, len: 0.05, lvl: 0.5 },
+    thump: { f0: 96, f1: 22, dec: 0.3, len: 0.36, lvl: 1.75 },
+    ring:  { rate: 0.8, f: [470, 720], q: 3.4, dec: 0.5, len: 0.55, lvl: 0.36, at: 0.012 },
+  },
+};
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = (r) => Array.isArray(r) ? rnd(r[0], r[1]) : r;
+
+/* one filtered noise burst on the pop bus */
+function popNoise(t, lvl, spec, sweepTo) {
+  const ctx = AU.ctx;
   const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
-  n.playbackRate.value = (soft ? 0.35 : 0.5) + Math.random() * (soft ? 0.2 : 0.4);
-  const f = ctx.createBiquadFilter(); f.type = "lowpass";
-  f.frequency.value = soft ? 130 + Math.random() * 110 : 260 + Math.random() * 380;
+  n.playbackRate.value = pick(spec.rate);
+  const f = ctx.createBiquadFilter();
+  f.type = spec.type || "bandpass";
+  f.frequency.value = pick(spec.f);
+  f.Q.value = spec.q === undefined ? 1 : spec.q;
+  const dec = pick(spec.dec);
+  if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, t + dec);
   const g = ctx.createGain();
-  g.gain.setValueAtTime(amp, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + (soft ? 0.09 : 0.05) + Math.random() * 0.05);
+  g.gain.setValueAtTime(Math.max(0.0001, lvl), t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
   n.connect(f); f.connect(g); g.connect(AU.popBus);
-  n.start(t); n.stop(t + (soft ? 0.17 : 0.12));
-  if (!soft) {
-    // sharp crack transient on top — real pops snap before they boom
-    const c = ctx.createBufferSource(); c.buffer = AU.noiseBuf; c.playbackRate.value = 1.6;
-    const cf = ctx.createBiquadFilter(); cf.type = "bandpass"; cf.frequency.value = 2400; cf.Q.value = 0.8;
-    const cg = ctx.createGain();
-    cg.gain.setValueAtTime(amp * 0.75, t);   // snappier crack
-    cg.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
-    c.connect(cf); cf.connect(cg); cg.connect(AU.popBus);
-    c.start(t); c.stop(t + 0.03);
-  }
-  if (soft || Math.random() < 0.7) {      // deeper bang under most pops
-    const o = ctx.createOscillator(); o.type = "sine";
-    o.frequency.setValueAtTime(soft ? 68 : 90, t);
-    o.frequency.exponentialRampToValueAtTime(soft ? 30 : 36, t + (soft ? 0.09 : 0.08));
-    const og = ctx.createGain();
-    og.gain.setValueAtTime(amp * 1.1, t);    // fuller chest-thump boom
-    og.gain.exponentialRampToValueAtTime(0.001, t + (soft ? 0.12 : 0.11));
-    o.connect(og); og.connect(AU.popBus); o.start(t); o.stop(t + (soft ? 0.14 : 0.13));
-  }
+  n.start(t); n.stop(t + spec.len);
 }
 
-/* burst of overrun crackle, with flames timed to the pops */
+/* the pitched thump underneath — this is where a pop's weight comes from */
+function popThump(t, lvl, spec) {
+  const ctx = AU.ctx;
+  const o = ctx.createOscillator(); o.type = "sine";
+  o.frequency.setValueAtTime(spec.f0 * rnd(0.92, 1.08), t);
+  o.frequency.exponentialRampToValueAtTime(spec.f1, t + spec.dec);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(Math.max(0.0001, lvl), t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + spec.dec);
+  o.connect(g); g.connect(AU.popBus);
+  o.start(t); o.stop(t + spec.len);
+}
+
+/* a single pop in a named voice. `amp` is how much fuel went off (0..~1). */
+function sfxPop(amp, when, voice) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t0 = when || ctx.currentTime;
+  const V = POP_VOICES[voice] || POP_VOICES.crack;
+  const lvl = Math.min(V.max, Math.max(0, amp) * V.gain);
+  if (lvl < 0.002) return;
+
+  const shot = (t, k) => {
+    if (V.click) popNoise(t, lvl * V.click.lvl * k, V.click);
+    if (V.body) {
+      const to = V.body.f2 ? pick(V.body.f2) : 0;    // gurgle sweeps, others don't
+      popNoise(t, lvl * V.body.lvl * k, V.body, to);
+    }
+    if (V.snap) popNoise(t, lvl * V.snap.lvl * k, V.snap);
+    if (V.ring) popNoise(t + (V.ring.at || 0), lvl * V.ring.lvl * k, V.ring);
+    if (V.thump) popThump(t, lvl * V.thump.lvl * k, V.thump);
+  };
+  shot(t0, 1);
+  // the stuttered second tap that turns "p" into "pl"
+  if (V.double) shot(t0 + rnd(V.double[0], V.double[1]), V.double[2]);
+}
+
+/* ---------------- crackle patterns ----------------
+   Which voices a car uses, how fast they come, and how often one of them
+   really lets go. A fitted exhaust imposes its own character; on the stock
+   system the car's own nature shows through instead. */
+const CRACKLE_STYLES = {
+  lazy:  { mix: [["putter", 7], ["gurgle", 2], ["crack", 1]],
+           gap: [0.06, 0.12],  count: [3, 5],   bang: 0.015, roll: 0.10 },
+  mixed: { mix: [["crack", 5], ["putter", 3], ["gurgle", 2], ["tick", 2]],
+           gap: [0.04, 0.1],   count: [4, 7],   bang: 0.07,  roll: 0.22 },
+  wet:   { mix: [["gurgle", 7], ["crack", 3], ["putter", 2]],
+           gap: [0.035, 0.085], count: [5, 9],  bang: 0.08,  roll: 0.40 },
+  dry:   { mix: [["tick", 8], ["crack", 2]],
+           gap: [0.026, 0.058], count: [7, 12], bang: 0.05,  roll: 0.52 },
+  hard:  { mix: [["crack", 6], ["tick", 2], ["gurgle", 1]],
+           gap: [0.035, 0.085], count: [4, 8],  bang: 0.20,  roll: 0.22 },
+  war:   { mix: [["tick", 5], ["crack", 5], ["gurgle", 2]],
+           gap: [0.022, 0.052], count: [9, 15], bang: 0.28,  roll: 0.55 },
+};
+
+function crackleStyle() {
+  return CRACKLE_STYLES[curEx().crackle || CC.crackle || "mixed"] || CRACKLE_STYLES.mixed;
+}
+
+/* weighted pick out of a style's voice mix */
+function pickVoice(style) {
+  const mix = style.mix;
+  let total = 0;
+  for (const [, wgt] of mix) total += wgt;
+  let r = Math.random() * total;
+  for (const [name, wgt] of mix) { r -= wgt; if (r <= 0) return name; }
+  return mix[0][0];
+}
+
+/* how big a flame a given voice throws — a tick barely licks the pipe, a
+   bang is a torch */
+const POP_FLAME = { putter: 0.14, gurgle: 0.3, tick: 0.18, crack: 0.55, bang: 0.95 };
+
+/* burst of overrun crackle, with flames timed to the pops.
+   Real crackle stutters: mostly a loose scatter, then a fast ROLL of three or
+   four right on top of each other, then a gap. That unevenness is most of
+   what makes it sound like an engine instead of a metronome. */
 function sfxCrackle(intensity) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t0 = ctx.currentTime;
-  const n = 3 + Math.floor(Math.random() * 3 + intensity);
-  let dt = 0.015;
+  const st = crackleStyle(), mul = popEff();
+  const n = Math.round(pick(st.count) * clamp(0.55 + intensity * 0.32, 0.5, 1.7));
+  const bangOdds = Math.min(0.42, st.bang * (0.6 + mul * 0.7));
+  let dt = 0.012;
+
   for (let i = 0; i < n; i++) {
-    const amp = (0.4 + Math.random() * 0.35) * Math.max(0.35, 1 - i * 0.12) * Math.min(1.7, intensity);
-    sfxPop(amp, t0 + dt);
-    if (amp > 0.16) setTimeout(() => popFlame(amp > 0.42), dt * 1000);
-    dt += 0.045 + Math.random() * 0.09;
+    const fade = Math.max(0.32, 1 - i * 0.085);        // the burst dies away
+    const amp = rnd(0.42, 0.8) * fade * Math.min(1.7, intensity);
+    const bang = Math.random() < bangOdds;
+    const voice = bang ? "bang" : pickVoice(st);
+    sfxPop(amp, t0 + dt, voice);
+
+    const power = (POP_FLAME[voice] || 0.4) * (0.65 + amp * 0.7);
+    if (power > 0.08) setTimeout(() => popFlame(power), dt * 1000);
+    dt += pick(st.gap);
+
+    // …and every so often it stutters into a tight roll
+    if (!bang && Math.random() < st.roll) {
+      const rollVoice = pickVoice(st);
+      for (let k = 0, m = 2 + Math.floor(Math.random() * 3); k < m; k++) {
+        sfxPop(amp * rnd(0.42, 0.7), t0 + dt, rollVoice);
+        dt += rnd(0.019, 0.032);
+      }
+      dt += rnd(0.02, 0.05);
+    }
   }
 }
 
+/* the flat WHUMP a car without a popping exhaust makes on a bad lift, and
+   the stumble of a misfire: one real report, then its smaller echo off the
+   underside of the car */
 function sfxBackfire() {
   if (!AU.ready) return;
-  const ctx = AU.ctx, t = ctx.currentTime;
-  for (const dt of [0, 0.07 + Math.random() * 0.05]) {
-    const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
-    n.playbackRate.value = 0.5;
-    const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 260;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.75, t + dt);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.11);
-    n.connect(f); f.connect(g); g.connect(AU.popBus);
-    n.start(t + dt); n.stop(t + dt + 0.14);
-  }
+  const t = AU.ctx.currentTime;
+  sfxPop(0.5, t, "bang");
+  sfxPop(0.16, t + 0.07 + Math.random() * 0.05, "crack");
 }
 
 /* ================================================================
@@ -3006,7 +3893,7 @@ function stepPhysics(dt) {
     S._blatT = (S._blatT || 0) - dt * blat;
     if (S._blatT <= 0) {
       S._blatT = 0.34 + Math.random() * 0.14;
-      sfxPop((0.1 + Math.random() * 0.06) * (0.6 + blat * 0.55), 0, true);
+      sfxPop((0.13 + Math.random() * 0.07) * (0.6 + blat * 0.55), 0, "putter");
     }
   } else S._blatT = 0.1;
 
@@ -3052,13 +3939,14 @@ function stepPhysics(dt) {
 
   // engine torque (drive minus internal braking)
   let Te = 0;
-  if (S.engineOn) Te = torqueAt(S.rpm) * boostMul * ENG.tqMul * eff - (16 + S.rpm * 0.011) * (ENG.fric || 1) * (1 - eff);
+  if (S.engineOn) Te = (torqueAt(S.rpm) * boostMul * ENG.tqMul + evBoostNm(S.rpm)) * eff
+                     - (16 + S.rpm * 0.011) * (ENG.fric || 1) * (1 - eff);
   else Te = -(20 + S.rpm * 0.02) * (ENG.fric || 1);
 
   const engage = computeEngage();
   S.engage = engage;
   const ratio = currentRatio();
-  const cap = CAR.clutchCap * engage;
+  const cap = CAR.clutchCap * engage * dmgClutchHold();
 
   // resistances on the car
   let F = 0;
@@ -3073,7 +3961,8 @@ function stepPhysics(dt) {
   // pressure trails the car gently and only a firm push delivers full stopping
   // power (real pedal feel, not an on/off switch)
   const brakeForce = Math.pow(S.brake, 1.7);
-  let braking = brakeForce * CAR.brakeMax + (S.mode === "auto" && S.autoSel === "P" ? 20000 : 0);
+  let braking = brakeForce * CAR.brakeMax * dmgBrakeFade() +
+                (S.mode === "auto" && S.autoSel === "P" ? 20000 : 0);
   if (S.lockup) braking *= 0.68;             // locked rubber stops worse
 
   const omegaToRpm = 60 / (2 * Math.PI);
@@ -3151,6 +4040,26 @@ function stepPhysics(dt) {
   if (Math.abs(S.v) < 0.015 && S.brake > 0.1) S.v = 0;
   S.odo += Math.abs(S.v) * dt / 1000;
 
+  // what the drive is actually putting through the road, for the screen
+  // and the battery: positive under power, negative under regen
+  S.powerW = driveF * S.v;
+
+  if (isEv()) {
+    if (S.evBoost > 0) {
+      S.evBoost = Math.max(0, S.evBoost - dt);
+      if (S.evBoost === 0) { S.evCool = EV_COOL_S; sfxBeep(520, 0.18, 0.09); }
+    } else if (S.evCool > 0) {
+      S.evCool = Math.max(0, S.evCool - dt);
+      if (S.evCool === 0) sfxBeep(1180, 0.14, 0.08);
+    }
+    // ludicrous pulls hard on the pack, well beyond what the wheels see
+    if (S.evBoost > 0) S.batt = clamp(S.batt - dt * 0.004, 0, 1);
+    evSimTick(dt);
+    evBattTick(dt);
+  }
+
+  dmgTick(dt, Te, engage, ratio, braking);
+
   S.rpm = clamp(S.rpm, 0, S.parkLimit ? S.parkLimit : ENG.cut * 1.24);
   // the start-up ceiling is absolute — momentum doesn't get to carry the
   // needle through it either, so the guard outlives the flare by a beat
@@ -3180,8 +4089,14 @@ function stepPhysics(dt) {
   const onOverrun = S.engineOn && eff < 0.04 && S.engage > 0.6 &&
                     S.rpm > ENG.max * burbleFloor && Math.abs(S.v) > 4;
   if (onOverrun && pr > 0 && Math.random() < dt * 1.6 * pr * pMul) {
-    sfxPop((0.3 + Math.random() * 0.35) * Math.min(1.4, pMul));
-    popFlame(false);
+    // most burble pops are little ones in the car's own voice; every so
+    // often one lets go properly
+    const st = crackleStyle();
+    const amp = (0.34 + Math.random() * 0.36) * Math.min(1.4, pMul);
+    const bang = Math.random() < st.bang * 0.55 * pMul;
+    const voice = bang ? "bang" : pickVoice(st);
+    sfxPop(amp, undefined, voice);
+    popFlame((POP_FLAME[voice] || 0.4) * (0.65 + amp * 0.7));
   }
   S._lastEff = eff;
 
@@ -3254,6 +4169,123 @@ function armCel() {
   el.style.display = CC.cel ? "" : "none";
 }
 
+/* ================================================================
+   CONSEQUENCES — opt-in mechanical sympathy
+   ================================================================
+   Off by default: the bay is a sandbox and it should stay one. Switched on in
+   the workshop, the car stops being indestructible and three things start
+   keeping score:
+
+     ENGINE  past the fuel cut the valves are floating. Bouncing off the
+             limiter kills it slowly; a money shift — dropping two gears at
+             speed and dumping the clutch — spins it so far past the cut that
+             it lets go in under a second.
+     CLUTCH  slipping the plates while the engine is making real torque glazes
+             them. A glazed clutch holds less, which makes it slip more.
+     BRAKES  heat soaks in faster than it radiates out. Hot brakes fade, and
+             fade is what turns one late corner into two.
+
+   Everything here is derived from state the physics already computes, so none
+   of it changes how the car drives until the driver earns it. */
+const DMG = {
+  on: false,
+  engine: 0, clutch: 0, brakes: 0,   // 0..1
+  blown: false,
+};
+
+/* fade curves. Both stay at full strength through the first half of the gauge
+   — you get a warning band before anything actually stops working. */
+function dmgBrakeFade() {
+  return DMG.on ? 1 - 0.45 * clamp((DMG.brakes - 0.5) / 0.5, 0, 1) : 1;
+}
+function dmgClutchHold() {
+  return DMG.on ? 1 - 0.5 * clamp((DMG.clutch - 0.35) / 0.65, 0, 1) : 1;
+}
+
+function dmgReset(keepMode) {
+  DMG.engine = DMG.clutch = DMG.brakes = 0;
+  DMG.blown = false;
+  if (!keepMode) DMG.on = !!S.dmgOn;
+  $("blownOverlay").classList.remove("show");
+  updateDmgUi();
+}
+
+function dmgTick(dt, Te, engage, ratio, braking) {
+  if (!DMG.on) { DMG.brakes = Math.max(0, DMG.brakes - dt * 0.25); return; }
+
+  // --- engine: over-rev. Severity is how far past the cut, not just whether.
+  if (S.engineOn && !DMG.blown && ENG.cut > 0) {
+    const over = S.rpm / ENG.cut;
+    if (over > 1.02) {
+      DMG.engine = Math.min(1, DMG.engine + dt * (over - 1.02) * 9);
+      if (DMG.engine >= 1) blowEngine();
+    }
+  }
+
+  // --- clutch: slip × torque. Riding it at idle costs nothing; slipping it
+  // against a V12 at full noise destroys it in seconds.
+  if (!DMG.blown && ratio && engage > 0.04 && engage < 0.985) {
+    const wheelRpm = Math.abs(S.v) / CAR.wheelR * Math.abs(ratio) * (60 / (2 * Math.PI));
+    const slip = Math.abs(S.rpm - wheelRpm);
+    if (slip > 180)
+      DMG.clutch = Math.min(1, DMG.clutch + dt * (slip / 11000) * clamp(Math.abs(Te) / 420, 0, 3));
+  }
+
+  // --- brakes: heat in from work done, heat out all the time
+  const work = braking * Math.abs(S.v);          // watts, near enough
+  DMG.brakes = clamp(DMG.brakes + dt * (work / 5.2e6) - dt * 0.055, 0, 1);
+  if (DMG.brakes > 0.82 && Math.random() < dt * 2.2) sayEvent("fade", "Brakes fading", { cool: 8 });
+
+  updateDmgUi();
+}
+
+/* the money shift: it lets go, loudly, once */
+function blowEngine() {
+  DMG.blown = true; DMG.engine = 1;
+  S.engineOn = false; S.cranking = false; S.acc = false;
+  S.powered = false; S.boost = 0; S.locked = false;
+  clearTimeout(S.crankTimer); S.crankTimer = 0;
+  accNagStop(); accBedStop(0.1);
+  updateRunLamp();
+  // one enormous bang, then the wreckage rolling to a stop
+  sfxPop(1.9, undefined, "bang");
+  setTimeout(() => { sfxBackfire(); sfxClunk(1.6); }, 90);
+  setTimeout(() => sfxClunk(1.1), 260);
+  popFlame(1);
+  warnChime(1);
+  sayEvent("blown", "Engine let go", { cool: 30 });
+  $("lampCel").classList.add("lit", "blink");
+  $("lampRev").classList.add("lit", "blink");
+  $("blownOverlay").classList.add("show");
+  updateDmgUi();
+}
+
+/* fresh engine, fresh plates, cold discs */
+function rebuildCar() {
+  dmgReset(true);
+  $("lampCel").classList.remove("lit", "blink");
+  $("lampRev").classList.remove("lit", "blink");
+  S.rpm = 0; S.v = 0; S.gear = 0; S.autoSel = "P"; S.autoGear = 1;
+  sfxClunk(0.8);
+  sayEvent("rebuilt", "Rebuilt", { cool: 2 });
+}
+
+function updateDmgUi() {
+  const strip = $("dmgStrip");
+  if (!strip) return;
+  strip.classList.toggle("show", DMG.on);
+  if (!DMG.on) return;
+  const set = (id, v) => {
+    const el = $(id);
+    el.style.setProperty("--fill", (v * 100).toFixed(0) + "%");
+    el.classList.toggle("warn", v > 0.5);
+    el.classList.toggle("bad", v > 0.82);
+  };
+  set("dmgEngine", DMG.engine);
+  set("dmgClutch", DMG.clutch);
+  set("dmgBrakes", DMG.brakes);
+}
+
 function stallEngine() {
   S.engineOn = false; S.stalled = true; S.locked = false;
   updateRunLamp();
@@ -3275,6 +4307,11 @@ function ignitionDown() {
   initAudio();
   if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
   if (S.cranking) return;                   // already turning over
+  if (DMG.blown) {                          // nothing left in there to light
+    sfxClunk(0.5);
+    $("blownOverlay").classList.add("show");
+    return;
+  }
 
   if (CC.startCap && !S.capOpen) {
     S.capOpen = true;
@@ -3333,8 +4370,12 @@ function toggleIgnition() {
       updateRunLamp(); updateEdriveUi();
       return;
     }
-    S.powered = true; S.eDrive = "gas";       // …then fall through to the crank
-    updateEdriveUi();
+    // A plug-in hybrid has no "start the engine" button — it has a POWER
+    // button. Press it and the car wakes in silence on its e-motors. Lighting
+    // the combustion engine is a separate, deliberate act: the eDrive button
+    // (or H). That's how the real cars behave, and it's the whole party trick.
+    powerUpEv();
+    return;
   }
 
   if (S.engineOn) {
@@ -3355,6 +4396,17 @@ function toggleIgnition() {
     setTimeout(() => sayVoice("Systems ready"), 700);
     updateRunLamp();
     return;
+  }
+  // race cars: the starter button is the LAST thing that happens, and only
+  // once the panel above it is fully live. Nothing here is a shortcut.
+  if (CC.race) {
+    if (!raceReady()) {
+      sfxRaceDeny();
+      const p = $("racePanel");
+      p.classList.remove("nudge"); void p.offsetWidth; p.classList.add("nudge");
+      return;
+    }
+    if (S.engineOn) { killRaceEngine(); return; }
   }
   // two-stage cars — the SVJ, the older stuff, the diesel, the race car. The
   // first press only wakes it up: relay in, pump priming, needles sweeping the
@@ -3463,7 +4515,7 @@ function sfxCrankDie(p) {
   const wg = ctx.createGain();
   wg.gain.setValueAtTime(0.05, t);
   wg.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
-  w.connect(wf); wf.connect(wg); wg.connect(AU.master); w.start(t); w.stop(t + 0.4);
+  w.connect(wf); wf.connect(wg); wg.connect(AU.sfx); w.start(t); w.stop(t + 0.4);
   // the last two compressions, slowing down and dying out
   [[0.02, 0.5], [0.15, 0.28]].forEach(([dt, lvl]) => {
     const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 0.3;
@@ -3471,14 +4523,14 @@ function sfxCrankDie(p) {
     const ng = ctx.createGain();
     ng.gain.setValueAtTime(0.26 * lvl, t + dt);
     ng.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.09);
-    n.connect(nf); nf.connect(ng); ng.connect(AU.master); n.start(t + dt); n.stop(t + dt + 0.11);
+    n.connect(nf); nf.connect(ng); ng.connect(AU.sfx); n.start(t + dt); n.stop(t + dt + 0.11);
     const k = ctx.createOscillator(); k.type = "sine";
     k.frequency.setValueAtTime(80, t + dt);
     k.frequency.exponentialRampToValueAtTime(38, t + dt + 0.1);
     const kg = ctx.createGain();
     kg.gain.setValueAtTime(0.24 * lvl, t + dt);
     kg.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.12);
-    k.connect(kg); kg.connect(AU.master); k.start(t + dt); k.stop(t + dt + 0.14);
+    k.connect(kg); kg.connect(AU.sfx); k.start(t + dt); k.stop(t + dt + 0.14);
   });
 }
 
@@ -3498,10 +4550,14 @@ function updateRunLamp() {
 function fireHybrid() {
   if (!CC.edrive || !S.powered || S.eDrive === "gas") return;
   S.eDrive = "gas"; S.engineOn = true; S.stalled = false;
+  // the engine lighting is not a reason to put the car in gear. In auto the
+  // box just mirrors whatever the driver already has the selector on; in
+  // sequential it stays exactly where they left it — it used to grab 1st for
+  // you, which is not the car's decision to make.
   if (S.mode === "auto") {
     S.autoGear = 1;
     S.gear = S.autoSel === "D" ? 1 : S.autoSel === "R" ? "R" : 0;
-  } else if (S.mode === "manual") S.gear = 1;
+  }
   S.rpm = 3500;                               // the fire-up flare
   S.shiftCool = 0.45;                         // a beat before the box reacts
   S.catchT = 0.1; S.catchAmt = 0.45; S.catchPeak = 3600;
@@ -3526,22 +4582,24 @@ function toElectric() {
   updateRunLamp(); updateEdriveUi();
 }
 
+/* wake an eDrive car in silent electric mode — engine cold and untouched */
+function powerUpEv() {
+  initAudio();
+  if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+  if (S.cranking) return;
+  S.crankSeq = (S.crankSeq || 0) + 1;
+  S.powered = true; S.engineOn = false; S.eDrive = "ev"; S.acc = true;
+  S.stalled = false; S.rpm = 0; S.boost = 0; S.sweep = 0;
+  $("stallOverlay").classList.remove("show");
+  $("lampStall").classList.remove("lit", "blink");
+  sfxChimeFerrari();                        // the full welcome on power-up
+  setTimeout(() => sayVoice("Electric drive ready"), 900);
+  updateRunLamp(); updateEdriveUi();
+}
+
 function toggleEdrive() {
   if (!CC.edrive) return;
-  if (!S.powered) {                           // off → boot straight into silent EV
-    initAudio();
-    if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
-    if (S.cranking) return;
-    S.crankSeq = (S.crankSeq || 0) + 1;
-    S.powered = true; S.engineOn = false; S.eDrive = "ev"; S.acc = true;
-    S.stalled = false; S.rpm = 0; S.boost = 0; S.sweep = 0;
-    $("stallOverlay").classList.remove("show");
-    $("lampStall").classList.remove("lit", "blink");
-    sfxChimeFerrari();                        // the full welcome on power-up
-    setTimeout(() => sayVoice("Electric drive ready"), 900);
-    updateRunLamp(); updateEdriveUi();
-    return;
-  }
+  if (!S.powered) { powerUpEv(); return; }    // off → boot into silent EV
   if (S.eDrive === "ev") fireHybrid(); else toElectric();
 }
 
@@ -4091,8 +5149,11 @@ function seqEngage(target, dir, silent) {
   if (dir < 0 && target !== 0 && target !== "R" && S.engineOn && Math.abs(S.v) > 3) {
     S.blip = 0.32; S.blipTarget = matchRpm(target); S.shiftCut = 0.26;    // heel-toe blip on the way down
     if (popsRating() >= 1) {             // the bark as the throttle stabs open
-      sfxPop(0.5);
-      if (popsRating() >= 2) popFlame(true);
+      // a downshift bark is one big deliberate slug of fuel, not a tick —
+      // the loud cars fire it as a proper bang with a torch behind it
+      const bang = popsRating() >= 2;
+      sfxPop(bang ? 0.68 : 0.52, undefined, bang ? "bang" : "crack");
+      if (bang) popFlame(0.8);
     }
   }
   if (curEx().burble && S.engineOn && S.rpm > ENG.idle * 2)
@@ -4114,20 +5175,170 @@ function flashSeqKey(dir) {
    UI — modes, themes, units, lamps, readouts
    ================================================================ */
 
-/* exhaust flame flash, synced to pops */
-function popFlame(big) {
+/* ---------------- exhaust flames ----------------
+   Real exhaust flames are not one colour, and which one you get is chemistry,
+   not decoration:
+
+     ORANGE  a rich, fuel-heavy charge burning at low pressure. The colour is
+             glowing soot particles — the more unburnt fuel, the deeper and
+             sootier the orange. This is the everyday overrun flame.
+     BLUE    a LEAN charge lighting off under high pressure in an already
+             red-hot pipe. Almost no soot survives, so you see the flame front
+             itself. This is what a proper anti-lag setup throws.
+     WHITE   a big slug of fuel going off all at once in a glowing pipe — hot
+             enough that the core washes out to white before the orange edges
+             catch up. The shotgun bangs.
+     VIOLET  the fringe you get off long straight pipes at night, when the
+             burn is clean and thin and there's nothing else lighting it.
+
+   The workshop can pin any one of these, or leave it on AUTO and let the
+   fitted system and the size of the pop decide. */
+const FLAME_KINDS = ["orange", "blue", "white", "violet"];
+
+function flameKind(power) {
+  const set = curMod().flame || "auto";
+  if (set !== "auto") return set;
+  const ex = curEx();
+  // anti-lag: fuel dumped straight into a glowing pipe, lean and high pressure
+  if (ex.burble) return power > 0.85 ? "white" : power > 0.4 ? "blue" : "orange";
+  // thin-wall race systems run hot enough to burn the charge clean up top
+  if (ex.flameLean) return power > 0.82 ? "white" : power > 0.5 ? "blue" : "violet";
+  // de-cat / open pipes are rich and sooty — deep orange, never blue
+  if (ex.flameRich) return power > 0.88 ? "white" : "orange";
+  return power > 0.9 ? "white" : "orange";
+}
+
+/* exhaust flame flash, synced to pops.
+   power: 0..1 — how much fuel went off. Booleans still work (legacy calls). */
+function popFlame(power) {
+  if (isEv()) return;                      // no exhaust, nothing to burn
   if (!(popsRating() > 0)) return;
+  if (typeof power === "boolean") power = power ? 0.7 : 0.3;
+  // the workshop's flame-size knob scales the whole event: turn it down and
+  // even a shotgun bang only licks the pipe, turn it up and ticks throw fire
+  power = clamp((power === undefined ? 0.3 : power) * curMod().flameSize, 0, 1);
+  if (power < 0.03) return;
+
+  const kind = flameKind(power);
+  const size = power > 0.78 ? "huge" : power > 0.4 ? "big" : "";
   const el = $("tipL");                    // one side-exit pipe now
   if (el) {
-    el.classList.toggle("big", big);
-    el.classList.remove("fire"); void el.offsetWidth; el.classList.add("fire");
-    setTimeout(() => el.classList.remove("fire"), 300);
+    el.className = "tip k-" + kind + (size ? " " + size : "");
+    void el.offsetWidth; el.classList.add("fire");
+    setTimeout(() => el.classList.remove("fire"), 360);
   }
-  if (big || Math.random() < 0.55) {
+  if (size || Math.random() < 0.55) {
     const gl = $("fireglow");
-    gl.classList.toggle("big", big);
-    gl.classList.remove("on"); void gl.offsetWidth; gl.classList.add("on");
+    gl.className = "fireglow k-" + kind + (size ? " " + size : "");
+    void gl.offsetWidth; gl.classList.add("on");
   }
+}
+
+/* ---------------- the digital player ----------------
+   The other cars get a tape deck with a mechanism you can hear. This one
+   gets a screen: no moving parts, no transport noise, just a title and an
+   equaliser that only moves when something is actually playing. It drives
+   exactly the same Spotify transport as the deck — it's a different face on
+   the same stereo, not a second one. */
+function updateDPlayer() {
+  if (!isEv()) return;
+  const playing = !!MUS.playing;
+  $("dpTitle").textContent = S.station ? stationName(S.station) : "NO SOURCE";
+  $("dpDot").classList.toggle("live", playing);
+  $("dpEq").classList.toggle("live", playing);
+  $("dpPlay").classList.toggle("on", playing);
+  $("dpPlayIcon").setAttribute("d", playing ? "M6 4h4v16H6zM14 4h4v16h-4z" : "M7 4l13 8-13 8z");
+}
+
+/* ---------------- the electric car's screen ----------------
+   Called once when the car changes (chrome, buttons, mode lock) and once a
+   frame while it's on screen (the live numbers). Split that way because the
+   first one touches layout and the second one must not. */
+function applyEvChrome() {
+  const on = hasScreen();
+  // an electric car has no exhaust to show, so the tip comes off entirely and
+  // the space under the dash goes to the stereo. Swap a V12 in and the pipe
+  // comes back, because now there is one.
+  const noPipe = isEv();
+  $("exhaust").classList.toggle("hide", noPipe);
+  $("dplayer").classList.toggle("hide", !noPipe);
+  updateDPlayer();
+  document.body.classList.toggle("ev-dash", on);
+  $("evScreen").setAttribute("aria-hidden", String(!on));
+  $("evsName").textContent = CC.name.toUpperCase();
+
+  // the two buttons belong to the drivetrain, not the dashboard: swap a V12
+  // into this thing and they go away, along with the silence
+  const ev = isEv();
+  $("evBoostBtn").classList.toggle("hide", !ev);
+  $("evV8Btn").classList.toggle("hide", !ev);
+  if (!ev && S.evV8) { S.evV8 = false; buildEngineVoice(voiceCar()); applyFormants(); }
+
+  // a single-speed car has nothing to shift, so it is automatic-only and the
+  // other two modes are locked out rather than quietly ignored
+  document.querySelectorAll(".mode-btn").forEach(b => {
+    const locked = ev && b.dataset.mode !== "auto";
+    b.classList.toggle("locked", locked);
+    b.disabled = locked;
+    b.title = locked ? "Single-speed — this car is automatic only" : "";
+  });
+  if (ev && S.mode !== "auto") setMode("auto");
+  updateEvUi();
+}
+
+/* button faces + the boost cell — anything that changes on a click, not a tick */
+function updateEvUi() {
+  if (!isEv()) return;
+  const bBtn = $("evBoostBtn");
+  const live = S.evBoost > 0, cool = S.evCool > 0;
+  bBtn.classList.toggle("on-ev", live);
+  bBtn.classList.toggle("cooling", cool);
+  $("evBoostLbl").textContent = live ? S.evBoost.toFixed(1) + "s"
+                              : cool ? Math.ceil(S.evCool) + "s" : "LUDICROUS";
+  $("evV8Btn").classList.toggle("on-ev", S.evV8);
+  $("evV8Lbl").textContent = S.evV8 ? "V8 ON" : "V8 SOUND";
+}
+
+function evScreenTick() {
+  if (!hasScreen()) return;
+  const ev = isEv();
+  const kmh = S.units === "kmh";
+  $("evsSpeed").textContent = Math.round(Math.abs(S.v) * (kmh ? 3.6 : 2.237));
+  $("evsUnit").textContent = kmh ? "km/h" : "mph";
+
+  // the power meter reads outward from the middle: drive right, regen left
+  const kw = S.powerW / 1000;
+  const peak = 700;
+  $("evsDrive").style.width = (clamp(kw / peak, 0, 1) * 50).toFixed(2) + "%";
+  $("evsRegen").style.width = (clamp(-kw / (peak * 0.35), 0, 1) * 50).toFixed(2) + "%";
+  $("evsKw").textContent = (kw >= 0 ? "" : "−") + Math.round(Math.abs(kw)) + " kW";
+
+  const pct = Math.round(S.batt * 100);
+  $("evsBattFill").style.width = pct + "%";
+  $("evsBattFill").classList.toggle("low", S.batt < 0.15);
+  $("evsBattPct").textContent = pct + "%";
+  $("evsRange").textContent = Math.round(S.batt * 480) + (kmh ? " km" : " mi");
+  $("evsRpm").textContent = v8SimOn()
+    ? Math.round(S.simRpm).toLocaleString() + " rpm"
+    : Math.round(S.rpm).toLocaleString() + " rpm";
+
+  const sel = S.mode === "auto" ? S.autoSel : (S.gear === 0 ? "N" : S.gear === "R" ? "R" : "D");
+  $("evsGear").querySelectorAll("span").forEach(el =>
+    el.classList.toggle("on", el.dataset.g === sel));
+
+  const badge = !S.engineOn ? "OFF"
+              : S.evBoost > 0 ? "LUDICROUS"
+              : S.evV8 ? "V8 SIM"
+              : S.batt < 0.1 ? "LOW CHARGE"
+              : (S.mode === "auto" && S.autoSel === "P") ? "CHARGING" : "READY";
+  const bEl = $("evsBadge");
+  if (bEl.textContent !== badge) bEl.textContent = badge;
+  bEl.dataset.state = badge.toLowerCase().replace(/ /g, "-");
+
+  $("evsBoostCell").classList.toggle("live", S.evBoost > 0);
+  $("evsBoostCell").classList.toggle("cool", S.evBoost <= 0 && S.evCool > 0);
+  $("evsClock").textContent = $("clockNum").textContent;
+  if (ev) updateEvUi();
 }
 
 /* one visible blade travel, in sync with sfxWiper */
@@ -4243,7 +5454,8 @@ function esc(s) {
 }
 
 function selectCar(id) {
-  const car = CARS.find(c => c.id === id) || CARS[1];
+  const base = CARS.find(c => c.id === id) || CARS[1];
+  const car = swapEngineInto(base);      // stock engine unless one's been swapped in
   CC = car;
   S.capOpen = false;                     // new car arrives with the cover down
   applyCar(car);
@@ -4253,6 +5465,7 @@ function selectCar(id) {
   S.cranking = false; S.engineOn = false; S.stalled = false;
   clearTimeout(S.crankTimer); S.crankTimer = 0;
   S.acc = false; S.capOpen = false; S._overWarn = 0;
+  dmgReset();                            // new car, fresh engine and cold discs
   accNagStop(); accBedStop(0.2);
   clearVox();
   S.powered = false; S.eDrive = "gas";
@@ -4263,6 +5476,10 @@ function selectCar(id) {
   S.shiftCut = 0; S.shiftCool = 0; S.cutTimer = 0; S.blip = 0; S.catchT = 0; S.sweep = -1;
   S.pendShift = false;
   S.spinV = 0; S.lockup = false;
+  S.evBoost = 0; S.evCool = 0;
+  IND.side = 0; IND.on = false; IND.t = 0;   // the stalk springs back
+  resetRaceSwitches();
+  S.simGear = 1; S.simRpm = V8SIM.idle; S.simCut = 0;
   S.needle.rpm = 0; S.needle.rpmV = 0; S.needle.spd = 0; S.needle.spdV = 0;
 
   $("ignition").classList.remove("cranking");
@@ -4287,11 +5504,13 @@ function selectCar(id) {
     car.asp === "hybrid" ? "E-BOOST %" : "BOOST PSI";
   updateEdriveUi();
   $("shiftLights").classList.toggle("show", !!car.shiftLights);
+  applyEvChrome();
+  updateIndicatorUi();
   document.querySelectorAll(".car-chip").forEach(b =>
     b.classList.toggle("on", b.dataset.car === car.id));
 
   tachG.rebuild(); speedG.rebuild();
-  if (AU.ready) buildEngineVoice(car);
+  if (AU.ready) buildEngineVoice(voiceCar());
   refreshWorkshop();
   if (LT.phase !== "off") {                // new car: re-arm the sprint clock
     LT.phase = "hold"; LT.disp = 0;
@@ -4399,7 +5618,7 @@ const EVIZ = {
       this.osc = c.createOscillator(); this.osc.type = "sawtooth";
       this.olp = c.createBiquadFilter(); this.olp.type = "lowpass"; this.olp.frequency.value = 1400;
       this.og = c.createGain(); this.og.gain.value = 0;
-      this.osc.connect(this.olp); this.olp.connect(this.og); this.og.connect(AU.master);
+      this.osc.connect(this.olp); this.olp.connect(this.og); this.og.connect(AU.sfx);
       this.osc.start();
     }
     const t = AU.ctx.currentTime;
@@ -4838,6 +6057,25 @@ function buildWorkshop() {
     $("wsPopVal").textContent = fmtPop();
     save();
   });
+  $("wsSwap").addEventListener("change", () => {
+    const chassis = CC.id;               // CC.id is always the chassis, swapped or not
+    curMod().swap = $("wsSwap").value;
+    save();
+    selectCar(chassis);                  // rebuilds the engine, gauges and voice
+    sfxClunk(0.7);                       // the lump dropping onto its mounts
+  });
+  $("wsFlame").addEventListener("input", () => {
+    curMod().flameSize = parseFloat($("wsFlame").value);
+    $("wsFlameVal").textContent = fmtFlame();
+    save();
+  });
+  document.querySelectorAll("#wsFlameCol .ws-card").forEach(b =>
+    b.addEventListener("click", () => {
+      curMod().flame = b.dataset.flame;
+      refreshWorkshop();
+      popFlame(0.85);                      // audition it right there in the bay
+      save();
+    }));
   $("wsGear").addEventListener("input", () => {
     curMod().gear = parseFloat($("wsGear").value);
     applyCar(CC);
@@ -4876,6 +6114,19 @@ function buildWorkshop() {
     $("ltimer").classList.remove("done");
     $("ltBig").classList.remove("golive");
   });
+  $("wsDmg").addEventListener("click", () => {
+    S.dmgOn = !S.dmgOn;
+    DMG.on = S.dmgOn;
+    dmgReset(true);                        // switching modes starts you clean
+    refreshWorkshop();
+    sfxClunk(0.5);
+    save();
+  });
+  $("wsShare").addEventListener("click", openSpecCard);
+  $("scClose").addEventListener("click", closeSpecCard);
+  $("scCopy").addEventListener("click", copySpecLink);
+  $("speccard").addEventListener("click", (e) => { if (e.target === $("speccard")) closeSpecCard(); });
+  $("blownRebuild").addEventListener("click", rebuildCar);
   $("wsClose").addEventListener("click", closeWorkshop);
   $("workshop").addEventListener("click", (e) => {
     if (e.target === $("workshop")) closeWorkshop();
@@ -4896,6 +6147,7 @@ function fmtTone() {
   return v === 0 ? "stock" : (v > 0 ? "+" : "") + v + " Hz";
 }
 function fmtPop() { return "×" + curMod().pop.toFixed(1); }
+function fmtFlame() { return "×" + curMod().flameSize.toFixed(1); }
 function fmtRev(r) {
   if (Math.abs(r - 1) < 0.001) return "stock";
   const p = Math.round((r - 1) * 100);
@@ -4904,6 +6156,7 @@ function fmtRev(r) {
 
 function refreshWorkshop() {
   $("wsCar").textContent = CC.name;
+  updateJobCard();
   document.querySelectorAll("#wsExhausts .ws-card").forEach(b =>
     b.classList.toggle("on", b.dataset.ex === curMod().ex));
   document.querySelectorAll("#wsShift .ws-card").forEach(b =>
@@ -4921,6 +6174,11 @@ function refreshWorkshop() {
   $("wsToneVal").textContent = fmtTone();
   $("wsPop").value = curMod().pop;
   $("wsPopVal").textContent = fmtPop();
+  refreshSwapPicker();
+  $("wsFlame").value = curMod().flameSize;
+  $("wsFlameVal").textContent = fmtFlame();
+  document.querySelectorAll("#wsFlameCol .ws-card").forEach(b =>
+    b.classList.toggle("on", b.dataset.flame === curMod().flame));
   $("exhaust").dataset.look = curEx().look || "stock";   // tips match the system
   $("wsGear").value = curMod().gear;
   $("wsGearVal").textContent = (CC.finalDrive * curMod().gear).toFixed(2);
@@ -4934,14 +6192,56 @@ function refreshWorkshop() {
   $("wsLtVal").textContent = ltLabel();
   $("wsTune").classList.toggle("on", curMod().tune);
   const aidsOn = curMod().abs !== false;
+  $("wsDmg").classList.toggle("on", S.dmgOn);
+  $("wsDmg").querySelector(".ws-card-name").textContent =
+    "CONSEQUENCES — " + (S.dmgOn ? "ON" : "OFF");
   $("wsAids").classList.toggle("on", aidsOn);
   $("wsAids").querySelector(".ws-card-name").textContent =
     "DRIVER AIDS — " + (aidsOn ? "ON" : "OFF");
   $("modBtn").classList.toggle("on",
     curMod().ex !== "stock" || curMod().pitch !== 1 || curMod().gear !== 1 ||
     curMod().vol !== 1 || curMod().tone !== 0 || curMod().pop !== 1 ||
+    curMod().flame !== "auto" || curMod().flameSize !== 1 || curMod().swap ||
     curMod().rev !== 1 || curMod().tune || !aidsOn || curMod().shift !== "stock" ||
     curMod().paddle !== "stock");
+}
+
+/* the engine-swap dropdown: every engine in the garage, grouped so the stock
+   one is never buried among thirty donors */
+function refreshSwapPicker() {
+  const sel = $("wsSwap"), chassis = CC.id, cur = curMod().swap || "";
+  const stock = CARS.find(c => c.id === chassis);
+  const donors = CARS.filter(c => c.id !== chassis)
+    .map(c => `<option value="${esc(c.id)}">${esc(c.name)} — ${esc(c.layout)}</option>`)
+    .join("");
+  sel.innerHTML =
+    `<option value="">FACTORY — ${esc(stock ? stock.layout : "as delivered")}</option>` +
+    `<optgroup label="Swap in">${donors}</optgroup>`;
+  sel.value = cur;
+  if (sel.value !== cur) sel.value = "";  // donor was deleted from the garage
+  const donor = cur && CARS.find(c => c.id === cur);
+  $("wsSwapNote").textContent = donor
+    ? `${donor.name}'s ${donor.layout} in the ${stock ? stock.name : "chassis"}. ` +
+      `Redline ${(CC.max / 1000).toFixed(1)}k, ` +
+      `${Math.round(CC.mass)}kg, clutch uprated to ${Math.round(CAR.clutchCap)}Nm.`
+    : "Factory engine, as delivered.";
+  sel.classList.toggle("on", !!cur);
+}
+
+/* the docket clipped to the bench: a stable per-car job number and a count
+   of how many things have been changed from factory */
+function updateJobCard() {
+  const m = curMod();
+  const changed = [
+    m.ex !== "stock", m.swap, m.pitch !== 1, m.vol !== 1, m.tone !== 0,
+    m.pop !== 1, m.flame !== "auto", m.flameSize !== 1, m.gear !== 1,
+    m.rev !== 1, m.tune, m.abs === false,
+    m.shift !== "stock", m.paddle !== "carbon",
+  ].filter(Boolean).length;
+  let h = 0;
+  for (const ch of CC.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  $("wsJob").textContent =
+    "DS-" + (1000 + h % 9000) + " · " + (changed ? changed + " MOD" + (changed > 1 ? "S" : "") : "STOCK");
 }
 
 function openWorkshop() { refreshWorkshop(); $("workshop").classList.add("open"); }
@@ -5505,6 +6805,7 @@ function renderStations() {
 }
 
 function updateCasFace(stateTxt) {
+  updateDPlayer();                       // the EV wears a different face on the same stereo
   $("casLabel").textContent = S.station ? stationName(S.station) : "NO TAPE";
   if (stateTxt) $("casState").textContent = stateTxt;
   else if (S.station) $("casState").textContent = MUS.playing ? "playing" : "paused — press play";
@@ -5619,6 +6920,111 @@ function setUnits(u) {
   save();
 }
 
+/* ================================================================
+   BUILD CARD — a whole build in a link
+   ================================================================
+   A build is just a car id plus that car's workshop entry, so it fits in a
+   URL fragment. The fragment never leaves the browser (that's the point of
+   using a hash rather than a query string), and opening one applies it as a
+   normal workshop change — nothing is trusted beyond "is this a car we have,
+   and are these numbers in range". */
+
+function b64urlEncode(str) {
+  return btoa(unescape(encodeURIComponent(str)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function b64urlDecode(str) {
+  const pad = str.replace(/-/g, "+").replace(/_/g, "/");
+  return decodeURIComponent(escape(atob(pad + "===".slice((pad.length + 3) % 4))));
+}
+
+function buildCode() {
+  return b64urlEncode(JSON.stringify({ v: 1, car: CC.id, mod: curMod() }));
+}
+
+function buildUrl() {
+  const base = location.origin + location.pathname;
+  return base + "#b=" + buildCode();
+}
+
+/* apply a build code from the address bar, if there's one there */
+function applyBuildFromUrl() {
+  const m = /[#&]b=([A-Za-z0-9\-_]+)/.exec(location.hash || "");
+  if (!m) return false;
+  let data;
+  try { data = JSON.parse(b64urlDecode(m[1])); } catch (_) { return false; }
+  if (!data || !data.car || !CARS.some(c => c.id === data.car)) return false;
+
+  const src = data.mod || {}, m2 = {};
+  // whitelist + clamp: a shared link may only set things the workshop can set
+  if (EXHAUSTS[src.ex]) m2.ex = src.ex;
+  if (CARS.some(c => c.id === src.swap)) m2.swap = src.swap;
+  if (FLAME_KINDS.includes(src.flame) || src.flame === "auto") m2.flame = src.flame;
+  if (["stock", "click", "metal"].includes(src.shift)) m2.shift = src.shift;
+  if (["stock", "mech", "metal", "carbon"].includes(src.paddle)) m2.paddle = src.paddle;
+  const num = (k, lo, hi) => {
+    const v = parseFloat(src[k]);
+    if (Number.isFinite(v)) m2[k] = clamp(v, lo, hi);
+  };
+  num("pitch", 0.7, 1.3); num("vol", 0.6, 1.6); num("tone", -800, 1200);
+  num("pop", 0, 2); num("flameSize", 0, 2); num("gear", 0.7, 1.3); num("rev", 0.5, 3);
+  m2.tune = !!src.tune;
+  m2.abs = src.abs !== false;
+
+  S.mods[data.car] = m2;
+  selectCar(data.car);
+  history.replaceState(null, "", location.origin + location.pathname);
+  return true;
+}
+
+function openSpecCard() {
+  closeWorkshop();
+  const donor = curMod().swap && CARS.find(c => c.id === curMod().swap);
+  $("scName").textContent = CC.name;
+  $("scLayout").textContent = donor ? donor.layout + " — swapped in" : CC.layout;
+  $("scExhaust").dataset.look = curEx().look || "stock";
+  $("scTip").className = "tip k-" + flameKind(0.9);
+
+  const rows = [
+    ["EXHAUST", curEx().name],
+    ["REDLINE", (ENG.max / 1000).toFixed(1) + "k rpm"],
+    ["MASS", Math.round(CAR.mass) + " kg"],
+    ["FINAL DRIVE", CAR.finalDrive.toFixed(2)],
+    ["PITCH", fmtPitch()],
+    ["VOLUME", fmtVol()],
+    ["TONE", fmtTone()],
+    ["POPS", fmtPop()],
+    ["FLAMES", fmtFlame() + " · " + (curMod().flame === "auto" ? "auto" : curMod().flame)],
+    ["REV SPEED", fmtRev(curMod().rev)],
+    ["TUNE", curMod().tune ? "race flash" : "stock"],
+    ["AIDS", curMod().abs === false ? "off" : "on"],
+  ];
+  $("scSpecs").innerHTML = rows
+    .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+
+  const url = buildUrl();
+  $("scUrl").value = url;
+  $("scNote").textContent =
+    "Anyone opening this link gets your exact car, engine and workshop settings.";
+  $("speccard").classList.add("show");
+}
+
+function closeSpecCard() { $("speccard").classList.remove("show"); }
+
+function copySpecLink() {
+  const input = $("scUrl");
+  input.select();
+  const done = (ok) => {
+    $("scNote").textContent = ok ? "Link copied — paste it anywhere."
+                                 : "Couldn't copy automatically — the link is selected, hit copy.";
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(input.value).then(() => done(true), () => done(false));
+  } else {
+    try { done(document.execCommand("copy")); } catch (_) { done(false); }
+  }
+}
+
 function save() {
   try {
     localStorage.setItem("dwnshift", JSON.stringify({
@@ -5626,6 +7032,7 @@ function save() {
       voice: S.voice,
       car: CC.id, tunnel: S.tunnel, flyby: S.flyby, cabin: S.cabin, mods: S.mods,
       traffic: S.traffic, rain: S.rain, lt: S.ltTgt, ltBest: LT.best,
+      dmgOn: S.dmgOn, evV8: S.evV8, batt: S.batt,
       night: S.night, station: S.station,
       stations: MUS.saved, tapeNames: MUS.names,
       musVol: MUS.vol, musEcho: MUS.echo, musWide: MUS.wide,
@@ -5678,10 +7085,16 @@ function initInput() {
         if (down && !e.repeat) ignitionDown(); else if (!down) ignitionUp();
         return true;
       case "KeyH": if (down && !e.repeat) toggleEdrive(); return true;
+      case "KeyB": if (down && !e.repeat) toggleEvBoost(); return true;
+      case "Comma":  if (down && !e.repeat) setIndicator(-1); return true;
+      case "Period": if (down && !e.repeat) setIndicator(1); return true;
+      case "KeyJ": if (down && !e.repeat) toggleEvV8(); return true;
       case "KeyL":
         if (down && !e.repeat) LT.phase === "off" ? openLaunch() : closeLaunch();
         return true;
-      case "Escape": if (down) { closeWorkshop(); closeLaunch(); toggleCassette(false); } return false;
+      case "Escape":
+        if (down) { closeWorkshop(); closeLaunch(); closeSpecCard(); toggleCassette(false); }
+        return false;
     }
     // number keys = analog pedal pressure while held: 1–9 → 10–90%, 0 → 100%
     const dig = /^(Digit|Numpad)([0-9])$/.exec(e.code);
@@ -5721,9 +7134,22 @@ function initInput() {
   // keyboard "press" on a focused button would fire a second, phantom start
   ign.addEventListener("click", e => e.preventDefault());
   $("edriveBtn").addEventListener("click", toggleEdrive);
+  $("evBoostBtn").addEventListener("click", toggleEvBoost);
+  $("evV8Btn").addEventListener("click", toggleEvV8);
+  $("dpPlay").addEventListener("click", () => { if (MUS.player) MUS.player.togglePlay(); });
+  $("dpPrev").addEventListener("click", () => { if (MUS.player) MUS.player.previousTrack(); });
+  $("dpNext").addEventListener("click", () => { if (MUS.player) MUS.player.nextTrack(); });
+  $("dpLib").addEventListener("click", () => toggleCassette());
+  $("tsigL").addEventListener("click", () => setIndicator(-1));
+  $("tsigR").addEventListener("click", () => setIndicator(1));
+  for (const k of RACE_SWITCHES)
+    $("rsw" + k[0].toUpperCase() + k.slice(1)).addEventListener("click", () => raceSwitch(k));
 
   document.querySelectorAll(".mode-btn").forEach(b =>
-    b.addEventListener("click", () => setMode(b.dataset.mode)));
+    b.addEventListener("click", () => {
+      if (b.classList.contains("locked")) return;   // single-speed cars: auto only
+      setMode(b.dataset.mode);
+    }));
 
   document.querySelectorAll(".swatch").forEach(s =>
     s.addEventListener("click", () => setTheme(s.dataset.t)));
@@ -6041,6 +7467,8 @@ function frame(now) {
   while (acc >= STEP) { stepPhysics(STEP); acc -= STEP; }
 
   audioTick();
+  pedalSfxTick();
+  indicatorTick(dt);
   ltTick(dt);
 
   /* --- ambience schedulers --- */
@@ -6151,6 +7579,8 @@ function frame(now) {
   }
   $("gearSub").textContent = gs;
 
+  evScreenTick();
+
   /* --- shift lights --- */
   if (CC.shiftLights && shiftLightEls.length) {
     const start = ENG.max * 0.68, end = ENG.cut * 0.99;
@@ -6245,8 +7675,12 @@ function frame(now) {
         S.mods[id].paddle = "carbon";
   if (saved.lt) S.ltTgt = { kmh: saved.lt.kmh || 100, mph: saved.lt.mph || 60 };
   LT.best = saved.ltBest || {};
+  S.dmgOn = !!saved.dmgOn;
+  DMG.on = S.dmgOn;
+  S.evV8 = !!saved.evV8;
+  if (typeof saved.batt === "number") S.batt = clamp(saved.batt, 0, 1);
 
-  CC = CARS.find(c => c.id === saved.car) || CARS[1];
+  CC = swapEngineInto(CARS.find(c => c.id === saved.car) || CARS[1]);
   applyCar(CC);
   armCel();
 
@@ -6260,6 +7694,9 @@ function frame(now) {
   initInput();
   refreshWorkshop();
   $("shiftLights").classList.toggle("show", !!CC.shiftLights);
+  applyEvChrome();
+  updateIndicatorUi();
+  resetRaceSwitches();
 
   $("boostWrap").classList.toggle("hide", CC.asp === "na" || CC.asp === "ev" || CC.edrive);
   updateEdriveUi();
@@ -6272,6 +7709,8 @@ function frame(now) {
   $("speedUnitLbl").textContent = S.units === "kmh" ? "km/h" : "mph";
 
   setMode(saved.mode || "auto");
+  updateDmgUi();
+  applyBuildFromUrl();                     // "#b=…" wins over the saved car
 
   // rebuild dial faces once web fonts arrive (numerals use JetBrains Mono)
   if (document.fonts && document.fonts.ready)
