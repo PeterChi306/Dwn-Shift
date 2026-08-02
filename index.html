@@ -53,6 +53,7 @@
       <span class="chip-sep" aria-hidden="true"></span>
       <button class="chip-btn mono" id="flybyBtn" title="Trackside flyby mode (F)">FLYBY</button>
       <button class="chip-btn mono" id="tunnelBtn" title="Tunnel echo mode (T)">TUNNEL</button>
+      <button class="chip-btn mono" id="stockBtn" title="Factory stock sound — quiet, dark, no pops. How the car actually left the showroom (G)">STOCK</button>
       <span class="chip-sep" aria-hidden="true"></span>
       <button class="chip-btn mono" id="unitsBtn" title="Toggle units">KM/H</button>
       <button class="chip-btn" id="muteBtn" title="Toggle sound">
@@ -104,6 +105,8 @@
         <div class="dmg-bar" id="dmgEngine"><span>ENGINE</span><i></i></div>
         <div class="dmg-bar" id="dmgClutch"><span>CLUTCH</span><i></i></div>
         <div class="dmg-bar" id="dmgBrakes"><span>BRAKES</span><i></i></div>
+        <div class="dmg-bar dmg-level" id="dmgFuel"><span>FUEL</span><i></i></div>
+        <div class="dmg-bar dmg-level" id="dmgCharge"><span>CHARGE</span><i></i></div>
       </div>
 
       <div class="gauges">
@@ -160,12 +163,12 @@
           </div>
 
           <div class="evs-foot">
-            <div class="evs-cell evs-batt">
+            <div class="evs-cell evs-batt" id="evsBattCell">
               <label>BATTERY</label>
               <div class="evs-batt-bar"><i id="evsBattFill"></i></div>
               <span class="mono" id="evsBattPct">100%</span>
             </div>
-            <div class="evs-cell"><label>RANGE</label><span class="mono" id="evsRange">— km</span></div>
+            <div class="evs-cell" id="evsRangeCell"><label>RANGE</label><span class="mono" id="evsRange">— km</span></div>
             <div class="evs-cell"><label>MOTOR</label><span class="mono" id="evsRpm">0 rpm</span></div>
             <div class="evs-cell" id="evsBoostCell"><label>LUDICROUS</label><span class="mono" id="evsBoostVal">READY</span></div>
           </div>
@@ -612,7 +615,11 @@
         </button>
         <button class="ws-card ws-tune" id="wsDmg">
           <span class="ws-card-name">CONSEQUENCES — OFF</span>
-          <span class="ws-card-desc">Switch on and the car stops being indestructible: over-rev it and the engine lets go, slip the clutch and it glazes, lean on the brakes and they fade.</span>
+          <span class="ws-card-desc">Switch on and the car stops being indestructible: over-rev it and the engine lets go, slip the clutch and it glazes, lean on the brakes and they fade. It also starts burning fuel and charge — and running out means what it means.</span>
+        </button>
+        <button class="ws-card ws-tune hide" id="wsFuel">
+          <span class="ws-card-name">REFUEL</span>
+          <span class="ws-card-desc" id="wsFuelDesc">Bring it to a stop and fill it. Petrol wants the engine switched off; the pack will take a charge either way.</span>
         </button>
       </section>
 
@@ -633,7 +640,30 @@
       </section>
 
       <section class="bay-stn">
-        <h3 class="stn-head"><i class="stn-no">10</i>CONDITIONS<em>The world outside the roller door.</em></h3>
+        <h3 class="stn-head"><i class="stn-no">10</i>WHERE YOU LISTEN<em>Same engine. Four microphones.</em></h3>
+        <div class="ws-listen" id="wsListen">
+          <button class="ws-card" data-listen="driver">
+            <span class="ws-card-name">DRIVER'S SEAT</span>
+            <span class="ws-card-desc">How the car is voiced, and where it's meant to be heard from. The default.</span>
+          </button>
+          <button class="ws-card" data-listen="hood">
+            <span class="ws-card-name">OVER THE BONNET</span>
+            <span class="ws-card-desc">Induction roar, valve gear and turbo, right in front of you. The exhaust is fifteen feet behind your back.</span>
+          </button>
+          <button class="ws-card" data-listen="exhaust">
+            <span class="ws-card-name">AT THE TAILPIPE</span>
+            <span class="ws-card-desc">All bass and rasp, every overrun bang going off in your face, and no intake at all.</span>
+          </button>
+          <button class="ws-card" data-listen="rear">
+            <span class="ws-card-name">BACK SEAT</span>
+            <span class="ws-card-desc">Through the bulkhead and the parcel shelf. Boomy, distant, and the only place a Phantom makes sense.</span>
+          </button>
+        </div>
+        <p class="ws-swap-note" id="wsListenNote">The two outside positions don't hear the cabin at all — press <kbd>V</kbd> all you like, a tailpipe is a tailpipe.</p>
+      </section>
+
+      <section class="bay-stn">
+        <h3 class="stn-head"><i class="stn-no">11</i>CONDITIONS<em>The world outside the roller door.</em></h3>
         <div class="ws-amb">
           <button class="ws-card" id="cabinBtn">
             <span class="ws-card-name">CABIN</span>
@@ -651,7 +681,7 @@
       </section>
 
       <section class="bay-stn">
-        <h3 class="stn-head"><i class="stn-no">11</i>PAPERWORK<em>Hand the build to someone else.</em></h3>
+        <h3 class="stn-head"><i class="stn-no">12</i>PAPERWORK<em>Hand the build to someone else.</em></h3>
         <div class="ws-share">
           <button class="chip-btn mono" id="wsShare">SHARE THIS BUILD</button>
           <p class="ws-swap-note" id="wsShareNote">Copies a link that rebuilds this exact car, engine and all.</p>
@@ -874,8 +904,8 @@
 
 <div class="stall-overlay" id="stallOverlay">
   <div class="stall-card">
-    <span class="stall-title">ENGINE STALLED</span>
-    <span class="stall-body">Clutch in, then hold <b>ENGINE START</b> — or hold <kbd>I</kbd></span>
+    <span class="stall-title" id="stallTitle">ENGINE STALLED</span>
+    <span class="stall-body" id="stallBody">Clutch in, then hold <b>ENGINE START</b> — or hold <kbd>I</kbd></span>
   </div>
 </div>
 

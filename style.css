@@ -354,8 +354,15 @@ kbd {
   display: flex; flex-direction: column; align-items: center; line-height: 1;
   pointer-events: none;
 }
-.digital span { font-size: clamp(22px, 2.6vw, 30px); font-weight: 700; letter-spacing: 0.02em; }
-.digital small { font-size: 10px; color: var(--muted); letter-spacing: 0.14em; margin-top: 4px; text-transform: uppercase; }
+/* the digits sit ON the dial face, not on the panel, so they take the face's
+   own ink (--tick) rather than the page text colour. Without this a car with
+   a cream face — the T.50, the Phantom — puts near-white numerals on a
+   near-white dial and the speed simply isn't there. */
+.digital span {
+  font-size: clamp(22px, 2.6vw, 30px); font-weight: 700; letter-spacing: 0.02em;
+  color: var(--tick);
+}
+.digital small { font-size: 10px; color: var(--tick-dim); letter-spacing: 0.14em; margin-top: 4px; text-transform: uppercase; }
 
 /* F1-style shift light strip (cars with shiftLights flag) */
 .shift-lights {
@@ -386,16 +393,18 @@ kbd {
   display: flex; flex-direction: column; align-items: center; line-height: 1;
   pointer-events: none;
 }
+/* same story as .digital — this is painted on the dial, so it follows the
+   dial's accent, which applyDash() darkens on a light face */
 .gear-display span {
   font-family: var(--font-mono); font-weight: 700;
   font-size: clamp(30px, 3.4vw, 42px);
-  color: var(--accent);
+  color: var(--dial-accent, var(--accent));
   text-shadow: 0 0 14px var(--accent-glow);
   transition: transform 0.12s ease;
 }
 .gear-display span.pop { animation: gearpop 0.28s var(--ease-snap); }
 @keyframes gearpop { 0% { transform: scale(1.45); } 100% { transform: scale(1); } }
-.gear-display small { font-size: 9.5px; letter-spacing: 0.16em; color: var(--muted); margin-top: 5px; text-transform: uppercase; }
+.gear-display small { font-size: 9.5px; letter-spacing: 0.16em; color: var(--tick-dim); margin-top: 5px; text-transform: uppercase; }
 
 /* cluster footer */
 .cluster-foot {
@@ -1288,6 +1297,8 @@ body[data-theme="frost"] .pedal-pad {
 .ws-gearing { margin-top: 20px; }
 .ws-tune { width: 100%; margin-top: 20px; }
 .ws-amb { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+/* the four microphone positions — two up, two down */
+.ws-listen { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
 .ws-sub-mid { margin-top: 20px; }
 #wsShift { margin-top: 10px; }
 .ws-paddles { grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
@@ -1811,9 +1822,12 @@ body.night.tunnel .pedalbay { filter: brightness(0.78) saturate(0.85); }
 .ws-soon .ws-card-desc { display: block; }
 
 /* ---- cluster: the damage strip (only present in consequences mode) ---- */
+/* three wear gauges, plus fuel and charge on the cars that carry them — the
+   count changes with the car, so the columns divide themselves */
 .dmg-strip {
   display: none;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 8px; margin-top: 10px;
 }
 .dmg-strip.show { display: grid; }
@@ -1843,6 +1857,18 @@ body.night.tunnel .pedalbay { filter: brightness(0.78) saturate(0.85); }
 .dmg-bar.bad span { color: #e2775a; }
 .dmg-bar.bad { animation: dmgPulse 1.1s ease-in-out infinite; }
 @keyframes dmgPulse { 50% { border-color: rgba(226,76,50,0.55); } }
+
+/* fuel and charge read the other way round: the bar is what you have LEFT,
+   so a full one is the good news and the colour runs green → amber → red as
+   it empties rather than as it fills */
+.dmg-level i {
+  background: linear-gradient(90deg, rgba(120,200,140,0.20), rgba(120,200,140,0.40));
+}
+.dmg-level.warn i { background: linear-gradient(90deg, rgba(230,180,60,0.24), rgba(230,180,60,0.48)); }
+.dmg-level.bad i  { background: linear-gradient(90deg, rgba(226,76,50,0.28), rgba(226,76,50,0.60)); }
+/* mid-fill: the pump is running */
+.dmg-level.filling i { transition: width 0.3s linear; }
+.dmg-level.filling { border-color: rgba(120,200,140,0.5); }
 
 /* ---- the engine let go ---- */
 .blown-overlay .stall-title { color: #e2603f; }
@@ -2308,6 +2334,9 @@ body.ev-dash .shift-lights { display: none; }
   padding-top: 11px;
   border-top: 1px solid rgba(127, 227, 208, 0.14);
 }
+/* consequences off: this car cannot run out, so the battery and range cells
+   come off the screen entirely and the two that are left take the space */
+.evs-foot.no-batt { grid-template-columns: 1fr 1fr; }
 .evs-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .evs-cell label { font-size: 8px; font-weight: 700; letter-spacing: 0.18em; color: var(--evs-dim); }
 .evs-cell span { font-size: 12px; font-weight: 600; color: var(--evs); }
@@ -2559,3 +2588,47 @@ body.night .dp-title { color: #ffffff; text-shadow: 0 0 14px rgba(182, 255, 240,
   transition: color 0.2s ease, opacity 0.2s ease;
 }
 .tp-duck.live { color: var(--accent); opacity: 1; }
+
+/* ================================================================
+   THE DEAD DASH
+   ================================================================
+   Switched off, a car has no instruments — not dim ones, none. The lit
+   content goes; the physical objects (bezel, glass, lens, needle housing)
+   stay, because they are still there in the dark. Set in game.js by the
+   `dash-dead` body class. The transition is deliberately asymmetric: power
+   arrives in a snap, and drains a touch more slowly, the way a discharging
+   cluster actually behaves. */
+.cluster .bezel canvas,
+.cluster .digital,
+.cluster .gear-display,
+.cluster .dmg-strip,
+.cluster .shift-lights,
+.ev-screen .evs-inner,
+.ev-screen .evs-glass {
+  transition: opacity .34s ease-out, filter .34s ease-out;
+}
+body.dash-dead .cluster .bezel canvas {
+  opacity: .05;               /* the faintest ghost of the dial face */
+  filter: brightness(.3) saturate(0);
+  transition: opacity .09s ease-in, filter .09s ease-in;
+}
+body.dash-dead .cluster .digital,
+body.dash-dead .cluster .gear-display,
+body.dash-dead .cluster .dmg-strip,
+body.dash-dead .cluster .shift-lights,
+body.dash-dead .ev-screen .evs-inner,
+body.dash-dead .ev-screen .evs-glass {
+  opacity: 0;
+  transition: opacity .09s ease-in;
+}
+/* the lamps are lenses, not lights: still there, just nothing behind them */
+body.dash-dead .cluster .lamp,
+body.dash-dead .cluster .turnsig {
+  opacity: .09;
+  transition: opacity .09s ease-in;
+}
+body.dash-dead .cluster .lamp i { box-shadow: none !important; }
+
+/* the clutch interlock shaking the pedal at you — same idea as the race
+   panel: the car is not refusing, it is pointing at what you missed */
+.pedal-group.nudge { animation: rpNudge 0.3s ease; }
