@@ -312,31 +312,48 @@ const CARS = [
     id: "huayrar", name: "San Cesario R", tag: "the best-sounding car in the world", layout: "V12 · 6.0L NA · open megaphone",
     race: true,   // track-only: never had indicators to begin with
     crackle: "dry",   // open megaphones ring rather than thump
-    /* 6.0 bespoke race V12, 850hp at 8,250 and a 9,000 redline, and a
-       crankshaft with essentially nothing hanging off it. `inertia` is what
-       decides whether the car feels alive: at 0.075 a stab of throttle in
-       neutral is at the limiter in under a tenth of a second, which is the
-       actual behaviour of a race V12 with a paper-thin flywheel. Give it road
-       car inertia and the needle GLIDES, and no amount of timbre work will
-       make it feel like this car afterwards. */
-    cyl: 12, idle: 1150, max: 9000, cut: 9250, inertia: 0.075,
+    /* 6.0 bespoke race V12, 850hp at 8,250 and a 9,000 redline.
+
+       `inertia` was at 0.075 and that was wrong, in the way that "technically
+       defensible" is often wrong. Six litres of steel crank, twelve rods,
+       twenty-four valves and a clutch pack is not a superbike; a race V12 is
+       responsive relative to a ROAD V12, not relative to nothing. At 0.075
+       the needle teleported and the whole car went past before you could hear
+       any of it — and the point of this car is that you get to listen to it.
+       0.15 still crosses the range in about a third of a second, which is
+       fast enough to snap and slow enough that the climb is an EVENT with a
+       shape you can follow. */
+    cyl: 12, idle: 1150, max: 9000, cut: 9250, inertia: 0.15,
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 240, dur: 0.66, fires: 5, flare: 1.0,  flareT: 1.0 },
     /* flat from 5,500 all the way to the power peak — this is a race engine
        with individual throttle bodies, not a road V12 that gives up at seven */
     curve: [[0, 150], [1200, 340], [3000, 560], [4500, 700], [5500, 750], [7000, 752],
             [8250, 748], [9000, 700], [9600, 430]],
-    mass: 1050, finalDrive: 3.8, clutchCap: 900, cdA: 0.72, brakeMax: 16000,
+    /* 3.35 rather than 3.8: taller gearing, so each ratio is a LONG pull
+       instead of a blink. With 750Nm from 5,500 there is no need to gear it
+       short, and the trade is the whole character — the R is not a car that
+       should be through third before you have finished enjoying second. */
+    mass: 1050, finalDrive: 3.35, clutchCap: 900, cdA: 0.72, brakeMax: 16000,
     grip: 2.4,                                    // slicks + a wing you could dine on
     tire: 1.65,                                   // and slicks HOWL, they don't squeal
     asp: "na", pops: 2.4, tachMax: 10, redK: 9, kmhMax: 360, mphMax: 220,
     shiftLights: true, dial: "gear",
-    /* Non-synchronised dog ring sequential. The paddle does not change gear —
-       it starts the gear change. The dogs slam home 85ms later, and the
-       ignition is dead for that whole time. Fifty-odd milliseconds of nothing
-       followed by an abrupt return IS the upshift bang; there is no separate
-       "shift sound" doing that work. */
-    shiftLag: 0.05,
+    /* Non-synchronised dog ring sequential, and the single most important
+       number on this car.
+
+       The paddle does not change gear. It starts a mechanical sequence that
+       takes real time: the ignition dies, a selector drum rotates and drags a
+       fork across, the dogs find their windows, they SLAM into engagement,
+       and only then does the ignition come back. That is roughly a fifth of a
+       second in which the car is not driving you anywhere — and it is a fifth
+       of a second full of NOISE, not silence. The gap is the gearbox.
+
+       Which is why this is 0.135 and not the 0.05 it briefly was. Shortening
+       it to what a modern seamless box does made the R shift like a DCT, and
+       a DCT shift is precisely the thing this gearbox is not.
+       See seqShift() for the three events that fill it. */
+    shiftLag: 0.135,
     gearWhine: 7,                        // modern HWA dog ring — fine pitch, and it screams
     rawCabin: 1,                         // carbon tub, no headliner, engine on the bulkhead
     /* The track-only art piece: a bespoke 6.0 NA V12 built with HWA, breathing
@@ -380,8 +397,13 @@ const CARS = [
       // pushed up the spectrum: a megaphone is a short, wide, undamped horn,
       // so its resonances sit high and ring hard. Nothing down at 160 to find.
       formants: [[210, 1.0, 3.5], [980, 1.7, 6.5], [2500, 2.3, 7], [5000, 2.7, 8.5]],
-      loadDrive: 0.72, noiseMul: 1.45, volTrim: 1.6, scream: 4800,
-      drive: 0.88, pulseDepth: 0.13, raspMul: 1.8, hunt: 1.2,
+      // volTrim 2.0 — the highest in the garage by a distance, and it should
+      // be. This is a 6-litre V12 with open megaphones and no silencer of any
+      // kind; it is measured at 128dB. Everything else here has at least a
+      // muffler between you and it. If it isn't the loudest thing in the
+      // garage the file is lying about what the car is.
+      loadDrive: 0.72, noiseMul: 1.6, volTrim: 2.0, scream: 4800,
+      drive: 0.92, pulseDepth: 0.13, raspMul: 2.0, hunt: 1.2,
     },
   },
   {
@@ -2130,8 +2152,26 @@ function initAudio() {
 
   // flyby stage: everything passes through a distance gain + position panner
   AU.flyGain = ctx.createGain(); AU.flyGain.gain.value = 1;
+  /* DIRECTIVITY. A car is not a point source, and a trackside pass is the one
+     situation where that stops being a technicality. An engine radiates its
+     intake noise forwards out of the airbox and its exhaust noise backwards
+     out of the pipes, and those are different sounds — so as a car comes at
+     you and then leaves, you do not hear one sound Doppler-shifting. You hear
+     two, and the handover happens at the moment it passes.
+
+     Coming at you it is all induction and top end: thin, hard, screaming,
+     with the bass still travelling away from you down the road. The instant
+     it is past, four open megaphones swing round to point at you and the
+     whole thing drops into a bassy, raspy, enormous BARK. That flip is the
+     sound everybody knows from trackside footage, and it is a spectral tilt
+     plus a rebalance, not a pitch bend. See audioTick(). */
+  AU.flyLo = ctx.createBiquadFilter(); AU.flyLo.type = "lowshelf";
+  AU.flyLo.frequency.value = 260; AU.flyLo.gain.value = 0;
+  AU.flyHi = ctx.createBiquadFilter(); AU.flyHi.type = "highshelf";
+  AU.flyHi.frequency.value = 1900; AU.flyHi.gain.value = 0;
   AU.flyPan = ctx.createStereoPanner(); AU.flyPan.pan.value = 0;
-  AU.cabShelf.connect(AU.flyGain); AU.flyGain.connect(AU.flyPan);
+  AU.cabShelf.connect(AU.flyGain);
+  AU.flyGain.connect(AU.flyLo); AU.flyLo.connect(AU.flyHi); AU.flyHi.connect(AU.flyPan);
 
   // interior bus: the things that live INSIDE the car with you — the cluster
   // chimes, the warning beeps, the indicator, the seatbelt nag. These do not
@@ -3345,6 +3385,11 @@ function audioTick() {
   // flyby: true Doppler (we synthesize the frequencies, so just bend them),
   // plus distance attenuation, position pan, and air absorption
   let dop = 1, flyG = 1, flyP = 0, flyLp = 1;
+  // directivity: -1 = nose-on and coming, +1 = tailpipes-on and going.
+  // 1 (dead ahead / dead behind) at both ends, and it swings through zero
+  // over about 18m either side of the pass — which at 200km/h is a quarter
+  // of a second, and that is exactly how abrupt the handover sounds.
+  let flyDir = 0;
   if (S.flyby) {
     const d = 14, x = S.flyX, r = Math.hypot(x, d);
     const vr = flybyV() * (-x) / r;                // closing speed toward listener (boosted past 200)
@@ -3352,9 +3397,22 @@ function audioTick() {
     flyG = clamp(22 / r, 0.12, 1.5);
     flyP = clamp(x / 70, -0.95, 0.95);
     flyLp = clamp(26 / r, 0.45, 1);
+    flyDir = clamp(x / 18, -1, 1);
   }
   AU.flyGain.gain.setTargetAtTime(flyG, t, 0.08);
   AU.flyPan.pan.setTargetAtTime(flyP, t, 0.08);
+  /* The spectral half of the handover. Approaching, the bottom end is
+     literally pointed away from you and has to diffract round the car to
+     arrive at all, so it is DOWN, and the induction top is up. Once it's
+     past, the pipes are aimed straight at your chest and it inverts. The
+     tilt is deliberately big — 9dB either way — because on real trackside
+     audio the difference between the two halves of a pass is enormous. */
+  AU.flyLo.gain.setTargetAtTime(flyDir * 9, t, 0.05);
+  AU.flyHi.gain.setTargetAtTime(-flyDir * 6, t, 0.05);
+  // …and the level half. Intake noise leaves the front of the car, exhaust
+  // and every overrun bang leave the back, so they swap places as it goes by.
+  const dirIntake = S.flyby ? 1 - flyDir * 0.7 : 1;
+  const dirEx     = S.flyby ? 1 + flyDir * 0.85 : 1;
 
   // firing freq × per-car octave drop (f0Mul) × pitch mod × Doppler
   const cm = curMod();
@@ -3440,7 +3498,7 @@ function audioTick() {
   AU.raspBp.frequency.setTargetAtTime(clamp(f0 * 1.5, 90, 5500), t, k);
   AU.raspG.gain.setTargetAtTime(
     running && !mute ? (0.02 + load * 0.10 + rFrac * 0.03) * (VC.sound.raspMul || 1) * (1 + (ex.raspAdd || 0))
-                     * hE * P.pop * (stockOn() ? STOCK.rasp : 1) : 0,
+                     * hE * P.pop * dirEx * (stockOn() ? STOCK.rasp : 1) : 0,
     t, k);
   // "scream" opens the filter with revs alone — the intake howl waking up.
   // The filter follows the VOICE, not the tacho: a car voiced an octave down
@@ -3458,7 +3516,7 @@ function audioTick() {
 
   // induction noise: the thing you're standing in front of over the bonnet,
   // and the thing you cannot hear at all from the tailpipe
-  const nMul = (VC.sound.noiseMul || 1) * P.intake;
+  const nMul = (VC.sound.noiseMul || 1) * P.intake * dirIntake;
   const boostHiss = CC.asp === "turbo" ? S.boost * 0.09 * P.turbo : 0;
   // On a naturally aspirated engine with open trumpets there is no turbo to
   // whoosh, and induction roar takes its place — but it does not track revs
@@ -3471,6 +3529,10 @@ function audioTick() {
   AU.nGain.gain.setTargetAtTime(
     running && !mute ? (load * 0.10 * il + rpm / 90000) * nMul + boostHiss : 0, t, k);
   AU.nbp.frequency.setTargetAtTime(500 + rpm * 0.35, t, k);
+  // every overrun bang goes off in the pipes, so on a flyby the pops belong
+  // almost entirely to the second half of the pass. (applyListen() sets this
+  // too, for the case where the audio tick isn't running.)
+  AU.popBus.gain.setTargetAtTime(1.35 * P.pop * dirEx, t, 0.05);
 
   // forced-induction whine
   let wf = 800, wg = 0, scg = 0, w2f = 1400, w2g = 0, tbF = 1400, tbG = 0, chopHz = 15, chopG = 0;
@@ -3842,6 +3904,44 @@ function loadPshift() {
 /* dog-ring engagement — NOT the paddle, the GEARBOX: a hard steel CLACK as
    the dogs slam into the next ratio, a dense mechanical thud through the
    chassis, and a brief straight-cut zing */
+/* THE MIDDLE OF THE SHIFT — the sound inside the gap.
+
+   Between the ignition dying and the dogs landing, a barrel-shaped selector
+   drum rotates a few degrees and its track drags a shift fork sideways,
+   sliding a splined ring along a shaft. All of it happens inside a magnesium
+   case full of hot oil, an arm's length behind your head.
+
+   So it is NOT a click. It is a short, dull, slightly gritty shunt with no
+   transient worth speaking of — steel sliding on steel through oil film,
+   heard through a case wall. Two components and no ring at all: a band of
+   filtered noise that swells and stops (the drag), and a soft low shunt (the
+   fork reaching the end of its travel). If you can pick it out as a separate
+   sound effect it is too loud; you should only notice that the pause has
+   something happening in it. */
+function sfxDogSelect(strength = 1) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  // the ring dragging across the splines — gritty, mid, and gone in 40ms
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 0.85;
+  const f = ctx.createBiquadFilter(); f.type = "bandpass";
+  f.frequency.setValueAtTime(760, t);
+  f.frequency.linearRampToValueAtTime(1250, t + 0.04);   // it speeds up as it goes
+  f.Q.value = 1.5;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.001, t);
+  g.gain.linearRampToValueAtTime(0.3 * strength, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+  n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t); n.stop(t + 0.06);
+  // the fork arriving at the end of the track — felt more than heard
+  const o = ctx.createOscillator(); o.type = "sine";
+  o.frequency.setValueAtTime(260, t + 0.022);
+  o.frequency.exponentialRampToValueAtTime(110, t + 0.075);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.22 * strength, t + 0.022);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.085);
+  o.connect(og); og.connect(AU.sfx); o.start(t + 0.022); o.stop(t + 0.1);
+}
+
 function sfxDogEngage(strength = 1) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime;
@@ -7536,17 +7636,32 @@ function seqShift(dir) {
     // the seamless twin-clutches. See mechBox.
     const dog = !!(CC.race || CC.gearWhine || CC.mechBox);
     sfxShift(0.75);                      // paddle in — command registered
+
     /* A race dog box genuinely stops the drive; a road single-clutch just
        opens a clutch and closes it again, and is far quicker about it.
 
-       The dead time on a dog ring is SHORT and it is the whole upshift sound.
-       The ECU kills the ignition, the ring slides across while nothing is
-       driving it, the dogs land, and the ignition comes back — all inside
-       about a tenth of a second. It used to sit at 180ms on top of the lag,
-       which is a quarter of a second of silence per gear; that reads as a
-       stumble rather than a shift. Fifty milliseconds of nothing followed by
-       an abrupt return is the bang, and it costs nothing to get right. */
-    S.shiftCut = ((CC.race || CC.gearWhine) ? 0.05 : CC.mechBox ? 0.085 : 0.10) + lag;
+       The dead time on a dog ring is not a gap in the sound. It is the part
+       of the shift you actually hear, and it has THREE events in it, not one:
+
+         1. the ignition dies         — the note stops dead, mid-note
+         2. the selector moves        — a drum rotates, a fork drags a ring
+                                        across its splines. Muffled, metallic,
+                                        happening inside a case full of oil.
+         3. the dogs SLAM             — steel finding steel at a few thousand
+                                        rpm of relative speed, and then the
+                                        ignition comes back on top of it
+
+       Firing only 1 and 3 gives you a hole with a bang on the end, and the
+       shift reads as a dropout rather than as machinery. Event 2 is the whole
+       difference, and it costs one scheduled sound. */
+    S.shiftCut = ((CC.race || CC.gearWhine) ? 0.075 : CC.mechBox ? 0.085 : 0.10) + lag;
+    // the selector, roughly halfway through the gap — only on the boxes that
+    // physically have one. A twin-clutch has nothing to drag anywhere.
+    if (dog && lag > 0.07) {
+      setTimeout(() => {
+        if (CC.id === car && S.mode === "manual") sfxDogSelect(0.85);
+      }, lag * 0.42 * 1000);
+    }
     setTimeout(() => {
       S.pendShift = false;
       if (CC.id !== car || S.mode !== "manual") return;
