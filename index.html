@@ -282,8 +282,8 @@
       <div class="seq-panel" id="seqPanel">
         <div class="seq-viz" id="seqViz"></div>
         <div class="seq-keys">
-          <div class="seq-key"><kbd>Q</kbd><span>shift down</span></div>
-          <div class="seq-key"><kbd>E</kbd><span>shift up</span></div>
+          <button type="button" class="seq-key" data-seq="-1"><kbd>Q</kbd><span>shift down</span></button>
+          <button type="button" class="seq-key" data-seq="1"><kbd>E</kbd><span>shift up</span></button>
         </div>
       </div>
 
@@ -612,6 +612,10 @@
         <button class="ws-card ws-tune" id="wsAids">
           <span class="ws-card-name">DRIVER AIDS — ON</span>
           <span class="ws-card-desc">ABS + traction control. Switch off for wheelspin, flaring revs and brake lockups.</span>
+        </button>
+        <button class="ws-card ws-tune" id="wsGrip">
+          <span class="ws-card-name">GRIP — OFF</span>
+          <span class="ws-card-desc">Unobtainium rubber. Switch on and the tires simply never let go: no wheelspin off the line, no lit rear end out of a gear, no locked wheels under the brakes — whatever the car, whatever the weather.</span>
         </button>
         <button class="ws-card ws-tune" id="wsDmg">
           <span class="ws-card-name">CONSEQUENCES — OFF</span>

@@ -1403,6 +1403,7 @@ function curMod() {
   if (m.flameSize === undefined) m.flameSize = 1;
   if (m.tune === undefined) m.tune = false;
   if (m.abs === undefined) m.abs = true;
+  if (m.grip === undefined) m.grip = false;    // the workshop's infinite-grip cheat
   if (m.shift === undefined) m.shift = "stock";
   if (m.paddle === undefined) m.paddle = "carbon";  // default = the real recorded click
   if (!EXHAUSTS[m.ex]) m.ex = "stock";     // repair saves hit by the old card bug
@@ -3084,8 +3085,14 @@ function audioTick() {
     boxHz = Math.min(9000, f0 * CC.gearWhine) * dop;
     boxLvl = (0.01 + load * 0.055 + (load < 0.15 && Math.abs(S.v) > 3 ? 0.036 : 0))
            * Math.pow(rFrac, 1.2);
-    // sealing yourself in with it is the loudest it ever gets
-    boxMul = insideEar() ? (inCabin() ? 4.2 : 2.6) : 0.45;
+    // Sealing yourself in with it is the loudest it ever gets — and how loud
+    // that is depends on how modern the box is. An old coarse-pitch dog box
+    // grumbles; a current LMH/GT3 set is fine-pitch and geared up, so its
+    // mesh frequency lands right in the band the tub radiates best and the
+    // cabin fills with that flat electric EEEEE over everything else.
+    // gearWhine is the mesh ratio, so it doubles as "how new is this box".
+    const modern = clamp((CC.gearWhine - 6) / 3, 0, 1);
+    boxMul = insideEar() ? (inCabin() ? 6 + 3 * modern : 3.2 + 1.2 * modern) : 0.45;
   } else if (running && CC.fan) {
     // the ground-effect fan: a 48V turbine behind your head. A smooth whoosh
     // that builds with speed — and steps up HARD when braking mode sucks the
@@ -3269,22 +3276,22 @@ function sfxWiper(dir) {
   th.connect(tg); tg.connect(AU.sfx); th.start(t + dur); th.stop(t + dur + 0.12);
 }
 
-function sfxClunk(strength = 1) {
+function sfxClunk(strength = 1, out) {
   if (!AU.ready) return;
-  const ctx = AU.ctx, t = ctx.currentTime;
+  const ctx = AU.ctx, t = ctx.currentTime, dest = out || AU.sfx;
   const o = ctx.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(95, t);
   o.frequency.exponentialRampToValueAtTime(40, t + 0.09);
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.5 * strength, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-  o.connect(g); g.connect(AU.sfx); o.start(t); o.stop(t + 0.14);
+  o.connect(g); g.connect(dest); o.start(t); o.stop(t + 0.14);
 
   const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
   const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 700;
   const ng = ctx.createGain();
   ng.gain.setValueAtTime(0.28 * strength, t);
   ng.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-  n.connect(f); f.connect(ng); ng.connect(AU.sfx); n.start(t); n.stop(t + 0.08);
+  n.connect(f); f.connect(ng); ng.connect(dest); n.start(t); n.stop(t + 0.08);
 }
 
 /* every gear change routes through the workshop's shifter-feel choice —
@@ -3298,10 +3305,19 @@ function sfxShift(strength = 1) {
     /* stock = silent — no click at all */
     return;
   }
-  const s = curMod().shift;
-  if (s === "click") sfxShiftClick(strength);
-  else if (s === "metal") sfxShiftMetal(strength);
-  else sfxClunk(strength);
+  /* The lever is not out on the road with the exhaust — it is eighteen inches
+     from your elbow, bolted through the tunnel you are sitting on. So it rides
+     the interior bus with the chimes and the stalk: it skips the windows-up
+     filter entirely, and sealing yourself in the car makes it LOUDER and
+     closer rather than duller, exactly the way it does in real life. From
+     outside, all you get is a muffled knock through the bodywork.
+     (1.7 keeps the outdoor level roughly where it has always been, since the
+      interior bus sits at 0.55 out there and 1.55 in here.) */
+  const s = curMod().shift, bus = AU.inner || AU.sfx;
+  strength *= 1.7;
+  if (s === "click") sfxShiftClick(strength, bus);
+  else if (s === "metal") sfxShiftMetal(strength, bus);
+  else sfxClunk(strength, bus);
 }
 
 /* ---- paddle-shifter voices (manual mode) ---- */
@@ -3500,16 +3516,16 @@ function sfxPaddleMetal(strength = 1) {
 
 /* crisp mechanical detent — "k-CHK", a short-shifter with a tight spring:
    release click, engage clack, and a small knuckle thump underneath */
-function sfxShiftClick(strength = 1) {
+function sfxShiftClick(strength = 1, out) {
   if (!AU.ready) return;
-  const ctx = AU.ctx, t = ctx.currentTime;
+  const ctx = AU.ctx, t = ctx.currentTime, dest = out || AU.sfx;
   [[0, 2600, 0.20], [0.045, 1700, 0.46]].forEach(([dt, hz, amp]) => {
     const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.6;
     const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = hz; f.Q.value = 2.2;
     const g = ctx.createGain();
     g.gain.setValueAtTime(amp * strength, t + dt);
     g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.045);
-    n.connect(f); f.connect(g); g.connect(AU.sfx);
+    n.connect(f); f.connect(g); g.connect(dest);
     n.start(t + dt); n.stop(t + dt + 0.06);
   });
   const o = ctx.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(180, t + 0.045);
@@ -3517,34 +3533,34 @@ function sfxShiftClick(strength = 1) {
   const og = ctx.createGain();
   og.gain.setValueAtTime(0.2 * strength, t + 0.045);
   og.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
-  o.connect(og); og.connect(AU.sfx); o.start(t + 0.045); o.stop(t + 0.13);
+  o.connect(og); og.connect(dest); o.start(t + 0.045); o.stop(t + 0.13);
 }
 
 /* open-gate metal snick — the ball knob through an exposed gate: a bright
    tick, the gate plate ringing (two detuned partials), and the lever's clack */
-function sfxShiftMetal(strength = 1) {
+function sfxShiftMetal(strength = 1, out) {
   if (!AU.ready) return;
-  const ctx = AU.ctx, t = ctx.currentTime;
+  const ctx = AU.ctx, t = ctx.currentTime, dest = out || AU.sfx;
   const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 2;
   const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 2800;
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.45 * strength, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-  n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t); n.stop(t + 0.07);
+  n.connect(f); f.connect(g); g.connect(dest); n.start(t); n.stop(t + 0.07);
   [[3150, 0.085], [4680, 0.05]].forEach(([hz, amp]) => {
     const o = ctx.createOscillator(); o.type = "sine";
     o.frequency.value = hz * (0.98 + Math.random() * 0.04);
     const og = ctx.createGain();
     og.gain.setValueAtTime(amp * strength, t + 0.01);
     og.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-    o.connect(og); og.connect(AU.sfx); o.start(t + 0.01); o.stop(t + 0.25);
+    o.connect(og); og.connect(dest); o.start(t + 0.01); o.stop(t + 0.25);
   });
   const o2 = ctx.createOscillator(); o2.type = "sine"; o2.frequency.setValueAtTime(140, t);
   o2.frequency.exponentialRampToValueAtTime(60, t + 0.07);
   const g2 = ctx.createGain();
   g2.gain.setValueAtTime(0.28 * strength, t);
   g2.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-  o2.connect(g2); g2.connect(AU.sfx); o2.start(t); o2.stop(t + 0.11);
+  o2.connect(g2); g2.connect(dest); o2.start(t); o2.stop(t + 0.11);
 }
 
 /* the starter button itself: a proper tactile switch. A crisp plastic tick as
@@ -5250,7 +5266,10 @@ function stepPhysics(dt) {
 
   // driver aids: with them off, hard braking locks the wheels
   const aidsOff = curMod().abs === false;
-  S.lockup = aidsOff && S.brake > 0.9 && Math.abs(S.v) > 6;
+  // GRIP: the workshop's cheat tire. Not more grip — ALL the grip. Nothing
+  // ever breaks traction at either end, so the brakes never lock either.
+  const gripLock = curMod().grip === true;
+  S.lockup = aidsOff && !gripLock && S.brake > 0.9 && Math.abs(S.v) > 6;
   // brake pedal isn't grabby off the top: a soft-shaped curve means light
   // pressure trails the car gently and only a firm push delivers full stopping
   // power (real pedal feel, not an on/off switch)
@@ -5342,7 +5361,7 @@ function stepPhysics(dt) {
                  through the gearing, and in first that reflected inertia
                  dwarfs the wheels themselves. It's why first gear lights up
                  slowly and progressively while third snaps.  */
-  const spun = evNow || (S.gear !== 0 && S.gear !== "R");
+  const spun = !gripLock && (evNow || (S.gear !== 0 && S.gear !== "R"));
   const gripCoef = aidsOff ? 0.345 : 0.42;   // no TC modulation → less usable grip
   // Weight transfer. A rear-drive car LIVES on this — full throttle plants it
   // on the axle that's doing the work, and that's the whole difference
@@ -5405,6 +5424,7 @@ function stepPhysics(dt) {
     }
   } else {
     S.spinV = Math.max(0, S.spinV - 12 * dt);
+    S.tcCut = 0;                             // nothing slipping, nothing to cut
   }
   S.slipR = sRatio;
   S.tracF = Math.max(0, driveF);             // what pitches the car next frame
@@ -7863,6 +7883,13 @@ function buildWorkshop() {
     sfxClunk(0.4);
     save();
   });
+  $("wsGrip").addEventListener("click", () => {
+    curMod().grip = !curMod().grip;
+    S.spinV = 0; S.slipR = 0; S.tcCut = 0; S.lockup = false;
+    refreshWorkshop();
+    sfxClunk(0.4);
+    save();
+  });
   $("wsLtTgt").addEventListener("input", () => {
     S.ltTgt[S.units] = parseInt($("wsLtTgt").value, 10);
     $("wsLtVal").textContent = ltLabel();
@@ -7964,12 +7991,16 @@ function refreshWorkshop() {
   $("wsAids").classList.toggle("on", aidsOn);
   $("wsAids").querySelector(".ws-card-name").textContent =
     "DRIVER AIDS — " + (aidsOn ? "ON" : "OFF");
+  const gripOn = curMod().grip === true;
+  $("wsGrip").classList.toggle("on", gripOn);
+  $("wsGrip").querySelector(".ws-card-name").textContent =
+    "GRIP — " + (gripOn ? "ON" : "OFF");
   $("modBtn").classList.toggle("on",
     curMod().ex !== "stock" || curMod().pitch !== 1 || curMod().gear !== 1 ||
     curMod().vol !== 1 || curMod().tone !== 0 || curMod().pop !== 1 ||
     curMod().flame !== "auto" || curMod().flameSize !== 1 || curMod().swap ||
-    curMod().rev !== 1 || curMod().tune || !aidsOn || curMod().shift !== "stock" ||
-    curMod().paddle !== "stock");
+    curMod().rev !== 1 || curMod().tune || !aidsOn || gripOn ||
+    curMod().shift !== "stock" || curMod().paddle !== "stock");
 }
 
 /* the engine-swap dropdown: every engine in the garage, grouped so the stock
@@ -8789,6 +8820,7 @@ function applyBuildFromUrl() {
   num("pop", 0, 2); num("flameSize", 0, 2); num("gear", 0.7, 1.3); num("rev", 0.5, 3);
   m2.tune = !!src.tune;
   m2.abs = src.abs !== false;
+  m2.grip = src.grip === true;
 
   S.mods[data.car] = m2;
   selectCar(data.car);
@@ -8817,6 +8849,7 @@ function openSpecCard() {
     ["REV SPEED", fmtRev(curMod().rev)],
     ["TUNE", curMod().tune ? "race flash" : "stock"],
     ["AIDS", curMod().abs === false ? "off" : "on"],
+    ["GRIP", curMod().grip ? "unlimited" : "as delivered"],
   ];
   $("scSpecs").innerHTML = rows
     .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
@@ -9127,6 +9160,17 @@ function initInput() {
       sfxClunk(0.5);
       flashGear();
       document.querySelectorAll(".prnd button").forEach(x => x.classList.toggle("on", x === b));
+    });
+  });
+
+  /* the two sequential keys are real buttons — clicking them shifts exactly
+     as Q and E do, so a mouse or a phone can drive the box too */
+  document.querySelectorAll(".seq-key").forEach(b => {
+    b.addEventListener("click", () => {
+      initAudio();
+      if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+      const dir = +b.dataset.seq;
+      if (S.mode === "clutch") kbSeqGate(dir); else seqShift(dir);
     });
   });
 

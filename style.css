@@ -823,7 +823,12 @@ kbd {
   border: 1px solid var(--edge);
   background: linear-gradient(180deg, var(--panel-hi), var(--panel-lo));
   box-shadow: inset 0 1px 0 var(--edge-hi);
+  font: inherit; color: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.06s ease, border-color 0.15s ease;
 }
+.seq-key:hover { border-color: var(--accent); }
+.seq-key:active { transform: translateY(1px); background: var(--accent-soft); }
 .seq-key kbd { font-size: 13px; padding: 4px 12px 5px; }
 .seq-key span { font-size: 9.5px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
 .seq-key.flash { background: var(--accent-soft); }
