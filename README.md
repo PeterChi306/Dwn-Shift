@@ -43,7 +43,7 @@ that's where all the useful control is.
 Not every car starts the same way.
 
 - **Most cars** — hold the button.
-- **Sant'Agata cars** (SVJ, V10 Evo, Revuelto) — flip the red cover first,
+- **Sant'Agata cars** (SVJ, V10 Evo, Revuelto, Urus) — flip the red cover first,
   then hold. It drops back down over the running engine, so it has to come
   up again before you can switch off.
 - **Two-stage cars** (SVJ, 458, and the older stuff) — one press wakes the
