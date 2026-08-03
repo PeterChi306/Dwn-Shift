@@ -1313,6 +1313,7 @@ body[data-theme="frost"] .pedal-pad {
 @media (max-width: 540px) { .ws-flames { grid-template-columns: 1fr; } }
 @media (max-width: 540px) { .ws-paddles { grid-template-columns: 1fr; } }
 @media (max-width: 540px) { .ws-amb { grid-template-columns: 1fr; } }
+@media (max-width: 540px) { .ws-listen { grid-template-columns: 1fr; } }
 
 .ws-pitch-scale {
   display: flex; justify-content: space-between;
@@ -2152,6 +2153,31 @@ body[data-theme="frost"] .bay-lights i {
 .stn-split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 @media (max-width: 760px) { .stn-split { grid-template-columns: 1fr; } }
 
+/* ---- keyboard focus ----
+   One ring, everywhere, and only for keyboard users. :focus-visible means a
+   mouse click never draws it, so this costs the pointer experience nothing
+   and gives the keyboard one back — previously you could tab through the
+   entire workshop and never see where you were. It sits OUTSIDE the control
+   (offset) so it reads on both the round road-car panels and the square
+   tool-drawer fronts in the bay without either needing its own version. */
+.ws-card:focus-visible,
+.chip-btn:focus-visible,
+.car-chip:focus-visible,
+.seq-key:focus-visible,
+.prnd button:focus-visible,
+.ws-close:focus-visible,
+.ignition:focus-visible,
+.cc-edit:focus-visible,
+.hu-row input:focus-visible,
+.st-name:focus-visible,
+.ws-pitch input[type="range"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+/* the range thumb is the thing you actually move, so the ring goes round the
+   whole track rather than round a 6px bar nobody can see */
+.ws-pitch input[type="range"]:focus-visible { outline-offset: 4px; }
+
 /* ---- controls, re-tuned for the bench ----
    The stacked-panel margins these carried in the old scrolling list would
    fight the grid, so inside a station spacing is uniform and local. */
@@ -2159,6 +2185,7 @@ body[data-theme="frost"] .bay-lights i {
 .stn-split > div > * + * { margin-top: 14px; }
 .bay-stn .ws-exhausts,
 .bay-stn .ws-amb,
+.bay-stn .ws-listen,
 .bay-stn .ws-pitch,
 .bay-stn .ws-tune,
 .bay-stn .ws-swap,
@@ -2167,6 +2194,7 @@ body[data-theme="frost"] .bay-lights i {
 .bay-stn .ws-gearing { margin: 0; }
 .bay-stn > * + .ws-exhausts,
 .bay-stn > * + .ws-amb,
+.bay-stn > * + .ws-listen,
 .bay-stn > * + .ws-pitch,
 .bay-stn > * + .ws-tune,
 .bay-stn > * + .ws-swap,
@@ -2174,6 +2202,7 @@ body[data-theme="frost"] .bay-lights i {
 .bay-stn > * + .ws-soon { margin-top: 14px; }
 .bay-stn .ws-exhausts { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
 .bay-stn .ws-amb { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.bay-stn .ws-listen { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
 .bay-stn .ws-flames { grid-template-columns: 1fr 1fr; }
 .bay-stn .ws-flames .ws-card:first-child { grid-column: 1 / -1; }
 .bay-stn .ws-tune { width: 100%; }

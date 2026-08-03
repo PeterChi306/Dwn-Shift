@@ -2188,6 +2188,50 @@ function initAudio() {
   AU.dry = ctx.createGain(); AU.dry.gain.value = 1;
   AU.flyPan.connect(AU.dry); AU.dry.connect(AU.comp);
 
+  /* ================= THE WET SEND =================
+     What is allowed to echo, and it is a short list: the engine.
+
+     This used to tap the whole mix, one node upstream, which meant a tunnel
+     echoed the indicator, the seatbelt chime, the wipers, the rain, the
+     traffic and the cassette deck along with the car. That is not what a
+     tunnel does. A tunnel is a hard surface reflecting the loudest thing
+     near it back at you, and next to a running engine nothing else in this
+     simulator is remotely loud enough to come back off a wall.
+
+     It is also the difference between "the reverb is on" and "the car is in
+     a tunnel". Reverberating the interface sounds is exactly what makes an
+     effect audible AS an effect: the click you just made with your finger
+     should not have a tail on it, because it did not happen in the tunnel,
+     it happened in your car — or in your browser.
+
+     So: the engine voice, the things bolted to the engine that sing with it
+     (turbo, blower, induction, straight-cut gearbox), and the exhaust bangs,
+     which get their own hotter send further down because a gunshot off
+     concrete is the entire reason to drive into one. Nothing else. */
+  AU.wetSend = ctx.createGain(); AU.wetSend.gain.value = 1;
+
+  /* …and the way back in. The send is tapped off the raw engine, BEFORE the
+     windows-up filter, because that is the truth of it: the noise that goes
+     out to hit the wall left through the exhaust, not through the glass. But
+     what comes BACK has to get into the car, and it gets in the same way
+     everything else does. Without this the tunnel tail is brighter than the
+     engine making it, which sounds like a reverb sitting on top of the mix
+     rather than like a wall thirty feet away. Mirrors applyCabin(). */
+  AU.wetOut = ctx.createGain(); AU.wetOut.gain.value = 1;
+  AU.wetCabLp = ctx.createBiquadFilter(); AU.wetCabLp.type = "lowpass";
+  AU.wetCabLp.frequency.value = 20000; AU.wetCabLp.Q.value = 0.7;
+  AU.wetCabShelf = ctx.createBiquadFilter(); AU.wetCabShelf.type = "lowshelf";
+  AU.wetCabShelf.frequency.value = 110; AU.wetCabShelf.gain.value = 0;
+  AU.wetOut.connect(AU.wetCabLp); AU.wetCabLp.connect(AU.wetCabShelf);
+  AU.wetCabShelf.connect(AU.comp);
+
+  /* the engine's own machinery bus. These are not sound effects — they are
+     the engine making noise through a different hole, so they belong on the
+     wet send with it rather than with the door clicks. Reaches the room the
+     ordinary way as well; see the AU.sfx comment below for the difference. */
+  AU.engMech = ctx.createGain(); AU.engMech.gain.value = 1;
+  AU.engMech.connect(AU.master); AU.engMech.connect(AU.wetSend);
+
   AU.conv = ctx.createConvolver(); AU.conv.buffer = makeTunnelIR(ctx);
   AU.wet = ctx.createGain(); AU.wet.gain.value = 0;
   // the tube's own voice, on the wet path only: concrete has an axial mode
@@ -2201,16 +2245,16 @@ function initAudio() {
   AU.tunLp.frequency.value = 5200; AU.tunLp.Q.value = 0.6;
   AU.tunHp = ctx.createBiquadFilter(); AU.tunHp.type = "highpass";
   AU.tunHp.frequency.value = 55; AU.tunHp.Q.value = 0.7;   // no sub-bass mud in the tail
-  AU.flyPan.connect(AU.conv);
+  AU.wetSend.connect(AU.conv);
   AU.conv.connect(AU.tunHp); AU.tunHp.connect(AU.tunLo); AU.tunLo.connect(AU.tunLp);
-  AU.tunLp.connect(AU.wet); AU.wet.connect(AU.comp);
+  AU.tunLp.connect(AU.wet); AU.wet.connect(AU.wetOut);
 
   AU.echo = ctx.createDelay(0.6); AU.echo.delayTime.value = 0.24;
   AU.echoFb = ctx.createGain(); AU.echoFb.gain.value = 0.46;
   AU.echoWet = ctx.createGain(); AU.echoWet.gain.value = 0;
-  AU.flyPan.connect(AU.echo);
+  AU.wetSend.connect(AU.echo);
   AU.echo.connect(AU.echoFb); AU.echoFb.connect(AU.echo);
-  AU.echo.connect(AU.echoWet); AU.echoWet.connect(AU.comp);
+  AU.echo.connect(AU.echoWet); AU.echoWet.connect(AU.wetOut);
 
   /* the SPACE: a second, parallel version of all of the above for the place
      you are driving rather than for the tunnel you occasionally enter. It
@@ -2226,16 +2270,16 @@ function initAudio() {
   AU.spHp = ctx.createBiquadFilter(); AU.spHp.type = "highpass";
   AU.spHp.frequency.value = 90; AU.spHp.Q.value = 0.7;   // outdoors keeps no sub
   AU.spWet = ctx.createGain(); AU.spWet.gain.value = 0;
-  AU.flyPan.connect(AU.spConv);
+  AU.wetSend.connect(AU.spConv);
   AU.spConv.connect(AU.spHp); AU.spHp.connect(AU.spLo); AU.spLo.connect(AU.spLp);
-  AU.spLp.connect(AU.spWet); AU.spWet.connect(AU.comp);
+  AU.spLp.connect(AU.spWet); AU.spWet.connect(AU.wetOut);
 
   AU.spEcho = ctx.createDelay(0.6); AU.spEcho.delayTime.value = 0.1;
   AU.spFb = ctx.createGain(); AU.spFb.gain.value = 0;
   AU.spEchoWet = ctx.createGain(); AU.spEchoWet.gain.value = 0;
-  AU.flyPan.connect(AU.spEcho);
+  AU.wetSend.connect(AU.spEcho);
   AU.spEcho.connect(AU.spFb); AU.spFb.connect(AU.spEcho);
-  AU.spEcho.connect(AU.spEchoWet); AU.spEchoWet.connect(AU.comp);
+  AU.spEcho.connect(AU.spEchoWet); AU.spEchoWet.connect(AU.wetOut);
 
   // pop bus: pops take the normal path PLUS their own hot sends into the
   // reverb and echo, so gunshot crackle rings down the tunnel harder than
@@ -2251,20 +2295,18 @@ function initAudio() {
   AU.popSp = ctx.createGain(); AU.popSp.gain.value = 0.8;
   AU.popBus.connect(AU.popSp); AU.popSp.connect(AU.spConv); AU.popSp.connect(AU.spEcho);
 
-  // sfx bus: EVERY one-shot component sound (doors, indicators, wipers,
-  // starters, horns, clunks, chimes, gunshots off the traffic…) rides this.
-  // It reaches the room the normal way through the master, PLUS its own hot
-  // sends into the convolver and the slap delay — without those, a 60ms door
-  // click puts almost nothing into a 3.4s tail and the tunnel sounds like it
-  // only echoes the engine. Now the whole car rings down the concrete.
+  /* sfx bus: EVERY one-shot component sound — doors, indicators, wipers,
+     starters, clunks, the shifter, the tyres, the rain spray. Dry, always.
+
+     These used to have hot sends into the convolver and the slap delay on
+     the theory that "the whole car should ring down the concrete". It is a
+     nice theory and it is wrong: an indicator relay is a 3cm plastic part
+     under the dashboard making about as much noise as a fingernail, and
+     putting a three-second concrete tail on it does not make the tunnel more
+     convincing, it makes the tunnel sound like a plugin. Real tunnel
+     recordings have exactly one thing echoing in them. */
   AU.sfx = ctx.createGain(); AU.sfx.gain.value = 1;
   AU.sfx.connect(AU.master);
-  AU.sfxRev = ctx.createGain(); AU.sfxRev.gain.value = 0;
-  AU.sfx.connect(AU.sfxRev); AU.sfxRev.connect(AU.conv);
-  AU.sfxEcho = ctx.createGain(); AU.sfxEcho.gain.value = 0;
-  AU.sfx.connect(AU.sfxEcho); AU.sfxEcho.connect(AU.echo);
-  AU.sfxSp = ctx.createGain(); AU.sfxSp.gain.value = 0.5;
-  AU.sfx.connect(AU.sfxSp); AU.sfxSp.connect(AU.spConv);
 
   // --- engine voice chain: (per-car oscillators) → soft clip → lowpass ---
   AU.engGain = ctx.createGain(); AU.engGain.gain.value = 0;
@@ -2334,6 +2376,7 @@ function initAudio() {
   AU.wDelay = ctx.createDelay(0.05); AU.wDelay.delayTime.value = 0.013;
   AU.posLp.connect(AU.panL); AU.panL.connect(AU.master);
   AU.posLp.connect(AU.wDelay); AU.wDelay.connect(AU.panR); AU.panR.connect(AU.master);
+  AU.posLp.connect(AU.wetSend);          // …and this is the thing that echoes
   AU.oscs = [];
 
   // --- the real thing: one blast per cylinder, at that engine's crank
@@ -2367,13 +2410,13 @@ function initAudio() {
   // --- turbo whistle / supercharger gear whine ---
   AU.whine = ctx.createOscillator(); AU.whine.type = "sine"; AU.whine.frequency.value = 800;
   AU.whineG = ctx.createGain(); AU.whineG.gain.value = 0;
-  AU.whine.connect(AU.whineG); AU.whineG.connect(AU.sfx); AU.whine.start();
+  AU.whine.connect(AU.whineG); AU.whineG.connect(AU.engMech); AU.whine.start();
 
   // second whistle for sequential setups — the high-rpm pair sings its own,
   // higher note that fades in as stage two comes online
   AU.whine2 = ctx.createOscillator(); AU.whine2.type = "sine"; AU.whine2.frequency.value = 1200;
   AU.whine2G = ctx.createGain(); AU.whine2G.gain.value = 0;
-  AU.whine2.connect(AU.whine2G); AU.whine2G.connect(AU.sfx); AU.whine2.start();
+  AU.whine2.connect(AU.whine2G); AU.whine2G.connect(AU.engMech); AU.whine2.start();
 
   // whistle modulation: chops a big single's whistle into "zu-zu-zu" under
   // boost, and pulses the blower whine into "yiii-yiii" at the top of the tach
@@ -2387,7 +2430,7 @@ function initAudio() {
   AU.scHp = ctx.createBiquadFilter(); AU.scHp.type = "highpass";
   AU.scHp.frequency.value = 900; AU.scHp.Q.value = 0.7;
   AU.blowG = ctx.createGain(); AU.blowG.gain.value = 0;
-  AU.scHp.connect(AU.blowG); AU.blowG.connect(AU.sfx);
+  AU.scHp.connect(AU.blowG); AU.blowG.connect(AU.engMech);
   AU.scOscs = [["sawtooth", 1, 0.5], ["sawtooth", 1.011, 0.35],
                ["sine", 2.02, 0.55], ["sine", 3.01, 0.2]].map(([type, mult, g]) => {
     const o = ctx.createOscillator(); o.type = type; o.frequency.value = 2000;
@@ -2411,7 +2454,7 @@ function initAudio() {
   AU.boxHp = ctx.createBiquadFilter(); AU.boxHp.type = "highpass";
   AU.boxHp.frequency.value = 800; AU.boxHp.Q.value = 0.7;    // no mud, it's all edge
   AU.boxG = ctx.createGain(); AU.boxG.gain.value = 0;
-  AU.boxBp.connect(AU.boxHp); AU.boxHp.connect(AU.boxG); AU.boxG.connect(AU.sfx);
+  AU.boxBp.connect(AU.boxHp); AU.boxHp.connect(AU.boxG); AU.boxG.connect(AU.engMech);
   // mesh fundamental, then the odd harmonics that do the cutting. The pair at
   // 1.004 beat slowly against each other — real gear sets are never perfect,
   // and that shimmer is what stops it sounding like a test tone.
@@ -2432,7 +2475,7 @@ function initAudio() {
   const nsrc = ctx.createBufferSource(); nsrc.buffer = nbuf; nsrc.loop = true;
   AU.nbp = ctx.createBiquadFilter(); AU.nbp.type = "bandpass"; AU.nbp.frequency.value = 900; AU.nbp.Q.value = 0.6;
   AU.nGain = ctx.createGain(); AU.nGain.gain.value = 0;
-  nsrc.connect(AU.nbp); AU.nbp.connect(AU.nGain); AU.nGain.connect(AU.sfx); nsrc.start();
+  nsrc.connect(AU.nbp); AU.nbp.connect(AU.nGain); AU.nGain.connect(AU.engMech); nsrc.start();
 
   // exhaust rasp: narrow noise band riding the firing frequency — reads as
   // combustion texture rather than synthesizer tone
@@ -2446,7 +2489,7 @@ function initAudio() {
   const tbsrc = ctx.createBufferSource(); tbsrc.buffer = nbuf; tbsrc.loop = true; tbsrc.playbackRate.value = 1.05;
   AU.tbBp = ctx.createBiquadFilter(); AU.tbBp.type = "bandpass"; AU.tbBp.frequency.value = 1400; AU.tbBp.Q.value = 0.8;
   AU.tbG = ctx.createGain(); AU.tbG.gain.value = 0;
-  tbsrc.connect(AU.tbBp); AU.tbBp.connect(AU.tbG); AU.tbG.connect(AU.sfx); tbsrc.start();
+  tbsrc.connect(AU.tbBp); AU.tbBp.connect(AU.tbG); AU.tbG.connect(AU.engMech); tbsrc.start();
 
   // --- wind / road ---
   const wsrc = ctx.createBufferSource(); wsrc.buffer = nbuf; wsrc.loop = true; wsrc.playbackRate.value = 0.6;
@@ -2472,8 +2515,6 @@ function initAudio() {
   AU.amb = ctx.createGain(); AU.amb.gain.value = 1;
   AU.ambLp = ctx.createBiquadFilter(); AU.ambLp.type = "lowpass"; AU.ambLp.frequency.value = 20000;
   AU.amb.connect(AU.ambLp); AU.ambLp.connect(AU.comp);
-  AU.ambSend = ctx.createGain(); AU.ambSend.gain.value = 0.5;
-  AU.ambLp.connect(AU.ambSend); AU.ambSend.connect(AU.conv);
 
   // distant road hum (traffic bed)
   const th = ctx.createBufferSource(); th.buffer = nbuf; th.loop = true; th.playbackRate.value = 0.5;
@@ -2679,6 +2720,11 @@ function applyCabin() {
   // bottom the pipes never made in the air comes back through the floor.
   AU.cabShelf.gain.setTargetAtTime(on ? (5.5 - 7 * h) + 5 * raw : 0, t, 0.1);
   AU.ambLp.frequency.setTargetAtTime(on ? 650 - 420 * h : 20000, t, 0.1);  // outside world, doubly sealed
+  // the tunnel tail comes back in through the same glass the engine does
+  if (AU.wetCabLp) {
+    AU.wetCabLp.frequency.setTargetAtTime(on ? (1150 - 750 * h) * (1 + 6 * raw) : 20000, t, 0.1);
+    AU.wetCabShelf.gain.setTargetAtTime(on ? (5.5 - 7 * h) + 5 * raw : 0, t, 0.1);
+  }
 }
 
 /* ================================================================
@@ -2915,13 +2961,24 @@ function setSpace(id) {
   save();
 }
 
+/* The note under the cards. It used to print the selected card's own
+   description straight back at you, one line lower, which is the kind of
+   thing that looks finished and reads as filler. It says something the cards
+   don't instead: what the space is doing to the sound. */
+const SPACE_NOTES = {
+  open: "Only the car, and a hint of room tone so it isn't uncomfortably dry. Everything below is a surface to bounce off.",
+  alley: "The round trip is 25ms — too fast to hear as an echo, so it fuses into a ring instead. Lift off and the bangs come back at you.",
+  city: "Far enough that you hear the slap arrive separately, broken up enough that it comes back scattered rather than as a strike.",
+  hill: "Hard reflection on one ear, soft scatter on the other. Wear headphones for this one — the lopsidedness is the whole effect.",
+};
+
 function refreshSpaceUi() {
   document.querySelectorAll("#wsSpace .ws-card").forEach(b =>
     b.classList.toggle("on", b.dataset.space === S.space));
   const note = $("wsSpaceNote");
   if (note) note.textContent = S.tunnel
     ? "You're in the tunnel — the concrete is louder than anything outside it, so this is doing almost nothing right now."
-    : curSpace().desc;
+    : (SPACE_NOTES[S.space] || SPACE_NOTES.open);
 }
 
 /* pipe resonances for the current car — Screamer shifts them up the spectrum */
@@ -2968,10 +3025,8 @@ function applyTunnel() {
   // of the car making them.
   AU.popRev.gain.setTargetAtTime(on ? 0.45 : 0.16, t, tc);
   AU.popEcho.gain.setTargetAtTime(on ? 0.22 : 0, t, tc);
-  // …and every other sound the car makes rings down the tube with it
-  AU.sfxRev.gain.setTargetAtTime(on ? 0.5 : 0.12, t, tc);
-  AU.sfxEcho.gain.setTargetAtTime(on ? 0.24 : 0, t, tc);
-  AU.ambSend.gain.setTargetAtTime(on ? 1.0 : 0.4, t, tc);
+  // (the interface, the ambience and the cassette deck deliberately have no
+  //  send at all — see the AU.wetSend comment in initAudio)
   // inside, the tube keeps the bottom and eats the top; outside, the "room
   // tone" is a small honest space and shouldn't boom at all
   AU.tunLo.gain.setTargetAtTime(on ? 6 : 0, t, tc);
@@ -3401,6 +3456,10 @@ function audioTick() {
   }
   AU.flyGain.gain.setTargetAtTime(flyG, t, 0.08);
   AU.flyPan.pan.setTargetAtTime(flyP, t, 0.08);
+  // the wet send is tapped upstream of the flyby stage, so it has to be told
+  // about the distance itself — otherwise a car half a kilometre away still
+  // rings the tunnel as hard as one going past your feet
+  AU.wetSend.gain.setTargetAtTime(flyG, t, 0.08);
   /* The spectral half of the handover. Approaching, the bottom end is
      literally pointed away from you and has to diffract round the car to
      arrive at all, so it is DOWN, and the induction top is up. Once it's
@@ -3942,18 +4001,33 @@ function sfxDogSelect(strength = 1) {
   o.connect(og); og.connect(AU.sfx); o.start(t + 0.022); o.stop(t + 0.1);
 }
 
-function sfxDogEngage(strength = 1) {
+/* The dogs landing.
+
+   `down` matters, and it is not a volume difference. An UPSHIFT engages while
+   the engine is decelerating into the new ratio — the torque reversal is
+   gentle, the dogs are being caught rather than thrown, and it is a bright
+   tight CLACK. A DOWNSHIFT throws a spinning engine at a shaft that is
+   already turning faster than it and then loads it backwards the instant it
+   arrives. Same hardware, much bigger event: lower, longer, more weight
+   underneath it, and a second knock as the play in the driveline closes up. */
+function sfxDogEngage(strength = 1, down = false) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime;
-  // the steel-on-steel strike
-  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.9;
-  const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1500; f.Q.value = 1.1;
+  // the steel-on-steel strike. Going down it is a heavier, blunter impact,
+  // so the band sits lower and it takes longer to die.
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
+  n.playbackRate.value = down ? 1.35 : 1.9;
+  const f = ctx.createBiquadFilter(); f.type = "bandpass";
+  f.frequency.value = down ? 950 : 1500; f.Q.value = down ? 0.85 : 1.1;
   const g = ctx.createGain();
-  g.gain.setValueAtTime(1.1 * strength, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-  n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t); n.stop(t + 0.07);
-  // hard metallic ring — short, damped by the oil
-  [[2100, 0.16, 0.09], [3300, 0.08, 0.06]].forEach(([hz, amp, dur]) => {
+  g.gain.setValueAtTime((down ? 1.35 : 1.1) * strength, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + (down ? 0.085 : 0.05));
+  n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t); n.stop(t + 0.11);
+  // hard metallic ring — short, damped by the oil. Downshifts ring lower and
+  // for longer: more mass moved, and it is the big gears doing the moving.
+  const rings = down ? [[1500, 0.2, 0.15], [2350, 0.11, 0.1], [3150, 0.05, 0.06]]
+                     : [[2100, 0.16, 0.09], [3300, 0.08, 0.06]];
+  rings.forEach(([hz, amp, dur]) => {
     const o = ctx.createOscillator(); o.type = "sine";
     o.frequency.value = hz * (0.99 + Math.random() * 0.02);
     const og = ctx.createGain();
@@ -3961,13 +4035,92 @@ function sfxDogEngage(strength = 1) {
     og.gain.exponentialRampToValueAtTime(0.001, t + 0.006 + dur);
     o.connect(og); og.connect(AU.sfx); o.start(t + 0.006); o.stop(t + 0.006 + dur + 0.02);
   });
-  // the thud through the tub — you feel this one
-  const k = ctx.createOscillator(); k.type = "sine"; k.frequency.setValueAtTime(200, t);
-  k.frequency.exponentialRampToValueAtTime(55, t + 0.09);
+  // the thud through the tub — you feel this one. Downshift: starts lower,
+  // falls further, and goes down into territory you hear with your chest.
+  const k = ctx.createOscillator(); k.type = "sine";
+  k.frequency.setValueAtTime(down ? 165 : 200, t);
+  k.frequency.exponentialRampToValueAtTime(down ? 38 : 55, t + (down ? 0.14 : 0.09));
   const kg = ctx.createGain();
-  kg.gain.setValueAtTime(0.7 * strength, t);
-  kg.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-  k.connect(kg); kg.connect(AU.sfx); k.start(t); k.stop(t + 0.14);
+  kg.gain.setValueAtTime((down ? 1.05 : 0.7) * strength, t);
+  kg.gain.exponentialRampToValueAtTime(0.001, t + (down ? 0.2 : 0.12));
+  k.connect(kg); kg.connect(AU.sfx); k.start(t); k.stop(t + 0.22);
+  // …and on the way down, the second knock: the dogs seat, then the backlash
+  // in the ring closes against the far side of its windows. Two impacts a
+  // few milliseconds apart is what "mechanical" actually sounds like — one
+  // clean impact is what a sample sounds like.
+  if (down) {
+    const d2 = 0.028 + Math.random() * 0.012;
+    const n2 = ctx.createBufferSource(); n2.buffer = AU.noiseBuf; n2.playbackRate.value = 1.15;
+    const f2 = ctx.createBiquadFilter(); f2.type = "bandpass";
+    f2.frequency.value = 720; f2.Q.value = 1.2;
+    const g2 = ctx.createGain();
+    g2.gain.setValueAtTime(0.5 * strength, t + d2);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + d2 + 0.06);
+    n2.connect(f2); f2.connect(g2); g2.connect(AU.sfx);
+    n2.start(t + d2); n2.stop(t + d2 + 0.08);
+    const k2 = ctx.createOscillator(); k2.type = "sine";
+    k2.frequency.setValueAtTime(120, t + d2);
+    k2.frequency.exponentialRampToValueAtTime(46, t + d2 + 0.1);
+    const kg2 = ctx.createGain();
+    kg2.gain.setValueAtTime(0.44 * strength, t + d2);
+    kg2.gain.exponentialRampToValueAtTime(0.001, t + d2 + 0.13);
+    k2.connect(kg2); kg2.connect(AU.sfx); k2.start(t + d2); k2.stop(t + d2 + 0.15);
+  }
+}
+
+/* THE TAKE-UP — the depth under a downshift.
+
+   The clack is the gearbox. This is the CAR, and it arrives a beat later.
+
+   The moment a lower gear engages on a closed throttle, the engine becomes
+   the slowest-turning thing in the driveline, and everything between it and
+   the road has to wind up backwards against it: driveshafts twist, the diff
+   loads onto the far side of its teeth, the engine mounts compress, the
+   whole rear of the car squats fractionally. None of that is instant and
+   none of it is silent — it is a big, low, heavily damped shunt that you
+   feel through the seat as much as hear, with a slow wobble on it as the
+   shafts unwind and rewind once before settling.
+
+   Two components. A decaying low sine with a touch of frequency wobble (the
+   wind-up itself, and the wobble is what stops it sounding like a kick
+   drum), and a short band of low noise underneath for the mounts and
+   bushings taking it. Deliberately dark — there is nothing above 200Hz in
+   this event, because everything making it weighs a great deal. */
+function sfxDrivelineShunt(strength = 1) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  // the wind-up: low, slow, and it sags rather than decays cleanly
+  const o = ctx.createOscillator(); o.type = "sine";
+  o.frequency.setValueAtTime(78, t);
+  o.frequency.linearRampToValueAtTime(52, t + 0.09);
+  o.frequency.linearRampToValueAtTime(61, t + 0.17);      // the shafts unwind…
+  o.frequency.linearRampToValueAtTime(44, t + 0.3);       // …and settle
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.001, t);
+  og.gain.linearRampToValueAtTime(0.62 * strength, t + 0.018);
+  og.gain.exponentialRampToValueAtTime(0.16 * strength, t + 0.14);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
+  o.connect(og); og.connect(AU.sfx); o.start(t); o.stop(t + 0.36);
+  // a second, slightly detuned voice a shade later — a driveline is not one
+  // spring, it is several in series, and they do not all arrive together
+  const o2 = ctx.createOscillator(); o2.type = "triangle";
+  o2.frequency.setValueAtTime(112, t + 0.012);
+  o2.frequency.exponentialRampToValueAtTime(58, t + 0.16);
+  const og2 = ctx.createGain();
+  og2.gain.setValueAtTime(0.001, t + 0.012);
+  og2.gain.linearRampToValueAtTime(0.2 * strength, t + 0.03);
+  og2.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+  o2.connect(og2); og2.connect(AU.sfx); o2.start(t + 0.012); o2.stop(t + 0.24);
+  // mounts and bushings taking the load — dark, short, no transient
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 0.55;
+  const f = ctx.createBiquadFilter(); f.type = "lowpass";
+  f.frequency.setValueAtTime(260, t);
+  f.frequency.linearRampToValueAtTime(120, t + 0.18);
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.001, t);
+  ng.gain.linearRampToValueAtTime(0.3 * strength, t + 0.025);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+  n.connect(f); f.connect(ng); ng.connect(AU.sfx); n.start(t); n.stop(t + 0.26);
 }
 
 /* twin-clutch engagement — the ROAD-CAR version of the above, and the whole
@@ -7655,6 +7808,23 @@ function seqShift(dir) {
        shift reads as a dropout rather than as machinery. Event 2 is the whole
        difference, and it costs one scheduled sound. */
     S.shiftCut = ((CC.race || CC.gearWhine) ? 0.075 : CC.mechBox ? 0.085 : 0.10) + lag;
+
+    /* THE BLIP GOES FIRST. This was backwards: the throttle blip fired from
+       seqEngage(), which runs when the dogs have already landed — so the car
+       banged into the lower gear and THEN matched the revs, which is the one
+       order it cannot happen in.
+
+       A dog ring has no synchromesh. Nothing in the gearbox can drag the
+       engine up to speed for you, so the ECU has to do it with the throttle
+       BEFORE the dogs will go anywhere near engagement, and the dogs land on
+       an engine that is already turning at the right speed. Get this the
+       wrong way round and every downshift is a crunch that shouldn't be
+       survivable. Get it right and you get the sound everyone knows: stab,
+       revs leap, CLUNK, and the whole car settles onto engine braking. */
+    if (dir < 0 && target !== 0 && target !== "R" && S.engineOn && Math.abs(S.v) > 3) {
+      S.blip = Math.max(S.blip, lag + 0.14);
+      S.blipTarget = matchRpm(target);
+    }
     // the selector, roughly halfway through the gap — only on the boxes that
     // physically have one. A twin-clutch has nothing to drag anywhere.
     if (dog && lag > 0.07) {
@@ -7665,8 +7835,9 @@ function seqShift(dir) {
     setTimeout(() => {
       S.pendShift = false;
       if (CC.id !== car || S.mode !== "manual") return;
-      if (dog) sfxDogEngage(0.95);       // the dogs slam into the next ratio
-      else sfxDctEngage(0.9);            // the clutch packs hand over
+      // a downshift lands harder than an upshift — see sfxDogEngage()
+      if (dog) sfxDogEngage(dir < 0 ? 1.15 : 0.95, dir < 0);
+      else sfxDctEngage(dir < 0 ? 1.0 : 0.9);
       seqEngage(target, dir, true);
     }, lag * 1000);
     return;
@@ -7679,14 +7850,38 @@ function seqShift(dir) {
    shiftLag seconds after the paddle on a dog box) */
 function seqEngage(target, dir, silent) {
   setGear(target, silent);
-  if (dir < 0 && target !== 0 && target !== "R" && S.engineOn && Math.abs(S.v) > 3) {
-    S.blip = 0.32; S.blipTarget = matchRpm(target); S.shiftCut = 0.26;    // heel-toe blip on the way down
-    if (popsRating() >= 1) {             // the bark as the throttle stabs open
-      // a downshift bark is one big deliberate slug of fuel, not a tick —
-      // the loud cars fire it as a proper bang with a torch behind it
+  const downshift = dir < 0 && target !== 0 && target !== "R"
+                 && S.engineOn && Math.abs(S.v) > 3;
+  if (downshift) {
+    // instant boxes blip here because there was no gap to blip in; the lag
+    // boxes already started theirs when the paddle moved (see seqShift)
+    if (S.blip <= 0) { S.blip = 0.32; S.blipTarget = matchRpm(target); }
+    S.shiftCut = Math.max(S.shiftCut, 0.16);
+
+    /* THE TAKE-UP — the part that gives a downshift its weight.
+
+       The dogs landing is a noise. What you FEEL a beat later is the whole
+       driveline loading up backwards: the engine is now the slowest thing in
+       the system, so every shaft, joint and diff between it and the road
+       winds up against the play in it and then rings. That is a big, low,
+       damped shunt through the floor about 40ms behind the clack, and it is
+       the single most missing ingredient in a synthesized downshift —
+       without it the gear change is a click, and with it the car has mass. */
+    setTimeout(() => sfxDrivelineShunt(0.9 + Math.min(0.5, Math.abs(S.v) / 55)), 42);
+
+    /* …and the bang, which lands LAST. The overrun pop is not the sound of
+       the throttle opening, it is the sound of it slamming shut again at the
+       top of the blip and dumping everything that didn't burn into a
+       glowing pipe. So it goes off at the end of the blip, not at the start
+       of the shift — which is also why you hear it a beat after the clunk
+       rather than under it. */
+    if (popsRating() >= 1) {
       const bang = popsRating() >= 2;
-      sfxPop(bang ? 0.68 : 0.52, undefined, bang ? "bang" : "crack");
-      if (bang) popFlame(0.8);
+      const at = Math.max(90, Math.min(320, S.blip * 1000 * 0.62));
+      setTimeout(() => {
+        sfxPop(bang ? 0.72 : 0.54, undefined, bang ? "bang" : "crack");
+        if (bang) popFlame(0.85);
+      }, at);
     }
   }
   if (exSound().burble && S.engineOn && S.rpm > ENG.idle * 2)
