@@ -1457,6 +1457,12 @@ body[data-theme="frost"] .pedal-pad {
   background: var(--accent-soft);
 }
 
+/* a control that doesn't apply to the car currently in the bay. Greyed and
+   inert rather than removed, so the bay doesn't reflow as you change cars and
+   the row can still say WHY it doesn't apply. */
+.ws-off { opacity: 0.4; }
+.ws-off .seg button { pointer-events: none; }
+
 /* accent colour picker */
 .seg-accent { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .seg-accent button {

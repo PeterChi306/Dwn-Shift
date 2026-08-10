@@ -12,6 +12,50 @@ function gearCount(ratios) {
   return Math.max(...Object.keys(ratios).filter(k => k !== "R").map(Number));
 }
 
+/* ---------------- TRANSMISSION SWAP ----------------
+   The same gearbox, cut into a different number of steps.
+
+   The one decision that matters here is what to hold constant, and it is the
+   SPREAD: first gear and top gear stay exactly as the car came, and only the
+   ratios in between are redistributed. That is what makes this a gearbox swap
+   rather than a different car — launch is still launch (first gear is the
+   traction limit and the 0-60), top is still top (that ratio and the final
+   drive are what set the theoretical maximum), and what changes is how many
+   steps you take to get there and how big each one is.
+
+   The steps are GEOMETRIC, not evenly spaced arithmetically, because that is
+   how real gearboxes are designed: a constant ratio between consecutive gears
+   means a constant rpm drop on every shift, so the engine lands back in the
+   same part of its powerband every time. Space them arithmetically instead and
+   the lower gears end up absurdly close together while the top two are miles
+   apart, which is the tell of a fantasy ratio set.
+
+   Consequence worth knowing: more gears do NOT make the car faster. They keep
+   the engine nearer its peak between shifts, so a 9-speed holds the powerband
+   better and shifts constantly, and a 4-speed lugs between ratios and lets you
+   listen to each one. Both are the point.
+
+   Single-speed cars (the EVs, with every forward ratio identical) are returned
+   untouched — there is no spread to redistribute, and a transmission swap on a
+   direct-drive motor is not a thing. */
+function ratiosWithGears(base, n) {
+  if (!n) return base;                          // 0 / unset = as delivered
+  const have = gearCount(base);
+  const first = base[1], top = base[have];
+  if (!Number.isFinite(first) || !Number.isFinite(top)) return base;
+  if (Math.abs(top - first) < 1e-6) return base;    // single-speed: nothing to cut
+  if (n === have) return base;
+  const out = { R: base.R };
+  const step = Math.pow(top / first, 1 / (n - 1));  // the constant ratio step
+  for (let g = 1; g <= n; g++) out[g] = +(first * Math.pow(step, g - 1)).toFixed(3);
+  return out;
+}
+
+// how many gears the box in front of you actually has, mod included
+function moddedRatios(c, m) {
+  return ratiosWithGears(c.ratios || DEFAULT_RATIOS, (m && m.gears) || 0);
+}
+
 /* The garage. Each car defines its engine, drivetrain, gauge scales,
    aspiration (na / turbo / super) and a synthesized sound profile.
    Sound layer mult 1 = firing frequency (rpm/60 × cylinders/2). */
@@ -1341,7 +1385,17 @@ const CARS = [
     id: "molsheim", name: "Molsheim 16.4", tag: "quad-turbo hypercar", layout: "W16 · quad turbo",
     indicator: "luxury",   // a quad-turbo grand tourer clicks like a bank vault
     awd: true,
-    cyl: 16, idle: 800, max: 7100, cut: 7300, inertia: 0.5,
+    /* inertia is still the physical truth — eight litres, sixteen pistons and
+       a crank you could moor a boat with — but revRate is the character knob
+       on top of it, and 1.8 is what makes the needle actually move. A Chiron
+       does not rev like a flywheel-heavy diesel; the whole point of 1500hp
+       through a twin-clutch is that it snaps.
+       And no flames: a quad-turbo car routes every scrap of exhaust energy
+       through four turbines before it ever reaches a tailpipe, and there is
+       nothing left to light. Cars that spit fire are the ones with a short
+       path from valve to atmosphere. This one has the longest in the garage. */
+    cyl: 16, idle: 800, max: 7100, cut: 7300, inertia: 0.5, revRate: 1.8,
+    noFlame: true,
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 195, dur: 1.15, fires: 6, flare: 0.8,  flareT: 0.85, whine: 900 },
     curve: [[0, 300], [800, 520], [2000, 760], [3000, 880], [4500, 900], [6000, 860],
@@ -1368,7 +1422,7 @@ const CARS = [
         // their wastegates by 2600 — the reason the car has all its torque
         // from 2000rpm and does not feel like it is waiting for anything
         { at: 800, span: 1250, sat: 2600, share: 0.54, inertia: 0.52,
-          whineHz: 950, whineMul: 1.0, breathHz: 460 },
+          whineHz: 950, whineMul: 1.0, breathHz: 92 },
         /* the high pair: bigger wheels, more inertia, held shut by their
            control valves until there is enough exhaust to light them — and
            once lit they never let go. Bugatti quote 3800rpm as the point the
@@ -1378,7 +1432,7 @@ const CARS = [
            Centring it is the difference between "all four arrive at 3800" and
            "something happens at 3800", and only one of those is a sound. */
         { at: 2900, span: 1850, sat: 5600, share: 0.46, inertia: 0.92,
-          whineHz: 1280, whineMul: 1.25, breathHz: 620 },
+          whineHz: 1280, whineMul: 1.25, breathHz: 124 },
       ],
       spoolUp: 3.1, coast: 0.62, bleed: 8.5, windmill: 0.10,
       whine: { level: 0.150, hzMul: 1, spread: 0.007, wobble: 0.5, wobbleHz: 5.7, hp: 280 },
@@ -1388,8 +1442,19 @@ const CARS = [
          pressure is still CLIMBING — so `rise` gets more than double the
          generic lean and a ceiling high enough to let it actually get there. */
       intake: { level: 0.145, hz: 340, q: 0.55, load: 0.78, rev: 0.28,
-                rise: 0.58, riseMax: 0.95 },
-      breath: { level: 0.235, q: 0.58, boostHz: 540, rise: 0.42, riseMax: 0.8 },
+                rise: 0.40, riseMax: 0.70 },
+      /* The charge, an octave and a half down and quieter with it. Every
+         frequency here is the old one divided by five: 540 -> 108 for the
+         band's home, and the sweep with it, or pressure would drag it back up
+         to where it started. What that buys is the difference between a hiss
+         and a PRESSURE — four compressors moving an enormous volume of air
+         read as something you feel under the note rather than something
+         sitting on top of it, and at 108Hz it stops competing with the
+         whistle for the same part of the spectrum. Level comes down because a
+         deep layer needs far less of it to be present; the old 0.235 at this
+         pitch would be a drone. */
+      breath: { level: 0.115, q: 0.58, boostHz: 108, sweep: 84,
+                rise: 0.30, riseMax: 0.55 },
       // the whistle now owns this band, so the old broadband hiss steps back
       // out of its way rather than smearing it
       hiss:   { level: 0.018, hz: 3400, q: 0.5 },
@@ -1536,7 +1601,12 @@ const CARS = [
         ["triangle", 3.02, 0.005, 0.02, 0.055],
         ["sine",     4.03, 0,     0.006, 0.028],
       ],
-      noiseMul: 0.9, drive: 0.74, pulseDepth: 0.2, pulseDiv: 2, raspMul: 0.95, volTrim: 1.5,
+      // volTrim 1.5 -> 1.05: the W16 was the second-loudest thing in the
+      // garage after the open-megaphone R, and it should not be. It is a
+      // luxury GT with four turbochargers and a full exhaust system, and now
+      // that the chargers are unfiltered and out in front of it (see
+      // AU.turboOut) the engine does not need to shout to be there.
+      noiseMul: 0.9, drive: 0.74, pulseDepth: 0.2, pulseDiv: 2, raspMul: 0.95, volTrim: 1.05,
       scream: 900, lpMul: 0.58,
       // a low chest formant, a midrange body, and a hard upper band that only
       // opens under load — that upper one is the "exotic" and it is what makes
@@ -1703,7 +1773,7 @@ const CAR = {
    brakes, aero, the dashboard, the shape of the exhaust tip. */
 const ENGINE_FIELDS = [
   "cyl", "idle", "max", "cut", "inertia", "curve", "asp", "pops", "sound",
-  "revRate", "start", "camAt", "cel", "noPop", "ev", "crackle", "firing",
+  "revRate", "start", "camAt", "cel", "noPop", "noFlame", "ev", "crackle", "firing",
   "boostMax", "spool", "spoolRate", "psiMax", "whistleMul", "whistleFreqMul",
   // flutter and its two companions travel together: how prone the plumbing is
   // to surging, when it surges, and how long it chatters for are all facts
@@ -1779,8 +1849,14 @@ function applyCar(c) {
   ENG.curve = c.curve;
   CAR.mass = c.mass;
   CAR.finalDrive = c.finalDrive * (m.gear || 1);  // workshop final drive
-  CAR.ratios = c.ratios || DEFAULT_RATIOS;
+  CAR.ratios = moddedRatios(c, m);              // workshop transmission swap
   CAR.top = gearCount(CAR.ratios);
+  /* Fitting a shorter box while you are sitting in 7th has to put you
+     somewhere real. Without this the selector keeps displaying a gear the
+     ratio table no longer has, gearRatio() returns undefined and the car
+     silently freewheels. */
+  if (typeof S.gear === "number" && S.gear > CAR.top) S.gear = CAR.top;
+  if (typeof S.autoGear === "number" && S.autoGear > CAR.top) S.autoGear = CAR.top;
   CAR.cdA = c.cdA; CAR.brakeMax = c.brakeMax; CAR.clutchCap = c.clutchCap;
   CAR.roll = Math.round(c.mass * 0.126);
   applyDash(c);
@@ -1887,6 +1963,7 @@ function curMod() {
   // build link that omitted it) left the slider reading NaN
   if (m.pitch === undefined) m.pitch = 1;
   if (m.gear === undefined) m.gear = 1;
+  if (m.gears === undefined) m.gears = 0;      // 0 = the box it came with
   if (m.rev === undefined) m.rev = 1;
   if (m.vol === undefined) m.vol = 1;
   if (m.tone === undefined) m.tone = 0;
@@ -1896,7 +1973,11 @@ function curMod() {
   if (m.flameSize === undefined) m.flameSize = 1;
   if (m.tune === undefined) m.tune = false;
   if (m.abs === undefined) m.abs = true;
-  if (m.grip === undefined) m.grip = false;    // the workshop's infinite-grip cheat
+  // GRIP is on out of the box. This is a driving simulator you look at and
+  // listen to, not a tyre model you fight — spending your first minute in a new
+  // car spinning the rears at every light is not the experience, and anyone who
+  // wants the fight can switch it off per car and that choice is remembered.
+  if (m.grip === undefined) m.grip = true;     // the workshop's infinite-grip cheat
   if (m.shift === undefined) m.shift = "stock";
   if (m.paddle === undefined) m.paddle = "carbon";  // default = the real recorded click
   if (!EXHAUSTS[m.ex]) m.ex = "stock";     // repair saves hit by the old card bug
@@ -2529,13 +2610,22 @@ function initAudio() {
      moment you sealed the car even with the level compensated back up.
 
      So the whole turbo family gets its own bus straight to the flyby stage,
-     skipping cabLp and cabShelf. It keeps the wet send, so it still rings in a
-     tunnel like everything else, and it deliberately does NOT pass through
-     AU.duck — the release should not duck the chargers, only the engine. */
+     skipping cabLp and cabShelf. It deliberately does NOT pass through
+     AU.duck — the release should not duck the chargers, only the engine — and
+     it has NO wet send at all.
+
+     That last one is the same principle the tunnel was built on: only the
+     engine echoes. A tunnel rings because a hundred and twenty decibels of
+     exhaust leaves the pipe and hits concrete seven metres away. Induction and
+     charge-air noise is a fraction of that, it radiates forwards and inwards
+     rather than out at the walls, and most of it is generated inside the
+     bodywork to begin with — so putting a three-second concrete tail on the
+     turbo does not make the tunnel more convincing, it smears the one layer
+     whose job is to be tight and immediate. */
   AU.postCab = ctx.createGain(); AU.postCab.gain.value = S.muted ? 0 : 0.85;
   AU.postCab.connect(AU.flyGain);
   AU.turboOut = ctx.createGain(); AU.turboOut.gain.value = 1;
-  AU.turboOut.connect(AU.postCab); AU.turboOut.connect(AU.wetSend);
+  AU.turboOut.connect(AU.postCab);
 
   AU.conv = ctx.createConvolver(); AU.conv.buffer = makeTunnelIR(ctx);
   AU.wet = ctx.createGain(); AU.wet.gain.value = 0;
@@ -5920,7 +6010,10 @@ const RIG_DEF = {
   // …and the same pair for the charge-air rush. Off by default (rise: 0) so
   // nothing already tuned changes; a car turns it on when the swell onto boost
   // is part of its character.
-  breath:  { level: 0.07, q: 0.6, boostHz: 600, rise: 0, riseMax: 0.5 },
+  // sweep: how far manifold pressure carries the rush's band upward. Keep it
+  // in proportion to boostHz — a sweep bigger than the centre frequency turns
+  // a deep rush back into a midrange one the moment the car makes boost.
+  breath:  { level: 0.07, q: 0.6, boostHz: 600, sweep: 420, rise: 0, riseMax: 0.5 },
   hiss:    { level: 0.025, hz: 3200, q: 0.5 },
   /* --- the whistle ---
      The thing people mean when they say "turbo". It is NOT the whine layer:
@@ -6532,7 +6625,13 @@ function turboRigTick(t, k, env) {
     bNum += st[i].breathHz * w; bDen += w;
   }
   const bHz = bDen > 0.02 ? bNum / bDen : B.boostHz;
-  R.brBp.frequency.setTargetAtTime(clamp((bHz + boost * 420) * dop, 120, 4000), t, k);
+  /* `sweep` is how far pressure carries the band up, and it has to be a per-car
+     number rather than the flat 420 it was: on a rig voiced deep the sweep was
+     bigger than the band's own centre frequency, so it dragged everything back
+     up into the midrange and undid the voicing. The clamp floor comes down to
+     45Hz for the same reason — a deep rush was being held up at 120. */
+  const bSweep = B.sweep === undefined ? 420 : B.sweep;
+  R.brBp.frequency.setTargetAtTime(clamp((bHz + boost * bSweep) * dop, 45, 4000), t, k);
   R.brBp.Q.setTargetAtTime(B.q, t, 0.2);
   // the release rides here too: after a lift the shafts are still turning and
   // still pushing air round the bypass loop, and that is a rush, not a tone.
@@ -9552,6 +9651,13 @@ function flameKind(power) {
    power: 0..1 — how much fuel went off. Booleans still work (legacy calls). */
 function popFlame(power) {
   if (isEv()) return;                      // no exhaust, nothing to burn
+  /* …and some engines bang without ever showing a flame. Deliberately separate
+     from `noPop`: that one says "this engine does not do overrun theatre at
+     all" and silences the audio with it. This says the crackle is real and the
+     fire is not, which is the normal case for anything with a long, heavily
+     turbocharged exhaust path — the energy is spent spinning turbines before
+     it can reach air. */
+  if (CC.noFlame) return;
   if (!(popsRating() > 0)) return;
   if (typeof power === "boolean") power = power ? 0.7 : 0.3;
   // the workshop's flame-size knob scales the whole event: turn it down and
@@ -10440,6 +10546,25 @@ function buildWorkshop() {
       popFlame(0.85);                      // audition it right there in the bay
       save();
     }));
+  $("wsGears").querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => {
+      curMod().gears = parseInt(b.dataset.v, 10) || 0;
+      applyCar(CC);                        // rebuild the ratio table and CAR.top
+      /* …and the things that are DRAWN from the ratio table. Both of these are
+         otherwise only rebuilt when you change car, so without them the
+         H-pattern gate keeps its old number of slots and the sequential ladder
+         its old number of rungs while the car underneath has a different box.
+         Both are already written generically off CAR.top, so a 9-speed gate
+         lays itself out correctly — they just have to be told to redraw. */
+      buildGateSvg();
+      buildSeqViz();
+      if (S.mode === "clutch") $("consoleTitle").textContent = CAR.top + "-SPEED GATE";
+      flashGear();
+      refreshWorkshop();
+      // the box coming out and a new one going in, felt through the tunnel
+      sfxClunk(0.8);
+      save();
+    }));
   $("wsGear").addEventListener("input", () => {
     curMod().gear = parseFloat($("wsGear").value);
     applyCar(CC);
@@ -10557,6 +10682,24 @@ function refreshWorkshop() {
   document.querySelectorAll("#wsFlameCol .ws-card").forEach(b =>
     b.classList.toggle("on", b.dataset.flame === curMod().flame));
   $("exhaust").dataset.look = curEx().look || "stock";   // tips match the system
+  /* --- transmission swap readout ---
+     A single-speed car has no spread to redistribute (see ratiosWithGears), so
+     rather than offering a control that silently does nothing, the row says so
+     and disables itself. */
+  const gm = curMod().gears || 0;
+  const baseR = CC.ratios || DEFAULT_RATIOS;
+  const stockCount = gearCount(baseR);
+  // no spread between first and top = direct drive, nothing to re-cut
+  const single = stockCount <= 1 || Math.abs(baseR[stockCount] - baseR[1]) < 1e-6;
+  segSet("wsGears", String(gm));
+  $("wsGearsRow").classList.toggle("ws-off", single);
+  $("wsGearsVal").textContent = single ? "single-speed"
+    : gm ? gm + "-speed" : "as delivered · " + stockCount + "-speed";
+  $("wsGearsNote").textContent = single
+    ? "Direct drive — there is no gearbox to swap."
+    : "First and top stay as delivered; the steps between them are re-cut, evenly "
+      + "in ratio. More gears hold the powerband and shift constantly; fewer let "
+      + "each one run.";
   $("wsGear").value = curMod().gear;
   $("wsGearVal").textContent = (CC.finalDrive * curMod().gear).toFixed(2);
   $("wsRev").value = curMod().rev;
@@ -11407,6 +11550,10 @@ function applyBuildFromUrl() {
   };
   num("pitch", 0.7, 1.3); num("vol", 0.6, 1.6); num("tone", -800, 1200);
   num("pop", 0, 2); num("flameSize", 0, 2); num("gear", 0.7, 1.3); num("rev", 0.5, 3);
+  // gear COUNT, not the final-drive slider above. 0 = stock; anything else has
+  // to be a whole number in range or the ratio table comes out malformed.
+  const gc = parseInt(src.gears, 10);
+  m2.gears = Number.isFinite(gc) && gc >= 3 && gc <= 9 ? gc : 0;
   m2.tune = !!src.tune;
   m2.abs = src.abs !== false;
   m2.grip = src.grip === true;
@@ -11429,6 +11576,7 @@ function openSpecCard() {
     ["EXHAUST", curEx().name],
     ["REDLINE", (ENG.max / 1000).toFixed(1) + "k rpm"],
     ["MASS", Math.round(CAR.mass) + " kg"],
+    ["GEARBOX", CAR.top + "-speed" + (curMod().gears ? " · swapped in" : "")],
     ["FINAL DRIVE", CAR.finalDrive.toFixed(2)],
     ["PITCH", fmtPitch()],
     ["VOLUME", fmtVol()],
@@ -11479,6 +11627,7 @@ function save() {
       stations: MUS.saved, tapeNames: MUS.names,
       musVol: MUS.vol, musEcho: MUS.echo, musWide: MUS.wide,
       padV2: true,                       // paddle remap migration done
+      gripV2: true,                      // GRIP-by-default migration done
     }));
   } catch (_) {}
 }
@@ -12163,6 +12312,14 @@ function frame(now) {
     for (const id in S.mods)
       if (S.mods[id].paddle === "stock" || S.mods[id].paddle === undefined)
         S.mods[id].paddle = "carbon";
+  // GRIP became the default. Existing saves carry an explicit grip:false from
+  // back when it was opt-in, so a one-time migration turns it on — otherwise
+  // every car you had already visited would keep the old behaviour forever and
+  // the "default" would only apply to cars you happened not to have opened.
+  if (!saved.gripV2)
+    for (const id in S.mods)
+      if (S.mods[id].grip === false || S.mods[id].grip === undefined)
+        S.mods[id].grip = true;
   if (saved.lt) S.ltTgt = { kmh: saved.lt.kmh || 100, mph: saved.lt.mph || 60 };
   LT.best = saved.ltBest || {};
   S.dmgOn = !!saved.dmgOn;
