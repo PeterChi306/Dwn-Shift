@@ -1308,24 +1308,129 @@ const CARS = [
     shiftLag: 0.055,              // 7-speed twin-clutch moving 1500hp — deliberate
     mass: 1995, finalDrive: 2.0, clutchCap: 2600, cdA: 0.50, brakeMax: 17000,
     grip: 2.1,                                    // AWD launch — mid-2s to 60
-    asp: "turbo", pops: 1, boostMax: 0.85, spool: 1400, spoolRate: 3.2, psiMax: 22,
-    seqTurbo: { at: 3800, span: 1500, share: 0.45 },  // two turbos low, all four past 3800
+    // 18 psi is the quoted figure, and it matters here because the rig's
+    // boost is normalised 0..1 — the gauge multiplies by psiMax, so this is
+    // the number that decides whether the needle tells the truth
+    asp: "turbo", pops: 1, boostMax: 0.85, spool: 1400, spoolRate: 3.2, psiMax: 18,
     tachMax: 8, redK: 7.1, kmhMax: 520, mphMax: 320, dial: "classic",
     flutter: 0.2,                                // four of them, all politely plumbed
     whistleFreqMul: 0.45, whistleMul: 1.2,       // quad turbos breathe LOW — "zohh"
     turboBreath: 1.6, breathHz: 650,
+    /* --- the quad-turbo rig ---
+       Four turbochargers, plumbed as two sequential pairs, each with its own
+       shaft that spins up and — far more importantly — coasts back down on
+       its own time. See TURBO RIG for what every field does. This is the car
+       the whole model was written for. */
+    turboRig: {
+      stages: [
+        // the low pair: small, light, lit almost off idle and hard against
+        // their wastegates by 2600 — the reason the car has all its torque
+        // from 2000rpm and does not feel like it is waiting for anything
+        { at: 800, span: 1250, sat: 2600, share: 0.54, inertia: 0.52,
+          whineHz: 950, whineMul: 1.0, breathHz: 460 },
+        /* the high pair: bigger wheels, more inertia, held shut by their
+           control valves until there is enough exhaust to light them — and
+           once lit they never let go. Bugatti quote 3800rpm as the point the
+           second pair comes in, so the ramp is centred there rather than
+           started there: at/span put the half-way point at 3825, which means
+           the swell BEGINS below three thousand and is still filling at five.
+           Centring it is the difference between "all four arrive at 3800" and
+           "something happens at 3800", and only one of those is a sound. */
+        { at: 2900, span: 1850, sat: 5600, share: 0.46, inertia: 0.92,
+          whineHz: 1280, whineMul: 1.25, breathHz: 620 },
+      ],
+      spoolUp: 3.1, coast: 0.62, bleed: 8.5, windmill: 0.10,
+      whine: { level: 0.150, hzMul: 1, spread: 0.007, wobble: 0.5, wobbleHz: 5.7, hp: 280 },
+      intake: { level: 0.145, hz: 340, q: 0.55, load: 0.78, rev: 0.28 },
+      breath: { level: 0.170, q: 0.58, boostHz: 540 },
+      // the whistle now owns this band, so the old broadband hiss steps back
+      // out of its way rather than smearing it
+      hiss:   { level: 0.018, hz: 3400, q: 0.5 },
+      /* --- the whistle, in four versions ---
+         Four turbochargers behind your head, and what they sound like changes
+         completely across the range. The pitch spacing is deliberately
+         uneven: 620 → 1350 is most of an octave for the first third of the
+         shaft speed, then 1350 → 4400 is nearly two octaves for the last
+         third. That is the "rises sharply" — it loafs, and then it goes.
+
+         The `q` column is the other half of it. Down low the band is wide and
+         breathy and you barely pick it out of the induction noise; by full
+         boost it is tight enough to be a genuine note sitting on top of the
+         engine. Clean and hard rather than loud. */
+      /* Deliberately pitched DOWN from where a four-cylinder's turbo would
+         sit, and deliberately noise-led rather than tone-led. Two reasons,
+         and they are the same reason twice: these are big wheels moving an
+         enormous volume of air, and big wheels are low. A small turbo on a
+         hot hatch shrieks at four or five kHz; four large ones on an eight
+         litre engine make a sound closer to a jet on a taxiway, and the note
+         in it is buried in rushing air rather than sitting on top of it.
+
+         `tone` is the whole difference between "expensive" and "electrical".
+         It is the fraction of this layer that is oscillator rather than
+         filtered air, and it now peaks at 0.55 instead of 0.86 — so even flat
+         out, most of what you hear is air being moved and the blade note is
+         something you notice inside it rather than a synth lead over the
+         top. Turn `tone` up if it needs more edge; that is the knob, and it
+         is the one that will make it sound cheap if it goes too far. */
+      whistle: {
+        level: 0.175, load: 0.62, wobble: 10, surge: 0.78,
+        voices: [
+          { at: 0.00, hz:  380, tone: 0.08, q: 2.0, lvl: 0.10 },  // idle: a breath with a note in it
+          { at: 0.32, hz:  820, tone: 0.24, q: 4.2, lvl: 0.38 },  // moving, part throttle
+          { at: 0.66, hz: 1650, tone: 0.40, q: 6.5, lvl: 0.88 },  // on song, second pair in
+          { at: 0.92, hz: 2600, tone: 0.55, q: 8.5, lvl: 1.15 },  // full boost: hard, still deep
+        ],
+      },
+      // the top note over the engine — also dropped, for the same reason
+      spool: { level: 0.075, hz: [1700, 3900], q: 0.9 },
+      release: { level: 1.18, sigh: 1.12, chuff: 0.55, tail: 1.08, psh: 1.48, chirp: 1.2,
+                 duck: 1.0, shift: 1.0, shiftAt: 0.16, shiftThrough: 4,
+                 redlineAt: 0.88, redlineLift: 1.28 },
+      // sealed in with four turbochargers: the charger becomes the loudest
+      // thing in here after the engine itself, which is the whole point of
+      // sitting in this particular car
+      cabin: 2.85, cabinCont: 2.25,
+    },
     /* sixteen cylinders reads as a deep, jet-like rush — f0Mul drops the
        whole voice a full octave, so even at the 7100rpm redline it stays a
-       chest-deep freight-train roar instead of climbing into a scream */
+       chest-deep freight-train roar instead of climbing into a scream.
+
+       Three zones, not two. Down low it is all sub and chuff — an 8-litre
+       engine idling is a pressure wave, not a note. Through the middle the
+       boost arrives and the square/saw content hardens into the shove. At
+       the top it goes exotic and metallic — but look at the sub layers: they
+       go UP, not down. A W16 at 7000rpm still has sixteen cylinders' worth of
+       bottom end underneath the shriek, and losing that is exactly what makes
+       a synthesized hypercar sound like a hot hatch with a big exhaust. */
     sound: {
       // sixteen cylinders as a freight train
-      f0Mul: 0.5, air: -2, jitter: 1.0,
-      layers: [["sine", 0.25, 0.5, 0.6], ["sine", 0.5, 0.7, 0.75], ["square", 0.25, 0.14, 0.2],
-               ["square", 0.5, 0.32, 0.34], ["sawtooth", 1, 0.36, 0.42], ["sawtooth", 1.004, 0.2, 0.24],
-               ["sawtooth", 2.01, 0.04, 0.09], ["triangle", 3.02, 0.01, 0.04]],
-      noiseMul: 0.9, drive: 0.74, pulseDepth: 0.2, pulseDiv: 2, raspMul: 0.85, volTrim: 1.5,
-      scream: 800, lpMul: 0.55,
-      formants: [[55, 0.8, 6], [340, 1.3, 5], [1200, 1.8, 2.5]], loadDrive: 0.45,
+      f0Mul: 0.5, air: -2, jitter: 1.0, hp: 14,
+      layers: [
+        // the chest: half-order and quarter-order sub, present everywhere and
+        // strongest flat out
+        ["sine",     0.25, 0.52, 0.60, 0.72],
+        ["sine",     0.5,  0.72, 0.80, 0.88],
+        ["sine",     0.125, 0.20, 0.24, 0.30],   // the floor you feel, not hear
+        // the body: the square content that gives it the hard-edged shove
+        ["square",   0.25, 0.13, 0.19, 0.22],
+        ["square",   0.5,  0.30, 0.36, 0.36],
+        // the voice proper — a detuned saw pair, opening up through the mid
+        ["sawtooth", 1,    0.30, 0.42, 0.48],
+        ["sawtooth", 1.004, 0.17, 0.25, 0.29],
+        // the exotic top: near-silent at idle, singing over the lot of it at
+        // the red — this is the part that only shows up when it is working
+        ["sawtooth", 2.01, 0.02, 0.07, 0.13],
+        ["triangle", 3.02, 0.005, 0.02, 0.055],
+        ["sine",     4.03, 0,     0.006, 0.028],
+      ],
+      noiseMul: 0.9, drive: 0.74, pulseDepth: 0.2, pulseDiv: 2, raspMul: 0.95, volTrim: 1.5,
+      scream: 900, lpMul: 0.58,
+      // a low chest formant, a midrange body, and a hard upper band that only
+      // opens under load — that upper one is the "exotic" and it is what makes
+      // the tone change with the pedal instead of just with the tacho
+      formants: [[52, 0.8, 6.5], [330, 1.3, 5], [1150, 1.9, 3]],
+      loadDrive: 0.68,           // tone hangs off LOAD, not rpm — see audioTick
+      intakeLoad: 0.55,          // the rig owns induction now; don't double it
     },
   },
   {
@@ -1394,10 +1499,46 @@ const CARS = [
     cyl: 8, idle: 820, max: 8500, cut: 8700, inertia: 0.15,   // flat crank, feathery response
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 245, dur: 0.78, fires: 4, flare: 0.8,  flareT: 0.7 },
-    curve: [[0, 300], [1500, 660], [3000, 940], [4500, 1020], [6000, 985], [7200, 890],
-            [8500, 720], [9000, 480]],
-    shiftLag: 0.04,               // twin-clutch
-    mass: 1420, finalDrive: 2.35, clutchCap: 2400, cdA: 0.42, brakeMax: 16500, grip: 1.9,
+    /* 5.065 litres, two turbos, and on E85 it is quoted at 1500 Nm at 5100 and
+       1600 hp at 7800 — which are not two facts but one, because a curve that
+       does both has to be almost dead flat from three thousand to the
+       limiter. That is the whole character of the engine: it does not come on
+       song anywhere, because it is never off it. These are the BASE numbers;
+       the boost multiplier (boostMax 0.68) is what turns them into the real
+       ones, so the shape here is deliberately lower and flatter than the
+       published curve rather than a copy of it. */
+    curve: [[0, 320], [1500, 620], [2700, 860], [4000, 880], [5100, 895],
+            [6170, 890], [7000, 880], [7800, 870], [8500, 790], [9000, 520]],
+    /* --- the LST: nine speeds, seven wet multi-disc clutches ---
+       The real ratios, verbatim. They are not an arbitrary spread — look at
+       the steps and they run 1.295, 1.268, 1.278 and then repeat, three
+       ratios at a time, all the way up. That is the gearbox's actual
+       architecture showing through: three gears fixed to the input shaft
+       against three on the output plus three clutched, so the whole set is
+       generated by a small repeating pattern rather than chosen gear by gear.
+       Nothing else in the garage has steps this close, and that closeness IS
+       the car — it never falls out of boost, because there is nowhere to fall
+       to.
+
+       Reverse is not published, so it is sized off first the way every other
+       car here is. */
+    ratios: { R: -4.0,
+              1: 4.7200, 2: 3.6441, 3: 2.8744, 4: 2.2500, 5: 1.7371,
+              6: 1.3702, 7: 1.0783, 8: 0.8325, 9: 0.6566 },
+    /* Final drive is the one number that is NOT the real car's, and it can't
+       be: this simulator runs one wheel radius for every car (0.312m) and a
+       Jesko's rear tyre is 0.364m. So the final drive absorbs the difference,
+       and it is chosen to reproduce the real car's SPEEDS rather than its
+       printed ratio. It lands almost exactly right — first tops out at 77 km/h
+       against the real car's 81, and ninth runs to ~544 at the limiter,
+       inside Koenigsegg's own quoted 531–563 theoretical band.
+
+       And ninth is a genuine overdrive, not a tall top: eighth runs out of
+       breath against drag at about 439 km/h and ninth keeps pulling to ~524,
+       arriving at its own limiter and its own terminal velocity at the same
+       moment. That is what a car built around 0-400-0 is geared for. */
+    shiftLag: 0.025,              // LST: 20–30ms, and it is the fastest thing here
+    mass: 1390, finalDrive: 2.80, clutchCap: 2400, cdA: 0.523, brakeMax: 16500, grip: 1.9,
     asp: "turbo", pops: 2.2, boostMax: 0.68, spool: 2500, spoolRate: 2.3, psiMax: 25,
     flutter: 0.7, whistleMul: 0.7, whistleFreqMul: 1.05, turboBreath: 1.3, breathHz: 1550,
     tachMax: 9, redK: 8.5, kmhMax: 540, mphMax: 330, shiftLights: true,
@@ -1452,6 +1593,7 @@ const ENGINE_FIELDS = [
   "revRate", "start", "camAt", "cel", "noPop", "ev", "crackle", "firing",
   "boostMax", "spool", "spoolRate", "psiMax", "whistleMul", "whistleFreqMul",
   "turboBreath", "breathHz", "turboChop", "whineMult", "flutter",
+  "seqTurbo", "turboRig",              // the plumbing comes with the engine
   "tachMax", "redK", "shiftLights",
   "edrive", "evCapKmh", "evForce", "badge", "fireLbl",
 ];
@@ -1701,6 +1843,10 @@ const S = {
   capOpen: false,    // the red starter cover is flipped up
   powered: false, eDrive: "gas",       // eDrive cars: system-on flag + ev|gas motor
   rpm: 0, v: 0, odo: 0, boost: 0,
+  // --- turbo rig (see TURBO RIG) — shaft speed is a separate quantity from
+  //     boost, and that is the whole idea
+  tShaft: null, tSpd: 0, tStage: 0, tRise: 0,
+  tLiftT: 99, tLiftBoost: 0, tRelease: 0,
   gear: 0,                             // 0=N, 1..6, "R"
   autoSel: "P", autoGear: 1,
   in: { gas: 0, brake: 0, clutch: 0 }, // key/pointer targets
@@ -2230,7 +2376,27 @@ function initAudio() {
      wet send with it rather than with the door clicks. Reaches the room the
      ordinary way as well; see the AU.sfx comment below for the difference. */
   AU.engMech = ctx.createGain(); AU.engMech.gain.value = 1;
-  AU.engMech.connect(AU.master); AU.engMech.connect(AU.wetSend);
+  /* --- the duck ---
+     Everything continuous — the engine voice, the exhaust, the whole turbo
+     rig — passes through this one gain on its way out, so that one node can
+     briefly get out of the way of a transient.
+
+     This exists because of a specific, unfixable-by-volume problem. The
+     master chain ends in a compressor (2ms attack, 8:1) and a limiter (1ms,
+     20:1). At full throttle the engine and the turbo rig already sit well
+     past the compressor's threshold, so it is permanently in deep gain
+     reduction — and a blow-off is a 4ms transient, which is precisely the
+     shape those two exist to flatten. Turning the release up just feeds them
+     more and they flatten more of it. You cannot win that fight with gain.
+
+     So the release doesn't try. It goes out on the dry sfx bus, and it pulls
+     THIS down for a fifth of a second on its way past. Which is also simply
+     true: a bypass valve venting a foot behind your head really does bury the
+     engine for a moment, and that momentary hole is most of why the sound is
+     satisfying on a real recording. */
+  AU.duck = ctx.createGain(); AU.duck.gain.value = 1;
+  AU.engMech.connect(AU.duck);
+  AU.duck.connect(AU.master); AU.duck.connect(AU.wetSend);
 
   AU.conv = ctx.createConvolver(); AU.conv.buffer = makeTunnelIR(ctx);
   AU.wet = ctx.createGain(); AU.wet.gain.value = 0;
@@ -2491,6 +2657,11 @@ function initAudio() {
   AU.tbG = ctx.createGain(); AU.tbG.gain.value = 0;
   tbsrc.connect(AU.tbBp); AU.tbBp.connect(AU.tbG); AU.tbG.connect(AU.engMech); tbsrc.start();
 
+  // --- the quad-turbo rig ---
+  // Built unconditionally (a handful of oscillators is nothing) and silent
+  // unless the car has a `turboRig`. See TURBO RIG.
+  buildTurboRig(ctx);
+
   // --- wind / road ---
   const wsrc = ctx.createBufferSource(); wsrc.buffer = nbuf; wsrc.loop = true; wsrc.playbackRate.value = 0.6;
   AU.wlp = ctx.createBiquadFilter(); AU.wlp.type = "lowpass"; AU.wlp.frequency.value = 250;
@@ -2619,9 +2790,16 @@ const LISTEN = {
   hood:    { name: "OVER THE BONNET", tag: "induction, valve gear and turbo. Almost no exhaust.",
              inside: false, eng: 1.20, lo: -6, hi: +5, lp: 20000,
              pop: 0.45, intake: 2.1, turbo: 2.0, wind: 0.5 },
+  // …with one correction: on a turbo car the turbos are IN the exhaust
+  // stream, bolted to the manifolds, and everything they do goes out of the
+  // back of the car with everything else. Standing behind a big turbo car you
+  // do not hear less turbo than the driver does — you hear the intake side
+  // less, which is a different thing, and you hear the compressors bleed off
+  // on every lift very clearly indeed. So intake stays buried and the turbo
+  // itself sits close to where the driver has it.
   exhaust: { name: "AT THE TAILPIPE", tag: "all bass and rasp, every pop in your face, no intake.",
              inside: false, eng: 1.45, lo: +7, hi: +1, lp: 11000,
-             pop: 2.2, intake: 0.3, turbo: 0.45, wind: 0.55 },
+             pop: 2.2, intake: 0.3, turbo: 0.85, wind: 0.55 },
   rear:    { name: "BACK SEAT", tag: "through the bulkhead. Boomy, distant, chauffeur-side.",
              inside: true,  eng: 0.82, lo: +4, hi: -8, lp: 2600,
              pop: 0.7, intake: 0.45, turbo: 0.55, wind: 0.85 },
@@ -3047,11 +3225,24 @@ function buildEngineVoice(car) {
   AU.pulse.type = car.sound.pulseType || "sawtooth";  // square = choppy rotary/V8 chop
   applyFormants();
   applyFiring(car);                               // …and this engine's firing order
-  for (const [type, mult, gLo, gHi] of car.sound.layers) {
+  /* A layer is [wave, harmonic, gLo, gHi] — its level at the bottom of the
+     range and its level at the top, crossfaded across the tacho. A fifth slot
+     turns that into THREE zones: [wave, harmonic, gLo, gMid, gHi]. Two zones
+     is enough for an engine whose character just gets louder, but it cannot
+     describe an engine that changes shape twice — a big forced-induction
+     motor that rumbles at the bottom, hardens through the middle as the
+     turbos come in, and then turns exotic at the top while KEEPING its
+     bottom end. So layers that need it get a mid-range waypoint, and
+     everything already written stays a plain two-point fade. */
+  for (const [type, mult, a, b, c] of car.sound.layers) {
     const o = AU.ctx.createOscillator(); o.type = type; o.frequency.value = 30;
-    const g = AU.ctx.createGain(); g.gain.value = gLo;
+    const g = AU.ctx.createGain(); g.gain.value = a;
     o.connect(g); g.connect(AU.mixIn); o.start();
-    AU.oscs.push({ o, g, mult, gLo, gHi: gHi === undefined ? gLo : gHi });
+    const three = c !== undefined;
+    AU.oscs.push({ o, g, mult,
+                   gLo: a,
+                   gMid: three ? b : null,
+                   gHi: three ? c : (b === undefined ? a : b) });
   }
 }
 
@@ -3485,8 +3676,17 @@ function audioTick() {
     L.dr = Math.max(-0.004 * jm, Math.min(0.004 * jm, (L.dr || 0) * 0.99 + (Math.random() - 0.5) * 0.0008 * jm));
     const jit = 1 + L.dr + (Math.random() - 0.5) * 0.004 * jm;
     L.o.frequency.setTargetAtTime(Math.max(8, f0 * L.mult * jit), t, k);
-    if (L.gHi !== L.gLo)
+    if (L.gMid != null) {
+      // three zones: bottom → middle → top, crossfaded, never switched. The
+      // waypoint sits at half-revs, which on a big turbo motor is about where
+      // it stops rumbling and starts shoving.
+      const lvl = gCurve < 0.5
+        ? L.gLo + (L.gMid - L.gLo) * (gCurve / 0.5)
+        : L.gMid + (L.gHi - L.gMid) * ((gCurve - 0.5) / 0.5);
+      L.g.gain.setTargetAtTime(lvl, t, 0.06);
+    } else if (L.gHi !== L.gLo) {
       L.g.gain.setTargetAtTime(L.gLo + (L.gHi - L.gLo) * gCurve, t, 0.06);
+    }
   }
 
   const running = S.engineOn && !S.cranking;
@@ -3576,7 +3776,9 @@ function audioTick() {
   // induction noise: the thing you're standing in front of over the bonnet,
   // and the thing you cannot hear at all from the tailpipe
   const nMul = (VC.sound.noiseMul || 1) * P.intake * dirIntake;
-  const boostHiss = CC.asp === "turbo" ? S.boost * 0.09 * P.turbo : 0;
+  // …and on a rig car this is zero, because the rig has a proper intake layer
+  // of its own and stacking a second one on top just makes mud
+  const boostHiss = CC.asp === "turbo" && !CC.turboRig ? S.boost * 0.09 * P.turbo : 0;
   // On a naturally aspirated engine with open trumpets there is no turbo to
   // whoosh, and induction roar takes its place — but it does not track revs
   // the way a whistle tracks boost. It tracks THE THROTTLE, because it is
@@ -3609,6 +3811,12 @@ function audioTick() {
     chopG = wg * (load > 0.6 && rFrac > 0.72 ? 0.55 : 0.12);
     scg = (0.006 + load * 0.045) * Math.pow(rFrac, 0.9)
         + Math.pow(rFrac, 2.2) * (0.02 + load * 0.08);
+  } else if (running && CC.asp === "turbo" && CC.turboRig) {
+    /* This car has a real rig (see TURBO RIG), which owns the whine, the
+       intake, the charge-air rush and the release on its own chain and drives
+       all four off shaft speed rather than off the tacho. The legacy
+       single-whistle voice below would only fight with it, so it stays shut —
+       everything is left at zero and turboRigTick() does the work. */
   } else if (running && CC.asp === "turbo") {
     // A turbo is a big lump of metal spinning in a housing, and what you
     // actually hear from the driver's seat is a low siren, not a kettle. The
@@ -3715,6 +3923,23 @@ function audioTick() {
   for (const s of AU.scOscs)
     s.o.frequency.setTargetAtTime(Math.min(12000, wf * s.mult), t, k);
   AU.blowG.gain.setTargetAtTime(scg * hT * stW, t, 0.05);
+
+  /* --- the quad-turbo rig ---
+     Its own chain, its own listening map, and its own driving quantities —
+     shaft speed and manifold pressure rather than rpm. Everything it needs to
+     know about where you are standing and how far away the car is gets handed
+     to it here rather than looked up again, so the rig and the engine can
+     never disagree about the position of the microphone.
+
+     `hIn` is the intake's weighting rather than the turbo's: induction noise
+     leaves the FRONT of the car, so it behaves like the intake layer above
+     (huge over the bonnet, nearly absent at the tailpipe) and not like the
+     whine, which is a mechanical sound radiating off the compressors. */
+  turboRigTick(t, k, {
+    running, mute, load, dop, flyLp,
+    hT, stW,
+    hIn: hE * P.intake * dirIntake,
+  });
 
   const sp = Math.abs(S.v);
   // wind: gentle low rumble at town speeds, then the rush piles on hard past
@@ -5306,6 +5531,857 @@ function sfxSeqEngage() {
   n.start(t); n.stop(t + 0.42);
 }
 
+/* ================================================================
+   TURBO RIG — a turbocharger system as a physical object
+   ================================================================
+   Everything else in this file models forced induction as a number called
+   `boost` that chases rpm. That is fine for a car where the turbo is a detail.
+   It is completely wrong for a car where the turbos ARE the car, because it
+   gets the single most important thing backwards: a turbocharger is a heavy
+   wheel spinning at 130,000rpm, and it does not care what your right foot is
+   doing. Shut the throttle and manifold pressure is gone in a tenth of a
+   second — but the shaft is still spinning, and it will still be spinning a
+   second later. Get back on the throttle before it has bled off and the boost
+   is simply THERE, instantly, with no lag at all. That asymmetry — pressure
+   collapses fast, shaft speed decays slowly — is the entire feel of driving a
+   big turbo car, and it is why lift-and-reapply is satisfying.
+
+   So the rig separates the two:
+
+     shaft speed   integrated, with real inertia, driven by exhaust flow
+     boost         shaft speed × how far the throttle plate is open
+
+   Manifold pressure falls off a cliff on a lift. Shaft speed coasts. Both
+   drive the sound, and they drive DIFFERENT parts of it: the exhaust and the
+   engine tone follow boost and load, the whine and the charge-air rush follow
+   shaft speed. That is why the whine keeps singing for a moment after you
+   lift, and why it does not have to be faked with an envelope.
+
+   STAGING. The stages are turbo PAIRS, each with its own shaft, its own
+   inertia and its own whine. A stage's control valve opens it to the exhaust
+   over `at` → `at + span`, so it fades in over a whole chunk of the rev range
+   rather than switching on. Nothing is triggered, nothing steps, and there
+   are no separate whooshes — there is one turbo system that gets progressively
+   more of itself involved. A bigger stage has more inertia, so it takes
+   longer to light and longer to spin down, which is exactly the difference
+   you hear between the low pair and the high pair.
+
+   Every layer below is independently levelled, and every curve has a default,
+   so a car can specify a whole rig or just say `turboRig: {}` and get a
+   sensible generic one. See the Molsheim for a fully specified quad. */
+
+const RIG_DEF = {
+  // --- shaft mechanics -------------------------------------------------
+  spoolUp:  3.0,    // how hard exhaust energy accelerates a shaft (1/s)
+  coast:    0.6,    // how fast a shaft bleeds off unfed. LOW = long inertia,
+                    //   and this number IS the lift-and-reapply feel
+  bleed:    9.0,    // how fast manifold pressure collapses behind a shut plate
+  fill:    16.0,    // …and how fast it refills behind an open one. Near-
+                    //   instant: the air is already compressed and waiting
+  windmill: 0.10,   // shaft speed a closed throttle still supports — the
+                    //   engine is pumping SOMETHING even on the overrun
+  // --- layers ----------------------------------------------------------
+  whine:   { level: 0.05, hzMul: 1, spread: 0.007, wobble: 0.45, wobbleHz: 5.5, hp: 400 },
+  intake:  { level: 0.10, hz: 340, q: 0.55, load: 0.75, rev: 0.28 },
+  breath:  { level: 0.07, q: 0.6, boostHz: 600 },
+  hiss:    { level: 0.025, hz: 3200, q: 0.5 },
+  /* --- the whistle ---
+     The thing people mean when they say "turbo". It is NOT the whine layer:
+     the whine is the shaft, low and mechanical, and the whistle is the air
+     screaming through the compressor inducer on its way past the blades.
+
+     Measured turbocharger acoustics say two things that decide how this is
+     built. First, blade-pass tonal noise lives high — a few kHz, up to 10 on
+     a big wheel, with broadband lift across 4-12kHz. Second, and much more
+     useful: a compressor is TONAL at its design point and BROADBAND near
+     surge. So the same layer covers both jobs — hard, tight and pitched when
+     the engine is pulling; wide and airy when the throttle shuts and the
+     compressor falls off its map. One layer, two characters, and the
+     crossfade between them is a physical fact rather than an effect.
+
+     `voices` is the "different sound at different revs" part, and it is a
+     plain list: each entry is what the whistle IS at that shaft speed, and
+     the layer crossfades between the two that bracket it. Add entries to
+     make the character change more often; the blend never steps. */
+  whistle: {
+    level: 0.055,
+    load: 0.6,          // how much of it hangs off the pedal vs. the shaft
+    wobble: 9,          // cents of drift — a whistle that never wavers is a synth
+    voices: [
+      // at    the shaft speed this voice describes
+      // hz    where the whistle sits
+      // tone  0 = pure air, 1 = pure blade tone
+      // q     how tight the band is. Loose and breathy → hard and focused.
+      // lvl   how loud this voice is, before level/load scaling
+      { at: 0.00, hz:  520, tone: 0.16, q:  2.6, lvl: 0.10 },   // faint. just there.
+      { at: 0.30, hz: 1180, tone: 0.42, q:  5.5, lvl: 0.34 },   // part throttle
+      { at: 0.62, hz: 2500, tone: 0.64, q:  9.0, lvl: 0.76 },   // coming on song
+      { at: 0.90, hz: 4000, tone: 0.82, q: 12.5, lvl: 1.00 },   // full boost: hard
+    ],
+    surge: 0.75,        // how far toward broadband a lift drags it (see above)
+  },
+  /* --- the spool ---
+     The smooth high note that sits OVER the engine under hard acceleration
+     and is not there at any other time. It is deliberately not the whistle:
+     the whistle is always present to some degree, and this only shows up when
+     the engine is being asked for everything, which is what makes flooring it
+     feel like an event rather than like turning a volume knob. */
+  spool:   { level: 0.028, hz: [1800, 4200], q: 0.9 },
+  release: { level: 1, sigh: 1, chuff: 0.35, tail: 1, psh: 1, chirp: 1,
+             duck: 1,          // how hard a release pulls the engine down
+             shift: 0.8,       // an upshift's release, as a fraction of a lift's
+             shiftAt: 0.3 },   // …and the boost above which a shift gets one at all
+  /* --- where the turbo plumbing actually is ---
+     Every other one-shot in this file gets quieter when you seal the cabin,
+     because almost everything else in a car is outside it: the exhaust is
+     under the floor and out the back, the tyres are at the corners, the wind
+     is on the glass. Turbochargers are not. On a mid-engined car they and
+     their charge pipes are bolted to the bulkhead a foot behind your head,
+     and the bypass valves vent into the engine bay, which IS the cabin's back
+     wall. Sealing yourself in cuts the exhaust and the wind and leaves the
+     plumbing — so the turbo gets LOUDER inside, not quieter, and it is the
+     one thing in the car that does. */
+  cabin:   1.75,
+  /* …but the STEADY layers get a gentler lift than the one-shots do, and
+     they have to. A blow-off is an event: it can be as loud as the engine for
+     a fifth of a second and the mix simply makes room for it. The rush and
+     the whistle are continuous, and if they get the same 1.75 they stop being
+     a layer over the engine and start being a curtain in front of it. So the
+     bang gets the full amount and the wash gets about half of it. */
+  cabinCont: 1.35,
+  /* A stage is a turbo, or a pair of them:
+       at/span   the rev window its control valve opens across
+       sat       revs at which its turbine has all the exhaust it can use —
+                 small wheel, low number; big wheel, high one
+       share     how much of total boost it is responsible for
+       inertia   how heavy it is. Slows the spool AND lengthens the coast,
+                 and the coast is what you hear after a lift.
+       whineHz / whineMul / breathHz   its own voice */
+  stages:  [{ at: 1200, span: 2000, sat: 3000, share: 0.6, inertia: 0.6, whineHz: 1400, whineMul: 1, breathHz: 560 },
+            { at: 3600, span: 2200, sat: 5400, share: 0.4, inertia: 0.9, whineHz: 1850, whineMul: 1.15, breathHz: 720 }],
+};
+
+/* this car's rig, with every default filled in */
+function rigOf(car) {
+  const r = (car || CC).turboRig;
+  if (!r) return null;
+  if (r._def) return r;                       // memoised — this runs every frame
+  const merged = {
+    ...RIG_DEF, ...r,
+    whine:   { ...RIG_DEF.whine,   ...(r.whine   || {}) },
+    intake:  { ...RIG_DEF.intake,  ...(r.intake  || {}) },
+    breath:  { ...RIG_DEF.breath,  ...(r.breath  || {}) },
+    hiss:    { ...RIG_DEF.hiss,    ...(r.hiss    || {}) },
+    spool:   { ...RIG_DEF.spool,   ...(r.spool   || {}) },
+    release: { ...RIG_DEF.release, ...(r.release || {}) },
+    whistle: { ...RIG_DEF.whistle, ...(r.whistle || {}),
+               // voices are replaced wholesale, not merged element-wise: a car
+               // that describes its own whistle means all of it
+               voices: ((r.whistle && r.whistle.voices) || RIG_DEF.whistle.voices)
+                 .slice().sort((a, b) => a.at - b.at) },
+    stages:  (r.stages || RIG_DEF.stages).map(s => ({ ...RIG_DEF.stages[0], ...s })),
+    _def: true,
+  };
+  Object.assign(r, merged);
+  return r;
+}
+
+/* the rig's whole observable state, zeroed. Everything the audio side reads
+   comes from here, so there is exactly one place to look. */
+function turboRigReset() {
+  S.tShaft = null;      // per-stage shaft speed, 0..1
+  S.tSpd = 0;           // combined shaft speed, 0..1 — drives whine & rush
+  S.tStage = 0;         // how much of stage two is in it, 0..1
+  S.tRise = 0;          // d(boost)/dt, smoothed — "it is BUILDING"
+  S.tLiftT = 99;        // seconds since the last lift
+  S.tLiftBoost = 0;     // how much boost there was at the instant of the lift
+  S.tRelease = 0;       // release envelope, 0..1, decays after a lift
+  S._rigEff = 0;        // previous pedal position; do not inherit another car
+  S._rigShifting = false;
+  S._rigHold = 0;
+  S._shiftDir = 0;
+}
+
+/* one physics step of the rig. Owns S.boost for cars that have one. */
+function turboRigStep(dt, eff) {
+  const R = rigOf(CC);
+  if (!R) return;
+  const st = R.stages;
+  if (!S.tShaft || S.tShaft.length !== st.length) { turboRigReset(); S.tShaft = st.map(() => 0); }
+
+  /* A twin-clutch upshift cuts fuel for fifty milliseconds. The driver's foot
+     never moved, and neither did anything in the intake tract — the
+     compressors do not know a gear changed. So the rig is driven by the
+     PEDAL through a shift, not by the fuel cut, and no release fires. This is
+     the difference between a car that stays on boost through the gears and
+     one that has to re-spool four times on the way to the top of third. */
+  const shifting = S.shiftCut > 0 || S.cutTimer > 0;
+  const pedal = clamp(S.in.gas, 0, 1);
+  const air = shifting ? Math.max(eff, pedal * 0.9) : eff;
+
+  // how hard the engine is breathing at all: a closed throttle still pumps a
+  // little, which is `windmill`, and is why the shafts never actually stop
+  // while the engine is running
+  const pump = R.windmill + air * (1 - R.windmill);
+
+  let charge = 0, spd = 0, wsum = 0;
+  for (let i = 0; i < st.length; i++) {
+    const s = st[i];
+    /* Exhaust flow available to THIS stage, and the saturation point is per
+       stage because it is a property of the turbine, not of the engine. A
+       small wheel has all the exhaust it can use by two and a half thousand
+       rpm and is against its wastegate from there to the limiter — that is
+       what a small turbo is FOR, and it is where the low-down shove comes
+       from. A big wheel is still filling up at five. Using one global flow
+       curve for both makes the small pair behave like the big pair, and the
+       car loses the bottom end that is the entire point of staging it. */
+    const flow = clamp(S.rpm / s.sat, 0, 1);
+    // the stage's control valve opening to the exhaust stream — a ramp, not
+    // a switch, and a long one, so the stage arrives as a swell
+    const gate = clamp((S.rpm - s.at) / s.span, 0, 1);
+    const tgt = flow * pump * (gate * gate * (3 - 2 * gate));     // smoothstep
+    const w = S.tShaft[i];
+    // accelerating a turbine is violent; slowing one down is bearing drag and
+    // nothing else. Big wheels do both more slowly.
+    const rate = (tgt > w ? R.spoolUp : R.coast) / s.inertia;
+    S.tShaft[i] = w + (tgt - w) * Math.min(1, rate * dt);
+    charge += S.tShaft[i] * s.share;
+    spd += S.tShaft[i] * s.share; wsum += s.share;
+  }
+  S.tSpd = wsum > 0 ? clamp(spd / wsum, 0, 1.2) : 0;
+  // how much of what you are hearing is the second pair. Not a flag, not an
+  // event — a ratio, which is what stops the handover reading as a whoosh.
+  S.tStage = st.length > 1
+    ? clamp(S.tShaft[1] * st[1].share / Math.max(0.001, charge), 0, 1)
+    : 0;
+
+  // boost is what actually reaches the manifold: compressed air behind a
+  // throttle plate. The plate is the fast part of the system and the shaft is
+  // the slow part, and keeping them separate is the whole point.
+  const plate = clamp(air * 1.12, 0, 1);
+  const tgt = clamp(charge, 0, 1) * plate;
+  const prev = S.boost;
+  S.boost += (tgt - S.boost) * Math.min(1, (tgt > S.boost ? R.fill : R.bleed) * dt);
+  // smoothed rate of change — the audio side uses it to lean on the intake
+  // while pressure is actively climbing, which is what "coming onto boost"
+  // sounds like as opposed to "already on boost"
+  S.tRise += (clamp((S.boost - prev) / Math.max(dt, 0.001), 0, 4) - S.tRise)
+             * Math.min(1, 6 * dt);
+
+  /* --- the lift ---
+     Not an on/off event. How much comes out of the bypass valves is exactly
+     how much pressure was in the pipes when the plate shut, so a lift off a
+     part-throttle cruise is a tick and a lift off full boost at 6000rpm is
+     the whole thing. And the whine that follows it is not scripted at all —
+     the shafts are still spinning, `coast` is slow, and the whine layer is
+     already following shaft speed, so it decays because the model says so. */
+  const wasOn = S._rigEff === undefined ? 0 : S._rigEff;
+  const drop = wasOn - pedal;
+  S._rigHold = Math.max(0, (S._rigHold || 0) - dt);
+  /* It is a PARTIAL lift as well as a full one. Going from flat to a third
+     throttle in the middle of a corner still shuts most of the plate and
+     still puts most of that pressure out through the valves, and a model
+     that only listens for pedal-to-zero misses every one of them. So the
+     trigger is how far the foot moved and how much pressure it moved away
+     from — and the result is scaled by both, which is what makes a small
+     lift a tick and a big one an event. The hold stops a jittery pedal
+     firing a burst of them. */
+  if (!shifting && drop > 0.22 && pedal < 0.6 && prev > 0.03 && S._rigHold <= 0) {
+    const amt = clamp(prev * clamp(drop / 0.75, 0.25, 1), 0, 1);
+    S.tLiftBoost = amt;
+    S.tLiftT = 0;
+    S.tRelease = amt;
+    S._rigHold = 0.18;
+    sfxTurboRelease(amt, S.tSpd, R);
+    // …and the surge, for a rig with no bypass capacity to speak of
+    const fl = CC.flutter === true ? 1 : (CC.flutter || 0);
+    if (fl > 0.05 && amt > 0.4) sfxFlutter(amt * 0.8, fl);
+  }
+  /* --- the gearbox's contribution ---
+     An upshift at real boost is not a small event. The clutches hand over,
+     the compressors unload against a closed-ish path, and the valves crack —
+     and on a quad-turbo car that is one of the best noises it makes, on every
+     single shift. So above a useful amount of boost this fires the FULL
+     release rather than the little chuff, at a scaled-down amount so it reads
+     as "same mechanism, less of it" rather than as a different sound. Below
+     that, it stays a chuff, because a gearchange at part throttle should not
+     announce itself. */
+  if (shifting && !S._rigShifting && prev > 0.12 && S._shiftDir >= 0) {
+    // Some cars make their signature bypass-valve sound only in the lower
+    // gears, where a redline upshift is still carrying maximum charge-pipe
+    // pressure. `shiftThrough: 4` means the three events into 2nd, 3rd and
+    // 4th. Past that the normal, smaller chirp remains instead of making
+    // every motorway ratio sound like a launch run.
+    // Automatic shifts have already installed the destination ratio here;
+    // delayed paddle shifts are still displaying the source ratio until the
+    // DCT timer lands. Normalize both paths to the gear being shifted INTO.
+    const shownGear = S.mode === "auto" ? S.autoGear : S.gear;
+    const destGear = S.mode === "manual" && typeof shownGear === "number"
+      ? shownGear + (S._shiftDir > 0 ? 1 : 0) : shownGear;
+    const through = R.release.shiftThrough;
+    const signatureShift = typeof destGear === "number" && destGear >= 2
+                        && (through === undefined || destGear <= through);
+    const redAt = R.release.redlineAt === undefined ? 0.9 : R.release.redlineAt;
+    const red = clamp((S.rpm / ENG.max - redAt) / Math.max(0.01, 1 - redAt), 0, 1);
+    const redLift = 1 + red * ((R.release.redlineLift || 1) - 1);
+    if (prev >= (R.release.shiftAt === undefined ? 0.3 : R.release.shiftAt)) {
+      const shiftScale = R.release.shift === undefined ? 0.8 : R.release.shift;
+      const amt = clamp(prev * shiftScale * (signatureShift ? redLift : 0.72), 0, 1);
+      S.tRelease = Math.max(S.tRelease, amt * 0.8);
+      sfxTurboRelease(amt, S.tSpd, R);
+      S._rigHold = 0.1;          // don't let the lift trigger double up on it
+    } else {
+      sfxTurboChirp(prev, R);
+    }
+  }
+  S._rigShifting = shifting;
+  S._rigEff = pedal;
+  S.tLiftT = pedal < 0.12 ? S.tLiftT + dt : 0;
+  // the release envelope dies on its own clock — faster if you get back on it,
+  // because reopening the throttle is what stops air coming out of the valves
+  S.tRelease *= Math.max(0, 1 - (pedal > 0.25 ? 7 : 1.6) * dt);
+}
+
+/* engine off / not a rig car: let the shafts wind down instead of snapping
+   to zero, so shutting the engine down under boost still sounds like metal
+   coming to rest rather than a mute button */
+function turboRigIdle(dt) {
+  if (!S.tShaft) return;
+  for (let i = 0; i < S.tShaft.length; i++) S.tShaft[i] *= Math.max(0, 1 - 1.1 * dt);
+  S.tSpd *= Math.max(0, 1 - 1.1 * dt);
+  S.tRelease *= Math.max(0, 1 - 2.5 * dt);
+}
+
+/* ---------------------------------------------------------------
+   the rig's audio chain
+   ---------------------------------------------------------------
+   Four independent layers, each with its own gain, each driven by a
+   different quantity, each adjustable on its own from the car's config:
+
+     whine    the compressors themselves. Follows SHAFT SPEED, not rpm, and
+              that one decision is most of what makes it feel mechanical
+              rather than like a synthesizer tracking the tacho.
+     intake   air being swallowed. Follows the throttle and the rate of
+              pressure rise — the sound of an engine eating.
+     breath   low charge-air rush, the "zohh" through the pipes and the
+              intercoolers. Follows shaft speed and boost together.
+     hiss     the fine high-frequency top of the airflow. First thing to go
+              with distance, which is what makes distance read as distance.
+
+   All four hang off one bus so the whole system can be balanced against the
+   engine in one move. */
+function buildTurboRig(ctx) {
+  const R = {};
+  AU.rig = R;
+  R.out = ctx.createGain(); R.out.gain.value = 1;
+  R.out.connect(AU.engMech);
+
+  // --- whine ---
+  // A single sine is a dog whistle and reads as electronic. A real compressor
+  // is a wheel with a specific blade count in a housing that rings: a
+  // fundamental, a hard octave, a bit of third, and — critically — a second
+  // detuned copy of the fundamental so the two beat slowly against each
+  // other. Nothing in a turbocharger is perfectly balanced.
+  R.whHp = ctx.createBiquadFilter(); R.whHp.type = "highpass";
+  R.whHp.frequency.value = 400; R.whHp.Q.value = 0.7;
+  R.whG = ctx.createGain(); R.whG.gain.value = 0;
+  R.whHp.connect(R.whG); R.whG.connect(R.out);
+
+  // the wobble: a slow, shallow pitch drift shared across every wheel. Air is
+  // turbulent, the shafts hunt, and a whine that holds a dead-steady pitch is
+  // the single biggest tell that it came out of an oscillator.
+  R.wob = ctx.createOscillator(); R.wob.type = "sine"; R.wob.frequency.value = 5.5;
+  R.wobG = ctx.createGain(); R.wobG.gain.value = 0;      // in cents
+  R.wob.connect(R.wobG); R.wob.start();
+  // …and a second, much slower one, so the wobble itself isn't periodic
+  R.wob2 = ctx.createOscillator(); R.wob2.type = "sine"; R.wob2.frequency.value = 0.73;
+  R.wob2G = ctx.createGain(); R.wob2G.gain.value = 0;
+  R.wob2.connect(R.wob2G); R.wob2.start();
+
+  // one bank per stage — separate gains, so the stages fade against each
+  // other instead of being switched between. Three banks is enough for any
+  // rig anyone is going to write; spare ones sit at zero and cost nothing.
+  R.banks = [0, 1, 2].map(() => {
+    const g = ctx.createGain(); g.gain.value = 0;
+    g.connect(R.whHp);
+    const oscs = [["sine", 1, 0.62], ["sine", 1.006, 0.44],
+                  ["triangle", 2.0, 0.15], ["sine", 3.01, 0.05]]
+      .map(([type, mult, lvl]) => {
+        const o = ctx.createOscillator(); o.type = type; o.frequency.value = 1200;
+        const og = ctx.createGain(); og.gain.value = lvl;
+        o.connect(og); og.connect(g);
+        R.wobG.connect(o.detune); R.wob2G.connect(o.detune);
+        o.start();
+        return { o, mult };
+      });
+    return { g, oscs };
+  });
+
+  // --- intake: the engine swallowing ---
+  // Broad, low-mid, resonant. Not hiss — hiss is a leak. This is the sound of
+  // a very large volume of air being dragged through a duct, so it lives
+  // between about 200Hz and 1kHz and it has a body to it.
+  const isrc = ctx.createBufferSource(); isrc.buffer = AU.noiseBuf;
+  isrc.loop = true; isrc.playbackRate.value = 0.85;
+  R.inBp = ctx.createBiquadFilter(); R.inBp.type = "bandpass";
+  R.inBp.frequency.value = 340; R.inBp.Q.value = 0.55;
+  R.inLp = ctx.createBiquadFilter(); R.inLp.type = "lowpass"; R.inLp.frequency.value = 1800;
+  R.inG = ctx.createGain(); R.inG.gain.value = 0;
+  isrc.connect(R.inBp); R.inBp.connect(R.inLp); R.inLp.connect(R.inG);
+  R.inG.connect(R.out); isrc.start();
+
+  // --- breath: charge air moving through the pipes ---
+  const bsrc = ctx.createBufferSource(); bsrc.buffer = AU.noiseBuf;
+  bsrc.loop = true; bsrc.playbackRate.value = 1.02;
+  R.brBp = ctx.createBiquadFilter(); R.brBp.type = "bandpass";
+  R.brBp.frequency.value = 600; R.brBp.Q.value = 0.6;
+  R.brG = ctx.createGain(); R.brG.gain.value = 0;
+  bsrc.connect(R.brBp); R.brBp.connect(R.brG); R.brG.connect(R.out); bsrc.start();
+
+  // --- hiss: the detail on top ---
+  const hsrc = ctx.createBufferSource(); hsrc.buffer = AU.noiseBuf;
+  hsrc.loop = true; hsrc.playbackRate.value = 1.6;
+  R.hsBp = ctx.createBiquadFilter(); R.hsBp.type = "bandpass";
+  R.hsBp.frequency.value = 3200; R.hsBp.Q.value = 0.5;
+  R.hsG = ctx.createGain(); R.hsG.gain.value = 0;
+  hsrc.connect(R.hsBp); R.hsBp.connect(R.hsG); R.hsG.connect(R.out); hsrc.start();
+
+  /* --- whistle ---
+     Two sources into one gain, and the balance between them is the whole
+     trick. A pure oscillator is the cartoon whistle everybody complains
+     about; pure filtered noise is a steam leak. A real compressor is both at
+     once — a blade tone sitting inside a band of rushing air — and the ratio
+     between them is what changes with operating point. High-Q noise gives
+     the band; the oscillators give the note; `tone` crossfades them. */
+  R.wsG = ctx.createGain(); R.wsG.gain.value = 0;      // the layer's master
+  R.wsG.connect(R.out);
+
+  // the air: one narrow, steep band. Two poles in series, because a single
+  // biquad at Q 12 is still too wide to read as a whistle rather than a hiss.
+  const wsrc2 = ctx.createBufferSource(); wsrc2.buffer = AU.noiseBuf;
+  wsrc2.loop = true; wsrc2.playbackRate.value = 1.35;
+  R.wsBp = ctx.createBiquadFilter(); R.wsBp.type = "bandpass";
+  R.wsBp.frequency.value = 1200; R.wsBp.Q.value = 6;
+  R.wsBp2 = ctx.createBiquadFilter(); R.wsBp2.type = "bandpass";
+  R.wsBp2.frequency.value = 1200; R.wsBp2.Q.value = 6;
+  R.wsNG = ctx.createGain(); R.wsNG.gain.value = 0;
+  wsrc2.connect(R.wsBp); R.wsBp.connect(R.wsBp2); R.wsBp2.connect(R.wsNG);
+  R.wsNG.connect(R.wsG); wsrc2.start();
+
+  // the blade tone: fundamental plus a thin second, and a little third for
+  // the hard edge at full boost. Both wobble LFOs are wired in, so the
+  // whistle drifts with the shaft instead of sitting on a grid.
+  R.wsTG = ctx.createGain(); R.wsTG.gain.value = 0;
+  R.wsTG.connect(R.wsG);
+  R.wsOscs = [["sine", 1, 0.5], ["triangle", 2, 0.10], ["sine", 0.5, 0.18]]
+    .map(([type, mult, lvl]) => {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = 1200;
+      const og = ctx.createGain(); og.gain.value = lvl;
+      o.connect(og); og.connect(R.wsTG);
+      R.wobG.connect(o.detune); R.wob2G.connect(o.detune);
+      o.start();
+      return { o, mult };
+    });
+
+  /* --- spool: the smooth high note over the top, hard acceleration only ---
+     Sine-led and high-passed so it adds altitude to the mix without adding
+     any weight — it should sit ABOVE the engine, not inside it. */
+  R.spHp = ctx.createBiquadFilter(); R.spHp.type = "highpass";
+  R.spHp.frequency.value = 1600; R.spHp.Q.value = 0.6;
+  R.spG = ctx.createGain(); R.spG.gain.value = 0;
+  R.spHp.connect(R.spG); R.spG.connect(R.out);
+  R.spOscs = [["sine", 1, 0.55], ["sine", 1.004, 0.32], ["triangle", 2, 0.10]]
+    .map(([type, mult, lvl]) => {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = 3000;
+      const og = ctx.createGain(); og.gain.value = lvl;
+      o.connect(og); og.connect(R.spHp);
+      R.wobG.connect(o.detune);
+      o.start();
+      return { o, mult };
+    });
+}
+
+/* Which whistle this shaft speed calls for. The voices are waypoints and
+   this is the crossfade between the two that bracket the current speed —
+   so the character moves continuously and a car can have as many distinct
+   "versions" of its whistle as it cares to write down. */
+function whistleVoiceAt(spd, voices) {
+  const n = voices.length;
+  if (n === 1) return voices[0];
+  let i = 0;
+  while (i < n - 2 && spd >= voices[i + 1].at) i++;
+  const a = voices[i], b = voices[i + 1];
+  const span = b.at - a.at;
+  const u = span > 1e-6 ? clamp((spd - a.at) / span, 0, 1) : 0;
+  // smoothstep, so the handover between two voices has no corner in it
+  const s = u * u * (3 - 2 * u);
+  const mix = (p) => a[p] + (b[p] - a[p]) * s;
+  return { hz: mix("hz"), tone: mix("tone"), q: mix("q"), lvl: mix("lvl") };
+}
+
+/* Per-frame drive. `env` carries what the audio tick already worked out:
+   where you're standing, how far away the car is, and the Doppler factor. */
+function turboRigTick(t, k, env) {
+  const R = AU.rig;
+  if (!R) return;
+  const C = rigOf(CC);
+  const live = C && env.running && !env.mute;
+  if (!live) {
+    R.whG.gain.setTargetAtTime(0, t, 0.12);
+    R.inG.gain.setTargetAtTime(0, t, 0.12);
+    R.brG.gain.setTargetAtTime(0, t, 0.12);
+    R.hsG.gain.setTargetAtTime(0, t, 0.12);
+    R.wsG.gain.setTargetAtTime(0, t, 0.12);
+    R.spG.gain.setTargetAtTime(0, t, 0.12);
+    return;
+  }
+
+  const st = C.stages;
+  const spd = clamp(S.tSpd || 0, 0, 1.15);
+  const boost = clamp(S.boost || 0, 0, 1.1);
+  const load = env.load;
+  const dop = env.dop, hT = env.hT, stW = env.stW, flyLp = env.flyLp;
+  // distance eats the top of everything before it touches the bottom, so the
+  // whine and the hiss are attenuated by it and the low rush very nearly
+  // isn't. This is the whole reason a car half a mile away still sounds huge
+  // and doesn't sound sharp.
+  const near = clamp(flyLp, 0, 1);
+  const hiKill = 0.25 + 0.75 * near * near;
+  // sealing the cabin puts you INSIDE with the plumbing — see `cabin` in
+  // RIG_DEF for why the turbo is the one thing that gets louder in here
+  const cab = inCabin() ? (C.cabinCont || 1) : 1;
+
+  // --- whine: each stage sings its own note, at its own shaft speed ---
+  const W = C.whine;
+  R.wobG.gain.setTargetAtTime(W.wobble * 22 * (0.35 + spd * 0.65), t, 0.15);
+  R.wob2G.gain.setTargetAtTime(W.wobble * 14, t, 0.3);
+  R.wob.frequency.setTargetAtTime(W.wobbleHz * (0.7 + spd * 0.6), t, 0.2);
+  for (let i = 0; i < R.banks.length; i++) {
+    const s = st[Math.min(i, st.length - 1)];
+    const w = clamp((S.tShaft && S.tShaft[i]) || 0, 0, 1.15);
+    // pitch tracks THIS shaft. A turbo that is coasting down is a turbo whose
+    // note is falling, whatever the engine is doing — which is precisely the
+    // sound you want after a lift.
+    const hz = (260 + w * s.whineHz * 1.55) * (W.hzMul || 1) * dop;
+    for (const o of R.banks[i].oscs)
+      o.o.frequency.setTargetAtTime(Math.min(12000, Math.max(60, hz * o.mult)), t, k);
+    // level: quiet off boost, climbing hard with shaft speed, and leaning on
+    // load so a shaft freewheeling on the overrun is audible but not shouting
+    const lvl = i >= st.length ? 0
+      : Math.pow(w, 1.35) * s.whineMul * (0.45 + load * 0.55) * s.share * 2;
+    R.banks[i].g.gain.setTargetAtTime(clamp(lvl, 0, 2), t, 0.06);
+  }
+  R.whHp.frequency.setTargetAtTime(W.hp, t, 0.2);
+  // the top of a whine is directional and fragile: it barely survives the
+  // bulkhead and it does not survive distance at all
+  R.whG.gain.setTargetAtTime(W.level * hT * stW * hiKill * cab, t, 0.05);
+
+  // --- intake ---
+  // Hangs off the PEDAL, plus a lean on how fast pressure is climbing. That
+  // second term is what makes flooring it at 2000rpm sound different from
+  // holding it flat at 6000 — the same throttle, but only one of them is the
+  // sound of an engine getting greedier by the moment.
+  const I = C.intake;
+  const revs = clamp(S.rpm / (ENG.max || 7000), 0, 1);
+  const inLvl = (load * I.load + revs * I.rev + Math.min(0.35, S.tRise * 0.22))
+              * (0.5 + boost * 0.7);
+  R.inBp.frequency.setTargetAtTime((I.hz + revs * 620 + load * 220) * dop, t, k);
+  R.inBp.Q.setTargetAtTime(I.q, t, 0.2);
+  R.inLp.frequency.setTargetAtTime((1400 + revs * 2600) * (0.4 + 0.6 * near), t, 0.1);
+  R.inG.gain.setTargetAtTime(clamp(inLvl, 0, 2.5) * I.level * env.hIn * cab, t, 0.05);
+
+  // --- breath: shaft speed moving air, coloured by how much of it is
+  //     actually being compressed into the engine right now ---
+  const B = C.breath;
+  // the rush sits wherever the air is actually coming from: a weighted mean
+  // of the stages' bands, so as the big pair takes over the whole rush moves
+  // up with it. One sound getting bigger, not two sounds crossfading.
+  let bNum = 0, bDen = 0;
+  for (let i = 0; i < st.length; i++) {
+    const w = clamp((S.tShaft && S.tShaft[i]) || 0, 0, 1.2) * st[i].share;
+    bNum += st[i].breathHz * w; bDen += w;
+  }
+  const bHz = bDen > 0.02 ? bNum / bDen : B.boostHz;
+  R.brBp.frequency.setTargetAtTime(clamp((bHz + boost * 420) * dop, 120, 4000), t, k);
+  R.brBp.Q.setTargetAtTime(B.q, t, 0.2);
+  // the release rides here too: after a lift the shafts are still turning and
+  // still pushing air round the bypass loop, and that is a rush, not a tone
+  R.brG.gain.setTargetAtTime(
+    (Math.pow(spd, 1.15) * (0.35 + load * 0.65) + S.tRelease * 0.55) * B.level * hT * cab,
+    t, 0.05);
+
+  // --- hiss ---
+  const H = C.hiss;
+  R.hsBp.frequency.setTargetAtTime((H.hz + spd * 1500) * dop, t, k);
+  R.hsG.gain.setTargetAtTime(
+    (Math.pow(spd, 1.6) * (0.3 + load * 0.7) + S.tRelease * 0.4) * H.level * hT * hiKill * cab,
+    t, 0.06);
+
+  /* --- whistle ---
+     Pitch tracks shaft speed and NOT rpm, so it keeps climbing while the
+     engine holds station on a boost plateau, and it keeps falling after a
+     lift while the engine is still turning. That is the difference between a
+     turbo and an air-raid siren bolted to the tacho. */
+  const V = C.whistle;
+  const voice = whistleVoiceAt(spd, V.voices);
+  // Near surge the compressor stops making a tone and starts making noise —
+  // which is what a lift actually sounds like, and it means the sharp airy
+  // "pshhh" and the hard steady whistle are the same layer in two states.
+  const surge = clamp(S.tRelease * V.surge, 0, 0.9);
+  const tone = clamp(voice.tone * (1 - surge), 0, 1);
+  const wsHz = clamp(voice.hz * dop, 90, 13000);
+  R.wsBp.frequency.setTargetAtTime(wsHz, t, k);
+  R.wsBp2.frequency.setTargetAtTime(wsHz, t, k);
+  // the band tightens as it comes on song, and opens right up on a lift
+  const wq = Math.max(0.7, voice.q * (1 - surge * 0.8));
+  R.wsBp.Q.setTargetAtTime(wq, t, 0.08);
+  R.wsBp2.Q.setTargetAtTime(wq, t, 0.08);
+  for (const o of R.wsOscs)
+    o.o.frequency.setTargetAtTime(Math.min(15000, wsHz * o.mult), t, k);
+  // A narrow band throws away most of the noise power, so the air side needs
+  // a lot more raw gain than the tone side to arrive at the same loudness.
+  R.wsNG.gain.setTargetAtTime((1 - tone) * 2.6, t, 0.05);
+  R.wsTG.gain.setTargetAtTime(tone * 0.85, t, 0.05);
+  // …and it stays faintly audible off the throttle, because a spinning
+  // compressor is never actually silent
+  const wsLvl = voice.lvl * (1 - V.load + load * V.load) + S.tRelease * 0.5;
+  R.wsG.gain.setTargetAtTime(clamp(wsLvl, 0, 2) * V.level * hT * stW * hiKill * cab, t, 0.05);
+
+  /* --- spool ---
+     Only under hard acceleration, and it wants BOTH conditions: a wide
+     throttle and pressure actually in the pipes. Cruising at high boost on a
+     part throttle does not get it, and neither does flooring it at 1200rpm
+     with nothing behind the plate. It is the sound of the engine being asked
+     for everything and having it available. */
+  const SP = C.spool;
+  const hard = clamp((load - 0.55) / 0.4, 0, 1) * clamp((boost - 0.25) / 0.5, 0, 1);
+  const spHz = (SP.hz[0] + (SP.hz[1] - SP.hz[0]) * Math.pow(spd, 1.25)) * dop;
+  for (const o of R.spOscs)
+    o.o.frequency.setTargetAtTime(Math.min(15000, spHz * o.mult), t, k);
+  R.spHp.frequency.setTargetAtTime(clamp(spHz * 0.6, 300, 8000), t, 0.1);
+  R.spG.gain.setTargetAtTime(
+    hard * Math.pow(spd, 1.2) * SP.level * hT * stW * hiKill * cab, t, 0.07);
+}
+
+/* ---- the lift ----
+   Three things leave the car when the plate shuts, and how much of each
+   depends entirely on how much pressure was in the pipes:
+
+     the sigh    bypass valves opening and the charge air going back round to
+                 the compressor inlet. Soft, broadband, falling. This is the
+                 one that is always there.
+     the chuffs  a couple of soft slams as the column of air reverses. Only
+                 shows up with real pressure behind it, and it is short.
+     the tail    the last of it leaving, under everything, for about a second.
+
+   The decaying whine that follows is NOT here — that comes out of the shaft
+   model for free, because the shafts are still spinning. Which is the point.
+
+   `boost` is 0..1 at the instant of the lift. Below about a fifth of it this
+   is a tick you barely notice, which is correct: a small lift is a small
+   sound, and the reason arcade turbo audio is exhausting is that it isn't. */
+function sfxTurboRelease(boost, spd, R) {
+  if (!AU.ready) return;
+  const C = R || rigOf(CC);
+  if (!C) return;
+  const R2 = C.release;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  // under the bonnet and behind the bulkhead: loud over the wing, muted from
+  // the driver's seat with the glass up, and mostly gone at distance
+  const pos = ear().turbo * (inCabin() ? (C.cabin || 1) : 1) * (stockOn() ? 0.75 : 1);
+  const k = clamp(boost, 0, 1) * R2.level * pos;
+  if (k < 0.015) return;
+  const bus = AU.sfx;
+  // get the engine out of the way — this, not the gain above, is what makes
+  // the release audible over a mix that is already hitting the limiter
+  const dk = clamp(boost, 0, 1) * (R2.duck === undefined ? 1 : R2.duck);
+  if (dk > 0.05) duckBed(1 - dk * 0.62, 0.05 + dk * 0.05, 0.26 + dk * 0.14);
+
+  /* --- the "pshhh" ---
+     The transient. A valve snapping open against real pressure is a fast,
+     bright, tight crack of air, and it is SHORT — a couple of hundred
+     milliseconds at most, not the half-second whoosh that every arcade game
+     uses. Everything about it here is aimed at "expensive": a hard attack so
+     it reads as a mechanism rather than a fade-in, a high band so it cuts
+     over the engine instead of muddying it, a fast exponential collapse so it
+     is gone before you can decide it was silly, and a downward sweep because
+     the escaping air loses velocity as the pressure equalises.
+
+     Its length and brightness both scale with how much boost there was, which
+     is what stops a part-throttle lift sounding like a full one. */
+  const pd = 0.10 + k * 0.13;                    // 100-230ms. Short on purpose.
+  const p = ctx.createBufferSource(); p.buffer = AU.noiseBuf;
+  p.playbackRate.value = 1.5 + Math.random() * 0.25;
+  const pf = ctx.createBiquadFilter(); pf.type = "bandpass";
+  pf.Q.value = 1.5 + k * 1.2;                    // tighter with more pressure
+  pf.frequency.setValueAtTime(2600 + k * 2900, t);
+  pf.frequency.exponentialRampToValueAtTime(1100 + k * 700, t + pd);
+  // a little high-pass under it so nothing woolly survives — this layer is
+  // all edge, and the body of the release is the sigh below
+  const php = ctx.createBiquadFilter(); php.type = "highpass";
+  php.frequency.value = 1500; php.Q.value = 0.7;
+  const pg = ctx.createGain();
+  pg.gain.setValueAtTime(0.0001, t);
+  // This is the loudest single event the turbo system produces, and it is
+  // meant to be. A bypass valve dumping 18psi is a bang of air, and every
+  // time this number has been "tasteful" the release has vanished under the
+  // engine — which is the one failure mode that matters, because the release
+  // is the whole point of a turbo car.
+  pg.gain.linearRampToValueAtTime(0.38 * k * R2.psh, t + 0.004);   // 4ms: a snap
+  pg.gain.exponentialRampToValueAtTime(0.0001, t + pd);
+  p.connect(pf); pf.connect(php); php.connect(pg); pg.connect(bus);
+  p.start(t); p.stop(t + pd + 0.03);
+
+  // …and a second, lower band under the crack. The high band alone is a
+  // hiss; what makes it read as PRESSURE leaving rather than air escaping is
+  // a bit of body at the bottom of it, arriving at the same instant.
+  const pb = ctx.createBufferSource(); pb.buffer = AU.noiseBuf;
+  pb.playbackRate.value = 0.8;
+  const pbf = ctx.createBiquadFilter(); pbf.type = "bandpass"; pbf.Q.value = 1.1;
+  pbf.frequency.setValueAtTime(700 + k * 500, t);
+  pbf.frequency.exponentialRampToValueAtTime(260, t + pd * 1.3);
+  const pbg = ctx.createGain();
+  pbg.gain.setValueAtTime(0.0001, t);
+  pbg.gain.linearRampToValueAtTime(0.19 * k * R2.psh, t + 0.006);
+  pbg.gain.exponentialRampToValueAtTime(0.0001, t + pd * 1.3);
+  pb.connect(pbf); pbf.connect(pbg); pbg.connect(bus);
+  pb.start(t); pb.stop(t + pd * 1.3 + 0.03);
+
+  // --- the sigh ---
+  // The body under the crack: pressure still leaving after the initial snap.
+  // Shorter than it used to be, because the psh above now carries the front
+  // of the event and two long noise layers on top of each other is exactly
+  // how a release stops sounding tight.
+  const dur = 0.16 + k * 0.34;
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
+  n.loop = true; n.playbackRate.value = 1.1 + Math.random() * 0.2;
+  const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 0.75;
+  f.frequency.setValueAtTime(900 + k * 1500, t);
+  f.frequency.exponentialRampToValueAtTime(320 + k * 260, t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  // fast but not instant — a valve takes a few milliseconds to open, and
+  // making it instant is what turns this into a hi-hat
+  g.gain.linearRampToValueAtTime(0.30 * k * R2.sigh, t + 0.018);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  n.connect(f); f.connect(g); g.connect(bus);
+  n.start(t); n.stop(t + dur + 0.05);
+
+  // --- the chuffs ---
+  // Only with pressure behind them. Two or three, decelerating, quiet enough
+  // to sit inside the sigh rather than on top of it.
+  if (k > 0.28) {
+    const count = k > 0.62 ? 3 : 2;
+    let at = t + 0.012, gap = 0.055, amp = 0.075 * k * R2.chuff * 6;
+    for (let i = 0; i < count; i++) {
+      const jit = 0.85 + Math.random() * 0.3;
+      const c = ctx.createBufferSource(); c.buffer = AU.noiseBuf;
+      c.playbackRate.value = 0.9 + Math.random() * 0.3;
+      const cf = ctx.createBiquadFilter(); cf.type = "bandpass"; cf.Q.value = 1.1;
+      cf.frequency.setValueAtTime((760 + k * 700) * jit, at);
+      cf.frequency.exponentialRampToValueAtTime(300, at + gap * 1.4);
+      const cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.0001, at);
+      cg.gain.linearRampToValueAtTime(amp * jit, at + 0.006);
+      cg.gain.exponentialRampToValueAtTime(0.0001, at + gap * 1.5);
+      c.connect(cf); cf.connect(cg); cg.connect(bus);
+      c.start(at); c.stop(at + gap * 1.6);
+      at += gap; gap *= 1.28; amp *= 0.62;
+    }
+  }
+
+  // --- the tail ---
+  // The last of the pressure, low and long, under the lot of it. It is what
+  // stops the release ending on a hard edge.
+  const td = 0.5 + k * 0.75;
+  const tl = ctx.createBufferSource(); tl.buffer = AU.noiseBuf;
+  tl.loop = true; tl.playbackRate.value = 0.7;
+  const tf = ctx.createBiquadFilter(); tf.type = "lowpass";
+  tf.frequency.setValueAtTime(1100, t);
+  tf.frequency.exponentialRampToValueAtTime(280, t + td);
+  const tg = ctx.createGain();
+  tg.gain.setValueAtTime(0.0001, t);
+  tg.gain.linearRampToValueAtTime(0.11 * k * R2.tail, t + 0.05);
+  tg.gain.exponentialRampToValueAtTime(0.0001, t + td);
+  tl.connect(tf); tf.connect(tg); tg.connect(bus);
+  tl.start(t); tl.stop(t + td + 0.05);
+}
+
+/* Pull the continuous bed down and let it back up — see AU.duck. `amount` is
+   how far down (0.35 = to 35% of normal), `hold` is how long it stays there
+   before the recovery starts. The drop is fast enough to be inaudible as a
+   fade and the recovery is slow enough that the engine swells back in rather
+   than switching on, which is what stops it sounding like a pumping plugin. */
+function duckBed(amount, hold = 0.06, back = 0.30) {
+  if (!AU.ready || !AU.duck) return;
+  const g = AU.duck.gain, t = AU.ctx.currentTime;
+  const lvl = clamp(amount, 0.08, 1);
+  // stack politely: if something already ducked us, take the lower of the two
+  // rather than yanking the gain back up mid-recovery
+  g.cancelScheduledValues(t);
+  const cur = Math.min(g.value, 1);
+  g.setValueAtTime(cur, t);
+  g.linearRampToValueAtTime(Math.min(cur, lvl), t + 0.012);
+  g.setValueAtTime(Math.min(cur, lvl), t + 0.012 + hold);
+  g.linearRampToValueAtTime(1, t + 0.012 + hold + back);
+}
+
+/* ---- the upshift chuff ----
+   A twin-clutch changing gear at full boost does not do a full release — the
+   throttle never shut, so the whole charge volume is not being dumped. But
+   the torque handover unloads the compressors hard for a few tens of
+   milliseconds, and on a car running eighteen pounds of boost that is plenty
+   of air going somewhere it wasn't a moment ago.
+
+   This started out as a barely-there tick on the theory that it should be
+   subtle. That was wrong: on a real quad-turbo car, banging through the
+   gears flat out, you hear the plumbing on EVERY shift, and it is one of the
+   best noises the car makes. So it is now a short, hard chuff — the same
+   shape as the lift release, at roughly half the level and a third of the
+   length. Short enough to sit inside the shift, loud enough to be the reason
+   you keep taking it to the limiter. */
+function sfxTurboChirp(boost, R) {
+  if (!AU.ready) return;
+  const C = R || rigOf(CC);
+  if (!C) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const k = clamp(boost, 0, 1) * (C.release.chirp || 0)
+          * ear().turbo * (inCabin() ? (C.cabin || 1) : 1);
+  if (k < 0.015) return;
+  const bus = AU.sfx;
+  // …and the same trick, at about half strength, so a shift punches a hole
+  // in the engine rather than disappearing behind it
+  const dk = clamp(boost, 0, 1) * (C.release.duck === undefined ? 1 : C.release.duck);
+  if (dk > 0.05) duckBed(1 - dk * 0.34, 0.03, 0.20);
+  const dur = 0.085;
+
+  // the crack: bright, fast, gone
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
+  n.playbackRate.value = 1.6 + Math.random() * 0.3;
+  const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 2.2;
+  f.frequency.setValueAtTime(3000 + k * 1900, t);
+  f.frequency.exponentialRampToValueAtTime(1400, t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.22 * k, t + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  n.connect(f); f.connect(g); g.connect(bus);
+  n.start(t); n.stop(t + dur + 0.02);
+
+  // …and the body under it, so it lands as a chuff of air rather than a tick
+  const b = ctx.createBufferSource(); b.buffer = AU.noiseBuf;
+  b.playbackRate.value = 0.85;
+  const bf = ctx.createBiquadFilter(); bf.type = "bandpass"; bf.Q.value = 1.0;
+  bf.frequency.setValueAtTime(760, t);
+  bf.frequency.exponentialRampToValueAtTime(300, t + dur * 1.6);
+  const bg = ctx.createGain();
+  bg.gain.setValueAtTime(0.0001, t);
+  bg.gain.linearRampToValueAtTime(0.11 * k, t + 0.005);
+  bg.gain.exponentialRampToValueAtTime(0.0001, t + dur * 1.6);
+  b.connect(bf); bf.connect(bg); bg.connect(bus);
+  b.start(t); b.stop(t + dur * 1.6 + 0.02);
+}
+
 /* ---- compressor surge ----
    stu-tu-tu-tu-tu. What's actually happening: you shut the throttle, the
    column of pressurised air in the charge pipe has nowhere to go, and it
@@ -6101,12 +7177,18 @@ function stepPhysics(dt) {
   } else S._blatT = 0.1;
 
   // forced induction
-  if (CC.asp === "turbo" && S.engineOn) {
+  if (CC.turboRig && S.engineOn) {
+    turboRigStep(dt, eff);
+  } else if (CC.asp === "turbo" && S.engineOn) {
     // turbo needs exhaust flow: spools with rpm + load, bleeds fast off-throttle
     let tgt;
     if (CC.seqTurbo) {
-      // sequential stages: the small pair lights almost off idle, the second
-      // pair joins high in the rev range with a step you can hear
+      /* The lightweight staging model, for a car that wants a second pair of
+         turbos arriving without the full shaft-inertia rig. It steps rather
+         than swells, and the step is announced — which is a legitimate thing
+         to want for a car where the handover IS the event. Anything that
+         needs the turbos to be part of the voice should use `turboRig`
+         instead; see TURBO RIG. */
       const q = CC.seqTurbo;
       const s1 = clamp((S.rpm - CC.spool * 0.5) / (CC.spool * 0.9), 0, 1);
       const s2 = clamp((S.rpm - q.at) / q.span, 0, 1);
@@ -6145,6 +7227,7 @@ function stepPhysics(dt) {
     S.boost += (tgt - S.boost) * Math.min(1, 14 * dt);
   } else {
     S.boost *= Math.max(0, 1 - 3 * dt);
+    turboRigIdle(dt);
   }
   const boostMul = 1 + (CC.boostMax || 0) * S.boost;
 
@@ -6466,6 +7549,7 @@ function stepPhysics(dt) {
 
 function autoShift(g) {
   const down = g < S.autoGear;
+  S._shiftDir = down ? -1 : 1;
   S.autoGear = g; S.gear = g;
   // torque-converter smooth: a brief torque interruption and NOTHING else. No
   // throttle blip — a blip keeps the throttle alive while the clutch is open
@@ -7767,6 +8851,7 @@ function seqShift(dir) {
   const i = order.indexOf(S.gear);
   const j = clamp(i + dir, 0, order.length - 1);
   if (i === j) return;
+  S._shiftDir = dir;
   const target = order[j];
   if (target === "R" && Math.abs(S.v) > 1.6) {      // refuse reverse at speed
     sfxClunk(0.3);
@@ -8221,6 +9306,7 @@ function selectCar(id) {
   S.powered = false; S.eDrive = "gas";
   S.rpm = 0; S.v = 0; S.boost = 0; S.locked = false;
   S.seqStage = 0; S._seqPrev = 0;
+  turboRigReset();               // four cold turbochargers, not the last car's
   armCel();
   S.gear = 0; S.autoSel = "P"; S.autoGear = 1;
   S.shiftCut = 0; S.shiftCool = 0; S.cutTimer = 0; S.blip = 0; S.catchT = 0; S.sweep = -1;
