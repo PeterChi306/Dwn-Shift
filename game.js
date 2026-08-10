@@ -1421,6 +1421,16 @@ const CARS = [
          is the one that will make it sound cheap if it goes too far. */
       whistle: {
         level: 0.175, load: 0.62, wobble: 10, surge: 0.78,
+        /* The climb. This rig's stages saturate at 2600 and 5600, so shaft
+           speed is pinned at 1.0 from about 5500rpm — which means without
+           these two the whistle held one flat note from there to the 7100
+           limiter, through the exact part of the range you actually use.
+           0.85 puts the top voice's 2600Hz up near 4800 at the red, and it
+           gets there gradually (the 1.3 exponent) so the last thousand revs
+           climb hardest. `revLvl` matters as much: pitch rising with no level
+           rising reads as a pitch-shifted loop rather than something being
+           worked harder. */
+        rev: 0.85, revLvl: 0.42,
         voices: [
           { at: 0.00, hz:  380, tone: 0.08, q: 2.0, lvl: 0.10 },  // idle: a breath with a note in it
           { at: 0.32, hz:  820, tone: 0.24, q: 4.2, lvl: 0.38 },  // moving, part throttle
@@ -1428,6 +1438,15 @@ const CARS = [
           { at: 0.92, hz: 2600, tone: 0.55, q: 8.5, lvl: 1.15 },  // full boost: hard, still deep
         ],
       },
+      /* …and the slow one underneath it: the stored charge that packs in while
+         you hold it flat and leaves when the plate shuts. `rate: 0.75` is a
+         time constant of well over a second, so it is still filling most of
+         the way up a gear — deliberately slower than the tacho, because if it
+         tracked revs it would just be the rev term again. The shift dumps it
+         (see turboRigStep), and that is the "charging the air and then
+         releasing it": the gear winds up, the change lets it go, the next gear
+         starts winding from lower. */
+      charge: { rate: 0.75, fall: 2.4, pitch: 0.20, level: 0.40 },
       // the top note over the engine — also dropped, for the same reason
       spool: { level: 0.075, hz: [1700, 3900], q: 0.9 },
       /* sighDur/tailDur are the length of the thing. A quad-turbo 8-litre
@@ -2496,6 +2515,28 @@ function initAudio() {
   AU.engMech.connect(AU.duck);
   AU.duck.connect(AU.master); AU.duck.connect(AU.wetSend);
 
+  /* --- the turbo's own path out, around the cabin stage ---
+     Everything else in the car reaches you through AU.master, which means
+     through the windows-up lowpass and the body low shelf. That is right for
+     the engine and the exhaust: they are outside, and glass and steel are
+     between you and them.
+
+     The chargers are not outside. They and their charge pipes are bolted to
+     the back wall of the cabin and the bypass valves vent into the engine bay,
+     so there is no glass in the path at all — which means there is nothing to
+     apply a windows-up filter FOR. Running them through it was subtracting a
+     pane of glass that does not exist, and it is why the turbo went dull the
+     moment you sealed the car even with the level compensated back up.
+
+     So the whole turbo family gets its own bus straight to the flyby stage,
+     skipping cabLp and cabShelf. It keeps the wet send, so it still rings in a
+     tunnel like everything else, and it deliberately does NOT pass through
+     AU.duck — the release should not duck the chargers, only the engine. */
+  AU.postCab = ctx.createGain(); AU.postCab.gain.value = S.muted ? 0 : 0.85;
+  AU.postCab.connect(AU.flyGain);
+  AU.turboOut = ctx.createGain(); AU.turboOut.gain.value = 1;
+  AU.turboOut.connect(AU.postCab); AU.turboOut.connect(AU.wetSend);
+
   AU.conv = ctx.createConvolver(); AU.conv.buffer = makeTunnelIR(ctx);
   AU.wet = ctx.createGain(); AU.wet.gain.value = 0;
   // the tube's own voice, on the wet path only: concrete has an axial mode
@@ -2571,6 +2612,12 @@ function initAudio() {
      recordings have exactly one thing echoing in them. */
   AU.sfx = ctx.createGain(); AU.sfx.gain.value = 1;
   AU.sfx.connect(AU.master);
+  /* …and the turbo one-shots — release, flutter, the two recordings — get the
+     same treatment as the continuous layers above, for the same reason: a
+     bypass valve is venting into the engine bay, not through the side glass.
+     See AU.turboOut. */
+  AU.sfxTurbo = ctx.createGain(); AU.sfxTurbo.gain.value = 1;
+  AU.sfxTurbo.connect(AU.postCab);
 
   // --- engine voice chain: (per-car oscillators) → soft clip → lowpass ---
   AU.engGain = ctx.createGain(); AU.engGain.gain.value = 0;
@@ -2674,13 +2721,13 @@ function initAudio() {
   // --- turbo whistle / supercharger gear whine ---
   AU.whine = ctx.createOscillator(); AU.whine.type = "sine"; AU.whine.frequency.value = 800;
   AU.whineG = ctx.createGain(); AU.whineG.gain.value = 0;
-  AU.whine.connect(AU.whineG); AU.whineG.connect(AU.engMech); AU.whine.start();
+  AU.whine.connect(AU.whineG); AU.whineG.connect(AU.turboOut); AU.whine.start();
 
   // second whistle for sequential setups — the high-rpm pair sings its own,
   // higher note that fades in as stage two comes online
   AU.whine2 = ctx.createOscillator(); AU.whine2.type = "sine"; AU.whine2.frequency.value = 1200;
   AU.whine2G = ctx.createGain(); AU.whine2G.gain.value = 0;
-  AU.whine2.connect(AU.whine2G); AU.whine2G.connect(AU.engMech); AU.whine2.start();
+  AU.whine2.connect(AU.whine2G); AU.whine2G.connect(AU.turboOut); AU.whine2.start();
 
   // whistle modulation: chops a big single's whistle into "zu-zu-zu" under
   // boost, and pulses the blower whine into "yiii-yiii" at the top of the tach
@@ -2753,7 +2800,7 @@ function initAudio() {
   const tbsrc = ctx.createBufferSource(); tbsrc.buffer = nbuf; tbsrc.loop = true; tbsrc.playbackRate.value = 1.05;
   AU.tbBp = ctx.createBiquadFilter(); AU.tbBp.type = "bandpass"; AU.tbBp.frequency.value = 1400; AU.tbBp.Q.value = 0.8;
   AU.tbG = ctx.createGain(); AU.tbG.gain.value = 0;
-  tbsrc.connect(AU.tbBp); AU.tbBp.connect(AU.tbG); AU.tbG.connect(AU.engMech); tbsrc.start();
+  tbsrc.connect(AU.tbBp); AU.tbBp.connect(AU.tbG); AU.tbG.connect(AU.turboOut); tbsrc.start();
 
   // --- the quad-turbo rig ---
   // Built unconditionally (a handful of oscillators is nothing) and silent
@@ -4464,7 +4511,7 @@ function sfxTurboSample(which, amt = 1, gain = 1) {
   g.gain.setValueAtTime(lvl, t + dur - fade);
   // exponential, because pressure leaving a pipe doesn't leave linearly
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  s.connect(g); g.connect(AU.sfx);
+  s.connect(g); g.connect(AU.sfxTurbo || AU.sfx);
   s.start(t); s.stop(t + dur + 0.02);
 }
 
@@ -5792,7 +5839,7 @@ function sfxBlowoff(amount = 1) {
     const g = ctx.createGain();
     g.gain.setValueAtTime(amp * a, t + dt);
     g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.1);
-    n.connect(f); f.connect(g); g.connect(AU.sfx);
+    n.connect(f); f.connect(g); g.connect(AU.sfxTurbo || AU.sfx);
     n.start(t + dt); n.stop(t + dt + 0.13);
   });
 }
@@ -5810,7 +5857,7 @@ function sfxSeqEngage() {
   g.gain.setValueAtTime(0.001, t);
   g.gain.linearRampToValueAtTime(0.14, t + 0.08);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
-  n.connect(f); f.connect(g); g.connect(AU.sfx);
+  n.connect(f); f.connect(g); g.connect(AU.sfxTurbo || AU.sfx);
   n.start(t); n.stop(t + 0.42);
 }
 
@@ -5909,7 +5956,48 @@ const RIG_DEF = {
       { at: 0.90, hz: 4000, tone: 0.82, q: 12.5, lvl: 1.00 },   // full boost: hard
     ],
     surge: 0.75,        // how far toward broadband a lift drags it (see above)
+    /* --- the climb through a gear ---
+       Shaft speed saturates. That is not a bug in the model, it is what
+       turbochargers do — once a wheel is against its wastegate it is turning
+       as fast as it is going to turn, and on a well-plumbed rig that happens
+       surprisingly early. The consequence is that `voices` alone go FLAT for
+       the top of every gear: pinned at the last waypoint, same pitch, same
+       level, all the way to the limiter, which is precisely where you spend
+       your time when you are driving hard.
+
+       What is still changing up there is MASS FLOW. A compressor holding
+       station at max shaft speed while the engine revs from 5500 to 7100 is
+       feeding an engine swallowing thirty percent more air per second, and
+       every acoustic consequence of that goes UP: blade-pass noise, inducer
+       velocity, the lot. So the whistle keeps climbing on revs after the
+       shaft has stopped accelerating, which is what makes a gear sound like
+       it is winding up rather than arriving somewhere and waiting.
+
+         rev     how far rpm lifts the whistle's pitch, on top of the voice
+         revLvl  …and its level
+       Both default to 0, so nothing already voiced changes. */
+    rev: 0, revLvl: 0,
   },
+  /* --- the charge ---
+     The other half of "it should feel like it is building". The rev term above
+     rises and falls with the tacho, so it resets on every upshift and by itself
+     that reads as sawtooth rather than as accumulation.
+
+     This is the slow one: a value that winds UP the whole time the engine is
+     pulling against real pressure, on a clock of its own that is longer than a
+     gear, and that is DUMPED the instant the throttle shuts — on a lift, and on
+     every shift. Physically it stands in for the energy stored in the whole
+     charge system: pipes, coolers and plenum full of compressed air, plus four
+     spinning wheels' worth of angular momentum. That is genuinely something
+     that packs in while you hold it flat and genuinely leaves when the plate
+     shuts, which is why the shift feels like a release rather than a gap.
+
+       rate   how fast it packs in (1/s — small numbers, this is the slow one)
+       fall   how fast it bleeds when you are not on it
+       pitch  how far a full charge lifts the whistle
+       level  …and how much louder it is
+     Off unless a car asks for it. */
+  charge: null,
   /* --- the spool ---
      The smooth high note that sits OVER the engine under hard acceleration
      and is not there at any other time. It is deliberately not the whistle:
@@ -5983,6 +6071,7 @@ function turboRigReset() {
   S.tSpd = 0;           // combined shaft speed, 0..1 — drives whine & rush
   S.tStage = 0;         // how much of stage two is in it, 0..1
   S.tRise = 0;          // d(boost)/dt, smoothed — "it is BUILDING"
+  S.tCharge = 0;        // stored charge energy, 0..1 — packs in, dumps on a shift
   S.tLiftT = 99;        // seconds since the last lift
   S.tLiftBoost = 0;     // how much boost there was at the instant of the lift
   S.tRelease = 0;       // release envelope, 0..1, decays after a lift
@@ -6082,6 +6171,8 @@ function turboRigStep(dt, eff) {
     S.tLiftT = 0;
     S.tRelease = amt;
     S._rigHold = 0.18;
+    // everything that was packed in goes out through the valves with it
+    S.tCharge *= 0.15;
     sfxTurboRelease(amt, S.tSpd, R);
     /* …and, on a car that has a recording of this, the real thing over the
        top of it — but only up near the limiter, where a lift is actually the
@@ -6125,6 +6216,12 @@ function turboRigStep(dt, eff) {
       const shiftScale = R.release.shift === undefined ? 0.8 : R.release.shift;
       const amt = clamp(prev * shiftScale * (signatureShift ? redLift : 0.72), 0, 1);
       S.tRelease = Math.max(S.tRelease, amt * 0.8);
+      /* …and the shift lets the charge go. This is the whole "winding up and
+         then releasing it" shape: the whistle has spent the gear climbing on
+         revs and packing on charge, and the instant the clutches hand over,
+         the stored part leaves through the valves and the rev part resets with
+         the tacho. Then it starts again, from lower, in the next ratio. */
+      S.tCharge *= 0.12;
       sfxTurboRelease(amt, S.tSpd, R);
       // the recorded shift bang, on the ratios that earn it — 1→2, 2→3, 3→4
       const smp = R.sample;
@@ -6149,6 +6246,23 @@ function turboRigStep(dt, eff) {
      car with a lot of plumbing hold it open longer. */
   const rd = R.release.decay === undefined ? 1.6 : R.release.decay;
   S.tRelease *= Math.max(0, 1 - (pedal > 0.25 ? 7 : rd) * dt);
+
+  /* --- the charge packing in ---
+     See `charge` in RIG_DEF. Note this is NOT the local `charge` a few
+     hundred lines up — that one is this frame's boost target summed across the
+     stages. This is the slow stored-energy value that the whistle rides.
+
+     It only packs while the engine is actually pulling against pressure: a
+     wide throttle AND real boost behind it AND not mid-shift. Coasting at
+     high revs does not charge anything, which is the point — it is the effort
+     that accumulates, not the speed. */
+  const CH = R.charge;
+  if (CH) {
+    const packing = !shifting && pedal > 0.5 && S.boost > 0.22;
+    const rate = packing ? (CH.rate === undefined ? 0.9 : CH.rate)
+                         : (CH.fall === undefined ? 2.2 : CH.fall);
+    S.tCharge += ((packing ? 1 : 0) - S.tCharge) * Math.min(1, rate * dt);
+  } else S.tCharge = 0;
 }
 
 /* engine off / not a rig car: let the shafts wind down instead of snapping
@@ -6183,7 +6297,7 @@ function buildTurboRig(ctx) {
   const R = {};
   AU.rig = R;
   R.out = ctx.createGain(); R.out.gain.value = 1;
-  R.out.connect(AU.engMech);
+  R.out.connect(AU.turboOut);
 
   // --- whine ---
   // A single sine is a dog whistle and reads as electronic. A real compressor
@@ -6453,7 +6567,19 @@ function turboRigTick(t, k, env) {
   // "pshhh" and the hard steady whistle are the same layer in two states.
   const surge = clamp(S.tRelease * V.surge, 0, 0.9);
   const tone = clamp(voice.tone * (1 - surge), 0, 1);
-  const wsHz = clamp(voice.hz * dop, 90, 13000);
+  /* …and then the two things that keep it climbing after the shaft has
+     stopped accelerating — see `rev` and `charge` in RIG_DEF. Without these
+     the top of every gear is a held note, because shaft speed pins at 1.0
+     around 5500rpm on this rig and the voices have nowhere left to go.
+
+     Deliberately multiplicative on the voice rather than a fifth waypoint: a
+     waypoint would still be a fixed destination, and the point is that there
+     ISN'T one — it keeps going up for as long as you keep asking. */
+  const wRevs = clamp(S.rpm / (ENG.max || 7000), 0, 1.05);
+  const revLift = 1 + (V.rev || 0) * Math.pow(wRevs, 1.3);
+  const chg = clamp(S.tCharge || 0, 0, 1);
+  const chgPitch = 1 + (C.charge ? (C.charge.pitch || 0) : 0) * chg;
+  const wsHz = clamp(voice.hz * revLift * chgPitch * dop, 90, 13000);
   R.wsBp.frequency.setTargetAtTime(wsHz, t, k);
   R.wsBp2.frequency.setTargetAtTime(wsHz, t, k);
   // the band tightens as it comes on song, and opens right up on a lift
@@ -6468,7 +6594,13 @@ function turboRigTick(t, k, env) {
   R.wsTG.gain.setTargetAtTime(tone * 0.85, t, 0.05);
   // …and it stays faintly audible off the throttle, because a spinning
   // compressor is never actually silent
-  const wsLvl = voice.lvl * (1 - V.load + load * V.load) + S.tRelease * 0.5;
+  // …and it gets louder as it climbs, for the same reason it gets higher: more
+  // air per second through the same wheel. A rise in pitch with no rise in
+  // level reads as a pitch-shifted loop rather than as something working
+  // harder, which is the other half of why it felt flat.
+  const wsLvl = voice.lvl * (1 - V.load + load * V.load) + S.tRelease * 0.5
+              + (V.revLvl || 0) * Math.pow(wRevs, 1.5) * load
+              + (C.charge ? (C.charge.level || 0) : 0) * chg * load;
   R.wsG.gain.setTargetAtTime(clamp(wsLvl, 0, 2) * V.level * hT * stW * hiKill * cab, t, 0.05);
 
   /* --- spool ---
@@ -6479,7 +6611,11 @@ function turboRigTick(t, k, env) {
      for everything and having it available. */
   const SP = C.spool;
   const hard = clamp((load - 0.55) / 0.4, 0, 1) * clamp((boost - 0.25) / 0.5, 0, 1);
-  const spHz = (SP.hz[0] + (SP.hz[1] - SP.hz[0]) * Math.pow(spd, 1.25)) * dop;
+  // it rides the same climb the whistle does: this note sits over the engine
+  // under full load, and it is exactly where a pinned shaft speed was most
+  // obvious as a held tone with the tacho still moving underneath it
+  const spHz = (SP.hz[0] + (SP.hz[1] - SP.hz[0]) * Math.pow(spd, 1.25))
+             * revLift * chgPitch * dop;
   for (const o of R.spOscs)
     o.o.frequency.setTargetAtTime(Math.min(15000, spHz * o.mult), t, k);
   R.spHp.frequency.setTargetAtTime(clamp(spHz * 0.6, 300, 8000), t, 0.1);
@@ -6515,7 +6651,7 @@ function sfxTurboRelease(boost, spd, R) {
   const pos = ear().turbo * (inCabin() ? (C.cabin || 1) : 1) * (stockOn() ? 0.75 : 1);
   const k = clamp(boost, 0, 1) * R2.level * pos;
   if (k < 0.015) return;
-  const bus = AU.sfx;
+  const bus = AU.sfxTurbo || AU.sfx;   // no glass in the path — see AU.turboOut
   // get the engine out of the way — this, not the gain above, is what makes
   // the release audible over a mix that is already hitting the limiter
   const dk = clamp(boost, 0, 1) * (R2.duck === undefined ? 1 : R2.duck);
@@ -6681,7 +6817,7 @@ function sfxTurboChirp(boost, R) {
   const k = clamp(boost, 0, 1) * (C.release.chirp || 0)
           * ear().turbo * (inCabin() ? (C.cabin || 1) : 1);
   if (k < 0.015) return;
-  const bus = AU.sfx;
+  const bus = AU.sfxTurbo || AU.sfx;   // no glass in the path — see AU.turboOut
   // …and the same trick, at about half strength, so a shift punches a hole
   // in the engine rather than disappearing behind it
   const dk = clamp(boost, 0, 1) * (C.release.duck === undefined ? 1 : C.release.duck);
@@ -6748,7 +6884,7 @@ function sfxFlutter(boost, amount = 1) {
      recirculating setup barely reaches you. So the cabin figure scales with
      how prone the setup is instead of being a flat 0.3 for everything. */
   const pos = ear().turbo * (inCabin() ? 0.3 + 0.35 * clamp(amount, 0, 1) : 1);
-  const bus = AU.sfx;
+  const bus = AU.sfxTurbo || AU.sfx;   // no glass in the path — see AU.turboOut
 
   // how many stalls this surge gets, and how fast it starts. `flutterChat`
   // lengthens the burst without touching its level — the difference between a
@@ -7562,13 +7698,29 @@ function stepPhysics(dt) {
 
        `flutterEager` opts a car into that wider trigger. Left off, every
        other turbo car keeps exactly the behaviour it was tuned with. */
+    /* --- has the throttle shut? ---
+       This used to compare the pedal against its value on the PREVIOUS FRAME,
+       and that quietly never worked. S.throttle ramps at thrDn = 5.6/sec, so
+       coming off the gas takes about 180ms and moves roughly 0.09 per frame at
+       60fps — the old test wanted to see >0.5 one frame and <0.15 the next,
+       which cannot happen on any real lift. The only thing that ever satisfied
+       it was the fuel-cut line forcing eff to exactly 0 in a single frame, so
+       flutter fired on shifts (for cars that cut) and NEVER on lifting off, on
+       any car. It also meant the trigger was frame-rate dependent, which is
+       its own bug.
+
+       So the comparison is now against a decaying PEAK — the highest the pedal
+       has been in the last few hundred milliseconds. That is what "the plate
+       has shut" actually means, it is frame-rate independent, and it fires on a
+       lift that takes a realistic amount of time to happen. */
+    S._effPeak = Math.max(eff, (S._effPeak || 0) - dt * 1.6);
     const eager = !!CC.flutterEager;
     const inShift = S.shiftCut > 0 || S.cutTimer > 0;
-    const shutHard = S._prevBoostEff > 0.5 && eff < 0.15 && S.boost > 0.35;
+    const shutHard = S._effPeak > 0.5 && eff < 0.15 && S.boost > 0.35;
     // one per shift, on the edge — not once per frame for the whole cut
-    const shiftEdge = inShift && !S._flutShift && S._prevBoostEff > 0.35;
+    const shiftEdge = inShift && !S._flutShift && S._effPeak > 0.35;
     const eagerShut = eager && S.boost > 0.18
-                   && (((S._prevBoostEff - eff) > 0.28 && eff < 0.62) || shiftEdge);
+                   && (((S._effPeak - eff) > 0.28 && eff < 0.62) || shiftEdge);
     S._flutShift = inShift;
     if (shutHard || eagerShut) {
       // Throttle slammed shut under boost. What comes out depends entirely on
@@ -7589,6 +7741,8 @@ function stepPhysics(dt) {
          car comes back on boost instantly after a shift instead of having to
          spool from nothing. */
       S.boost *= shutHard ? 0.22 : clamp(0.28 + eff * 0.62, 0.22, 0.9);
+      // the pressure is out; don't fire again until the pedal has been back up
+      S._effPeak = eff;
     }
     S._prevBoostEff = eff;
   } else if (CC.asp === "super" && S.engineOn) {
@@ -11166,6 +11320,10 @@ function updateMasterGain() {
   // the interior bus skips the cabin filter, not the volume knob — mute and
   // music ducking still have to reach the chimes
   AU.innerMaster.gain.setTargetAtTime(S.muted ? 0 : 0.85 * duck, t, 0.25);
+  // …and the turbo bus, for exactly the same reason. It routes around the
+  // cabin stage, which means it routes around AU.master — so without this,
+  // MUTE would silence the whole car and leave four turbochargers running.
+  if (AU.postCab) AU.postCab.gain.setTargetAtTime(S.muted ? 0 : 0.85 * duck, t, 0.25);
   // Rain and traffic hang off their own bus, downstream of nothing — so they
   // ducked for exactly no one. Turning the music up used to leave the weather
   // roaring straight over the top of it. (This also means MUTE finally mutes
