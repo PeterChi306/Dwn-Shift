@@ -354,8 +354,35 @@ const CARS = [
        a DCT shift is precisely the thing this gearbox is not.
        See seqShift() for the three events that fill it. */
     shiftLag: 0.135,
-    gearWhine: 7,                        // modern HWA dog ring — fine pitch, and it screams
+    /* 9 rather than 7, and it changes what the box IS. gearWhine is the mesh
+       ratio, so it sets the pitch directly — at 9 the mesh note lands up in
+       the band the tub radiates best and stops being a whine you notice under
+       the engine. It becomes the flat, hard, electronic EEEEE that is the
+       first thing you hear in any onboard of this car, rising and falling with
+       the revs and cutting straight through the V12. It also maxes the
+       "modern box" term, which is right: this is a current HWA fine-pitch dog
+       set, not a 1990s coarse-cut crash box that grumbles. */
+    gearWhine: 9, gearWhineMul: 1.7,
     rawCabin: 1,                         // carbon tub, no headliner, engine on the bulkhead
+    /* --- the interior ---
+       A race interior is not a loud road interior, it is a different one, and
+       the R is the car that proves it. From outside, this is the loudest thing
+       in the garage (volTrim 2.0, and it is measured at 128dB). Climb in and
+       the megaphones are behind you pointing AWAY, with a tub and a bulkhead
+       in between — so the exhaust drops right back, and what fills the cabin
+       instead is gear mesh, valvetrain and intake trumpets. Thin, hard and
+       electronic rather than big and loud.
+
+       So: the combustion voice comes down to 55%, the top end it does have
+       comes back up (+5dB on the air shelf), the windows-up filter opens
+       further still, and — the one that matters most — the rawCabin bass
+       bonus is thrown away entirely. That +10.5dB low shelf is there for a
+       car whose body panels resonate; a bare carbon tub is a thin stiff panel
+       with no cavity behind it and it radiates almost nothing down there.
+       This engine already has nothing below 152Hz (see `hp`); pretending the
+       interior puts it back is what would make it sound like a road car with
+       the exhaust removed instead of a race car. */
+    cabinVoice: { eng: 0.55, air: 5, shelf: -1.5, lp: 1.5 },
     /* The track-only art piece: a bespoke 6.0 NA V12 built with HWA, breathing
        through an Inconel megaphone system of F1 construction with no silencer,
        no resonator and no catalyst anywhere in it.
@@ -762,7 +789,18 @@ const CARS = [
             [7600, 208], [8200, 130]],
     mass: 1450, finalDrive: 3.7, clutchCap: 700, cdA: 0.64, brakeMax: 12000,
     asp: "turbo", pops: 1, boostMax: 1.05, spool: 3400, spoolRate: 1.6, psiMax: 22,
-    flutter: 1, whistleMul: 1.6,         // big single, no bypass valve: it surges every lift
+    /* The noise this car is famous for. A single big turbo on an iron straight
+       six with no bypass valve anywhere in it: every time the throttle plate
+       moves against boost, the air that was on its way into the engine has
+       nowhere to go except back out through the compressor it just came
+       through, and it does that in a stack of discrete stalls a few
+       milliseconds apart — "stu-tu-tu-tu-tu". `flutterEager` is what makes it
+       happen on part-throttle lifts and on every upshift rather than only on a
+       full lift, and `flutterChat` is what makes it a long chatter instead of
+       a couple of chuffs. This is the loudest thing the car does short of the
+       exhaust, and on a stock-plumbed 90s single it is unmissable from inside. */
+    flutter: 1, flutterEager: true, flutterChat: 1.6,
+    whistleMul: 1.6,
     turboChop: 0.55,                     // whistle chatters "sti-zu-zu-zu" on boost
     tachMax: 9, redK: 7.6, kmhMax: 320, mphMax: 200,
     sound: {
@@ -780,7 +818,10 @@ const CARS = [
     mass: 1580, finalDrive: 3.13, clutchCap: 2800, cdA: 0.62, brakeMax: 14000, grip: 2.0,
     tire: 1.35, rawCabin: 0.9,                    // gutted: a cage, a seat and a bare floor
     asp: "turbo", pops: 2, boostMax: 3.0, spool: 4200, spoolRate: 1.1, psiMax: 55,
-    flutter: 1, whistleMul: 2.2, turboChop: 0.6,      // 98mm of it. the turbo IS the soundtrack
+    // 98mm of it. the turbo IS the soundtrack — and a wheel that big stalls
+    // longer and slower than the road car's, so it chatters harder again
+    flutter: 1, flutterEager: true, flutterChat: 1.9,
+    whistleMul: 2.2, turboChop: 0.6,
     tachMax: 11, redK: 9.8, kmhMax: 420, mphMax: 260,
     /* nothing below four grand, then the world ends: monster single spools
        forever and quadruples the torque when it arrives */
@@ -1341,8 +1382,14 @@ const CARS = [
       ],
       spoolUp: 3.1, coast: 0.62, bleed: 8.5, windmill: 0.10,
       whine: { level: 0.150, hzMul: 1, spread: 0.007, wobble: 0.5, wobbleHz: 5.7, hp: 280 },
-      intake: { level: 0.145, hz: 340, q: 0.55, load: 0.78, rev: 0.28 },
-      breath: { level: 0.170, q: 0.58, boostHz: 540 },
+      /* the swell onto boost, turned well up on both layers that carry it.
+         Four compressors filling eight litres is the loudest thing this car
+         does that isn't an explosion, and the moment it is loudest is while
+         pressure is still CLIMBING — so `rise` gets more than double the
+         generic lean and a ceiling high enough to let it actually get there. */
+      intake: { level: 0.145, hz: 340, q: 0.55, load: 0.78, rev: 0.28,
+                rise: 0.58, riseMax: 0.95 },
+      breath: { level: 0.235, q: 0.58, boostHz: 540, rise: 0.42, riseMax: 0.8 },
       // the whistle now owns this band, so the old broadband hiss steps back
       // out of its way rather than smearing it
       hiss:   { level: 0.018, hz: 3400, q: 0.5 },
@@ -1383,13 +1430,60 @@ const CARS = [
       },
       // the top note over the engine — also dropped, for the same reason
       spool: { level: 0.075, hz: [1700, 3900], q: 0.9 },
-      release: { level: 1.18, sigh: 1.12, chuff: 0.55, tail: 1.08, psh: 1.48, chirp: 1.2,
+      /* sighDur/tailDur are the length of the thing. A quad-turbo 8-litre
+         carries a huge volume of compressed air in its pipes, coolers and
+         plenum, and dumping it takes real time — so the body runs about twice
+         the generic length and the low tail more than twice, which puts the
+         whole release out past two seconds instead of ending in one. The
+         shafts are still coasting underneath it the entire time (see `coast`),
+         so the whine falling away has something to fall away over. */
+      release: { level: 1.18, sigh: 1.12, chuff: 0.55, tail: 1.22, psh: 1.48, chirp: 1.2,
+                 sighDur: 2.1, tailDur: 2.3, decay: 0.85,
                  duck: 1.0, shift: 1.0, shiftAt: 0.16, shiftThrough: 4,
                  redlineAt: 0.88, redlineLift: 1.28 },
-      // sealed in with four turbochargers: the charger becomes the loudest
-      // thing in here after the engine itself, which is the whole point of
-      // sitting in this particular car
-      cabin: 2.85, cabinCont: 2.25,
+      /* --- the two recorded events ---
+         The only car in the game with real recordings in its turbo voice, and
+         only for the two moments a recording is better than the model: coming
+         off the throttle up at the top of a gear, and the shifts through the
+         short ratios. `releaseAt` is a fraction of the rev limit — 0.78 of
+         7100 is about 5500, which is "near the red" in a car that pulls to
+         seven. `shiftGears` are the gears being shifted INTO, so 2/3/4 covers
+         the three shifts that still have full charge-pipe pressure behind
+         them; by fifth the car is long-legged enough that it should stay
+         synthesized.
+
+         The gains are measured against a clip normalized to full scale (see
+         TURBO_SAMPLES.norm), so 1.0 is already as loud as the mix can carry
+         and anything above it is deliberately driving the master limiter.
+
+         `cabin` then multiplies that again with the windows up, and it is set
+         where it is on purpose: sealed in, these two events do not sit over
+         the engine, they REPLACE it for a moment. Between this and `duck`
+         (which pulls the engine bed to the floor for the length of the clip)
+         there is a fifth of a second in here where the only thing you can
+         hear in the car is four turbochargers dumping eighteen pounds, and
+         then the W16 swells back up underneath the tail.
+
+         If it ever needs backing off, `cabin` is the knob — take it to 3
+         before touching anything else. Note that pushing it much HIGHER than
+         this stops helping: past roughly 6× the limiter is squashing the
+         recording itself flat, so it gets denser rather than louder. Beyond
+         that point, deepen `duck` instead. */
+      sample: { releaseAt: 0.78, releaseGain: 1.45,
+                shiftGears: [2, 3, 4], shiftGain: 1.35,
+                cabin: 4.4, duck: 1.0 },
+      /* Sealed in with four turbochargers, the charger is not the loudest
+         thing in here after the engine — it is the loudest thing in here,
+         full stop. `cabinCont` brings the continuous layers (the rush, the
+         whistle, the whine) up to where they sit over the W16 rather than on
+         it, and `cabinMask` is the other half of the same effect: the
+         combustion voice drops to 40% of itself at full boost, so what you
+         get with the windows up is compressors and induction with sixteen
+         cylinders rumbling somewhere underneath. See rigCabinMask() for why
+         the engine coming down is the right lever rather than the turbo going
+         further up, and note the mask scales with shaft speed — at idle this
+         still sounds exactly like an eight-litre engine. */
+      cabin: 2.85, cabinCont: 3.5, cabinMask: 0.6,
     },
     /* sixteen cylinders reads as a deep, jet-like rush — f0Mul drops the
        whole voice a full octave, so even at the 7100rpm redline it stays a
@@ -1592,7 +1686,11 @@ const ENGINE_FIELDS = [
   "cyl", "idle", "max", "cut", "inertia", "curve", "asp", "pops", "sound",
   "revRate", "start", "camAt", "cel", "noPop", "ev", "crackle", "firing",
   "boostMax", "spool", "spoolRate", "psiMax", "whistleMul", "whistleFreqMul",
-  "turboBreath", "breathHz", "turboChop", "whineMult", "flutter",
+  // flutter and its two companions travel together: how prone the plumbing is
+  // to surging, when it surges, and how long it chatters for are all facts
+  // about the charger and its pipework, not about the car around it
+  "turboBreath", "breathHz", "turboChop", "whineMult",
+  "flutter", "flutterEager", "flutterChat",
   "seqTurbo", "turboRig",              // the plumbing comes with the engine
   "tachMax", "redK", "shiftLights",
   "edrive", "evCapKmh", "evForce", "badge", "fireLbl",
@@ -2750,6 +2848,7 @@ function initAudio() {
 
   AU.ready = true;
   loadPshift();                          // the recorded paddle click
+  loadTurboSamples();                    // the Molsheim's two recorded turbo events
   buildEngineVoice(voiceCar());
   applyTunnel();
   applySpace(true);                      // the place you're driving, from the first frame
@@ -2877,6 +2976,62 @@ function inCabin() { return S.cabin && insideEar(); }
 function hushEng() { return 1 - 0.72 * hush(); }
 function hushAir() { return 1 - 0.62 * hush(); }
 
+/* ---- per-car interior voicing ----
+   `hush` and `rawCabin` between them cover the two ordinary cases: a car
+   trying to keep the engine out, and a car with nothing between you and it.
+   Neither describes a race car properly, because a race interior is not a
+   loud road interior — it is a DIFFERENT interior, and the difference is
+   spectral rather than a level.
+
+   Sit in a car with no glass, no headliner, no carpet and a bare carbon tub
+   and two things happen at once. There is nothing with any mass in it to
+   radiate low frequency, so the bottom end simply is not there — a tub is a
+   thin stiff panel, not a body shell with cavities. And there is nothing
+   absorbent anywhere, so everything above a couple of kHz arrives intact and
+   keeps arriving, off every hard surface in the car. That is why onboard audio
+   sounds THIN and HARD rather than big: the low end you would get in a road
+   car is missing and the top is unfiltered. It is also why the sound you
+   notice most is not the engine, it's the gearbox.
+
+     eng    trim on the combustion voice in here (a race interior is not
+            where the exhaust is — the megaphones are pointing away from you)
+     air    dB added to the engine's high shelf: the top that survives
+     shelf  absolute low-shelf dB, replacing the rawCabin bass bonus
+     lp     multiplier on the windows-up lowpass — how much top gets through */
+function cabinVoice() { return (inCabin() && CC.cabinVoice) ? CC.cabinVoice : null; }
+function cabinEngTrim() { const V = cabinVoice(); return V && V.eng !== undefined ? V.eng : 1; }
+function cabinAirAdd() { const V = cabinVoice(); return (V && V.air) || 0; }
+
+/* ---- the turbo owning the cabin ----
+   On most turbo cars the engine is the loudest thing in the cabin and the
+   charger is a layer on top of it. On a very few — a quad-turbo W16 being the
+   type specimen — it is the other way round, and the reason is geometry rather
+   than volume. The exhaust exits behind the axle and everything between you
+   and it is trying to stop it: bulkhead, insulation, laminated glass. The
+   turbochargers and their charge pipes are on the wrong side of all of that,
+   bolted to the back wall of the cabin, and the bypass valves vent into the
+   engine bay — which IS that wall. So sealing yourself in subtracts the engine
+   and leaves the plumbing, and what you hear at full boost is induction and
+   compressors with a W16 rumbling somewhere underneath.
+
+   Hence a mask on the combustion voice rather than a boost on the turbo: past
+   a point, turning the rig up just drives the limiter and squashes everything
+   including the rig. Pulling the engine down instead leaves the turbo layers
+   completely intact and simply removes what they were competing with.
+
+   It scales with how hard the plumbing is actually working, which is the part
+   that keeps it honest: at idle the engine is untouched and sounds like an
+   eight-litre engine should, and it only recedes as the compressors come up.
+   The mask is a cabin effect only — from outside, the exhaust wins, because
+   out there nothing is standing between you and it. */
+function rigCabinMask() {
+  if (!inCabin()) return 1;
+  const C = rigOf(CC);
+  if (!C || !C.cabinMask) return 1;
+  const act = clamp(Math.max(S.tSpd || 0, S.boost || 0), 0, 1);
+  return 1 - C.cabinMask * act;
+}
+
 /* interior mode: windows-up filtering on the whole mix */
 function applyCabin() {
   if (!AU.ready) return;
@@ -2891,17 +3046,21 @@ function applyCabin() {
   // rawCabin it goes the other way to ~8k, because there is nothing in a
   // carbon tub for it to be stopped BY.
   const raw = CC.rawCabin || 0;
-  AU.cabLp.frequency.setTargetAtTime(on ? (1150 - 750 * h) * (1 + 6 * raw) : 20000, t, 0.1);
+  // a car may override either half of the rawCabin treatment — see cabinVoice()
+  const CV = CC.cabinVoice || {};
+  const cabHz = (1150 - 750 * h) * (1 + 6 * raw) * (CV.lp || 1);
+  const cabSh = CV.shelf === undefined ? (5.5 - 7 * h) + 5 * raw : CV.shelf;
+  AU.cabLp.frequency.setTargetAtTime(on ? Math.min(20000, cabHz) : 20000, t, 0.1);
   // …and the low shelf comes DOWN rather than up, because the boom a normal
   // body panel resonates with is exactly what all that mass is there to stop.
   // A tub does the reverse: it is a drum skin with an engine on it, so the
   // bottom the pipes never made in the air comes back through the floor.
-  AU.cabShelf.gain.setTargetAtTime(on ? (5.5 - 7 * h) + 5 * raw : 0, t, 0.1);
+  AU.cabShelf.gain.setTargetAtTime(on ? cabSh : 0, t, 0.1);
   AU.ambLp.frequency.setTargetAtTime(on ? 650 - 420 * h : 20000, t, 0.1);  // outside world, doubly sealed
   // the tunnel tail comes back in through the same glass the engine does
   if (AU.wetCabLp) {
-    AU.wetCabLp.frequency.setTargetAtTime(on ? (1150 - 750 * h) * (1 + 6 * raw) : 20000, t, 0.1);
-    AU.wetCabShelf.gain.setTargetAtTime(on ? (5.5 - 7 * h) + 5 * raw : 0, t, 0.1);
+    AU.wetCabLp.frequency.setTargetAtTime(on ? Math.min(20000, cabHz) : 20000, t, 0.1);
+    AU.wetCabShelf.gain.setTargetAtTime(on ? cabSh : 0, t, 0.1);
   }
 }
 
@@ -3704,17 +3863,26 @@ function audioTick() {
   // that's the stereo.
   const mute = isEv() && !v8SimOn();
   const hE = hushEng() * cabinLift();              // the Phantom's bulkhead — or the lack of one
+  /* …and then the combustion voice ALONE gets the turbo mask on top of it.
+     Deliberately not folded into hE: the turbo and intake layers are derived
+     from hE further down (hT, hIn), so masking it there would pull the
+     chargers down by exactly the amount we are trying to make them win by.
+     This is the engine stepping back, not the whole car. */
+  const hEng = hE * rigCabinMask() * cabinEngTrim();
   const P = ear();                                 // and where you're standing
   // the low end this car's construction never made, and the path it takes
   // back in when there's no interior between you and the engine
   const hpBase = VC.sound.hp || 20;
   AU.engHp.frequency.setTargetAtTime(hpBase * (1 - 0.78 * rawCabin()), t, 0.12);
   const vol = running && !mute
-    ? (0.10 + idleLift + load * 0.30 + rFrac * 0.13 + (onCam ? 0.04 : 0)) * trim * 0.8 * blipBoost * hE * P.eng
+    ? (0.10 + idleLift + load * 0.30 + rFrac * 0.13 + (onCam ? 0.04 : 0)) * trim * 0.8 * blipBoost * hEng * P.eng
     : 0;
   // per-car de-fizz trim: `air` hands some of the top back to the engines
   // that genuinely are metallic up there (the flat-planes, the rotaries)
-  AU.engAir.gain.setTargetAtTime(-4 + (VC.sound.air || 0) + (stockOn() ? STOCK.air : 0), t, 0.1);
+  // …plus whatever the interior hands back on top of it: in a car with no trim
+  // in it, the top end is the part that survives the trip to your ears intact
+  AU.engAir.gain.setTargetAtTime(
+    -4 + (VC.sound.air || 0) + (stockOn() ? STOCK.air : 0) + cabinAirAdd(), t, 0.1);
   AU.engGain.gain.setTargetAtTime(vol, t, 0.05);
 
   // combustion throb — strong at idle, smooths out with revs
@@ -3746,7 +3914,7 @@ function audioTick() {
     // the pops, or standing at the pipe drives the whole chain into clipping
     PP.get("level").setTargetAtTime(
       running && !mute
-        ? Math.min(1.5, (0.14 + load * 0.95) * (1 - rFrac * 0.45) * chuff * trim * hE * (0.55 + P.pop * 0.45)
+        ? Math.min(1.5, (0.14 + load * 0.95) * (1 - rFrac * 0.45) * chuff * trim * hEng * (0.55 + P.pop * 0.45)
                         * (stockOn() ? STOCK.chuff : 1))
         : 0,
       t, 0.04);
@@ -3757,7 +3925,7 @@ function audioTick() {
   AU.raspBp.frequency.setTargetAtTime(clamp(f0 * 1.5, 90, 5500), t, k);
   AU.raspG.gain.setTargetAtTime(
     running && !mute ? (0.02 + load * 0.10 + rFrac * 0.03) * (VC.sound.raspMul || 1) * (1 + (ex.raspAdd || 0))
-                     * hE * P.pop * dirEx * (stockOn() ? STOCK.rasp : 1) : 0,
+                     * hEng * P.pop * dirEx * (stockOn() ? STOCK.rasp : 1) : 0,
     t, k);
   // "scream" opens the filter with revs alone — the intake howl waking up.
   // The filter follows the VOICE, not the tacho: a car voiced an octave down
@@ -3893,6 +4061,9 @@ function audioTick() {
     // gearWhine is the mesh ratio, so it doubles as "how new is this box".
     const modern = clamp((CC.gearWhine - 6) / 3, 0, 1);
     boxMul = insideEar() ? (inCabin() ? 6 + 3 * modern : 3.2 + 1.2 * modern) : 0.45;
+    // …and a per-car trim on top, for a box that is simply more of the car's
+    // voice than the mesh ratio alone can say
+    boxMul *= CC.gearWhineMul || 1;
   }
 
   // the blower and the turbos live under the bonnet, so where you stand
@@ -4183,6 +4354,118 @@ function loadPshift() {
           const a = new Audio("Sound/Pshift.wav"); a.preload = "auto"; return a;
         });
     });
+}
+
+/* ---- the recorded quad-turbo samples (Molsheim only) ----
+
+   Everything else the turbo rig makes is synthesized, and it stays that way:
+   filtered noise follows shaft speed and boost continuously, which is the
+   only way a lift at a third throttle can sound like a third of a lift. But
+   two moments in the Molsheim's life are single, fixed events with no
+   in-between worth modelling — the valves dumping eighteen pounds when you
+   come off it at the top of a gear, and the bang the box makes handing over
+   through the short ratios — and for those, a real recording beats anything
+   the synth will do.
+
+   So they layer ON TOP of the synthesized release rather than replacing it,
+   and only on this one car (see rigSample in the config). They ride the same
+   dry sfx bus, take the same listening-position and cabin scaling as
+   sfxTurboRelease, and — the part that matters for realism — every one of
+   them is faded out over its own tail instead of simply ending. A recording
+   that stops dead reads as a sample being cut off; a recording whose last
+   third rolls away reads as pressure equalising. */
+/* `norm` is not a taste knob — it is a measured correction. Both clips were
+   recorded quiet: the release peaks at 0.185 of full scale (-14.6dBFS) and the
+   shift at 0.297 (-10.5dBFS), and their RMS is lower still. Played at a gain
+   of 1 they land 15dB under an engine that is already sitting on the limiter,
+   which is exactly why they were inaudible. These numbers bring each clip UP
+   to a peak of 1.0 so that the gains below mean what they say: 1.0 is full
+   scale, and anything above it is deliberately driving the master chain.
+   If either file is ever re-exported at a different level, remeasure. */
+/* `rate` slows the clip down, which does two things at once and both of them
+   are wanted here. It makes the release LAST longer — a big charge-air system
+   does not empty quickly — and it pitches the escaping air DOWN, which is the
+   right direction: whistle and release frequency scale inversely with wheel
+   size, so four large compressors sit well below the hiss of a small one. The
+   shift bang keeps more of its speed; that event really is quick.
+   `fade` is how much of the (slowed) clip is spent getting to silence. */
+const TURBO_SAMPLES = {
+  release: { url: "Sound/Turbo Release.mp3", fade: 0.85, norm: 5.4, rate: 0.84 },
+  shift:   { url: "Sound/Turbo Shift.mp3",   fade: 0.24, norm: 3.4, rate: 0.94 },
+};
+
+function loadTurboSamples() {
+  if (!AU.ctx) return;
+  AU.turboBuf = AU.turboBuf || {};
+  for (const which in TURBO_SAMPLES) {
+    if (AU.turboBuf[which] || AU.turboBuf[which] === null) continue;
+    AU.turboBuf[which] = null;           // claim it, so we only fetch once
+    fetch(TURBO_SAMPLES[which].url)
+      .then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); })
+      .then(b => AU.ctx.decodeAudioData(b))
+      .then(buf => { AU.turboBuf[which] = buf; })
+      .catch(() => { delete AU.turboBuf[which]; });   // let a later boot retry
+  }
+}
+
+/* `amt` is the same 0..1 the synthesized release is scaled by, so a lift off
+   half boost brings the recording in at half level too — the sample is part of
+   the event, not an announcement laid over the top of it. */
+function sfxTurboSample(which, amt = 1, gain = 1) {
+  if (!AU.ready || !AU.turboBuf || !AU.turboBuf[which]) return;
+  const buf = AU.turboBuf[which], spec = TURBO_SAMPLES[which];
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const C = rigOf(CC);
+  const smp = (C && C.sample) || {};
+  /* Sealed in with four turbochargers a foot behind your head, these are the
+     loudest thing in the car — louder than the engine, on purpose. The rig's
+     own `cabin` (2.85) is tuned for the synthesized layers, which have to
+     leave room for everything else; these two clips do not, so they get their
+     own, bigger multiplier. */
+  const cab = inCabin() ? (smp.cabin || (C && C.cabin) || 1) : 1;
+  const pos = ear().turbo * cab * (stockOn() ? 0.75 : 1);
+  // deliberately NOT clamped to 1: past full scale the master limiter pulls
+  // the whole mix down around the clip, which is what "it dominates the cabin"
+  // actually sounds like as opposed to "it is turned up"
+  const lvl = clamp(amt, 0, 1) * pos * gain * (spec.norm || 1);
+  if (lvl < 0.02) return;
+
+  /* …and get the engine out of the way underneath it.
+
+     THIS is what makes the clip cover the engine, not the gain above, and the
+     distinction matters. Pushing gain further just feeds the master limiter,
+     which pulls the sample down along with everything else and squashes the
+     recording flat — past a point you get mush, not loudness. Pulling the bed
+     down instead leaves the clip completely intact and simply removes what it
+     was competing with. So inside the cabin the engine goes almost silent for
+     the length of the clip (duckBed floors at 0.08, and this asks for it):
+     you hear four turbochargers and essentially nothing else, then the engine
+     swells back underneath as the tail fades. Outside it stays a duck rather
+     than a hole, because out there the exhaust is the loud thing and muting it
+     would be the unrealistic choice.
+
+     The hold covers almost the whole clip — the synthesized release only ducks
+     for its own ~200ms transient, and the release recording is 1.26s. */
+  const dk = clamp(amt, 0, 1) * (smp.duck === undefined ? 1 : smp.duck);
+  if (dk > 0.05)
+    duckBed(1 - dk * (inCabin() ? 0.95 : 0.72), 0.06,
+            (buf.duration / (spec.rate || 1)) * (inCabin() ? 0.9 : 0.7));
+
+  const s = ctx.createBufferSource(); s.buffer = buf;
+  // slowed per the spec above, with a little jitter on top so it is never
+  // twice identical — four turbochargers do not repeat themselves
+  const rate = (spec.rate || 1) * (0.97 + Math.random() * 0.06);
+  s.playbackRate.value = rate;
+  const dur = buf.duration / rate;
+  const fade = Math.min(spec.fade, dur * 0.7);
+
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(lvl, t);
+  g.gain.setValueAtTime(lvl, t + dur - fade);
+  // exponential, because pressure leaving a pipe doesn't leave linearly
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(g); g.connect(AU.sfx);
+  s.start(t); s.stop(t + dur + 0.02);
 }
 
 /* dog-ring engagement — NOT the paddle, the GEARBOX: a hard steel CLACK as
@@ -5582,8 +5865,15 @@ const RIG_DEF = {
                     //   engine is pumping SOMETHING even on the overrun
   // --- layers ----------------------------------------------------------
   whine:   { level: 0.05, hzMul: 1, spread: 0.007, wobble: 0.45, wobbleHz: 5.5, hp: 400 },
-  intake:  { level: 0.10, hz: 340, q: 0.55, load: 0.75, rev: 0.28 },
-  breath:  { level: 0.07, q: 0.6, boostHz: 600 },
+  // rise/riseMax: how hard CLIMBING pressure leans on the induction noise, and
+  // the ceiling on that lean. This is the difference between flooring it at
+  // 2000rpm and holding it flat at 6000 — same throttle, one of them building.
+  intake:  { level: 0.10, hz: 340, q: 0.55, load: 0.75, rev: 0.28,
+             rise: 0.22, riseMax: 0.35 },
+  // …and the same pair for the charge-air rush. Off by default (rise: 0) so
+  // nothing already tuned changes; a car turns it on when the swell onto boost
+  // is part of its character.
+  breath:  { level: 0.07, q: 0.6, boostHz: 600, rise: 0, riseMax: 0.5 },
   hiss:    { level: 0.025, hz: 3200, q: 0.5 },
   /* --- the whistle ---
      The thing people mean when they say "turbo". It is NOT the whine layer:
@@ -5793,6 +6083,13 @@ function turboRigStep(dt, eff) {
     S.tRelease = amt;
     S._rigHold = 0.18;
     sfxTurboRelease(amt, S.tSpd, R);
+    /* …and, on a car that has a recording of this, the real thing over the
+       top of it — but only up near the limiter, where a lift is actually the
+       big event. Coming off it at 2000rpm dumps a fraction of the pressure
+       and the synthesized chuff already tells that story properly. */
+    const smp = R.sample;
+    if (smp && smp.releaseAt !== undefined && S.rpm >= ENG.max * smp.releaseAt)
+      sfxTurboSample("release", amt, smp.releaseGain === undefined ? 1 : smp.releaseGain);
     // …and the surge, for a rig with no bypass capacity to speak of
     const fl = CC.flutter === true ? 1 : (CC.flutter || 0);
     if (fl > 0.05 && amt > 0.4) sfxFlutter(amt * 0.8, fl);
@@ -5829,6 +6126,11 @@ function turboRigStep(dt, eff) {
       const amt = clamp(prev * shiftScale * (signatureShift ? redLift : 0.72), 0, 1);
       S.tRelease = Math.max(S.tRelease, amt * 0.8);
       sfxTurboRelease(amt, S.tSpd, R);
+      // the recorded shift bang, on the ratios that earn it — 1→2, 2→3, 3→4
+      const smp = R.sample;
+      if (smp && smp.shiftGears && typeof destGear === "number"
+          && smp.shiftGears.indexOf(destGear) >= 0)
+        sfxTurboSample("shift", amt, smp.shiftGain === undefined ? 1 : smp.shiftGain);
       S._rigHold = 0.1;          // don't let the lift trigger double up on it
     } else {
       sfxTurboChirp(prev, R);
@@ -5837,9 +6139,16 @@ function turboRigStep(dt, eff) {
   S._rigShifting = shifting;
   S._rigEff = pedal;
   S.tLiftT = pedal < 0.12 ? S.tLiftT + dt : 0;
-  // the release envelope dies on its own clock — faster if you get back on it,
-  // because reopening the throttle is what stops air coming out of the valves
-  S.tRelease *= Math.max(0, 1 - (pedal > 0.25 ? 7 : 1.6) * dt);
+  /* the release envelope dies on its own clock — faster if you get back on it,
+     because reopening the throttle is what stops air coming out of the valves.
+
+     This envelope is what the rush and the whistle's surge ride, so it is the
+     other half of "how long does the release last": the one-shot can sigh for
+     two seconds and it will still sound short if the continuous layers have
+     already snapped back to their on-boost state underneath it. `decay` lets a
+     car with a lot of plumbing hold it open longer. */
+  const rd = R.release.decay === undefined ? 1.6 : R.release.decay;
+  S.tRelease *= Math.max(0, 1 - (pedal > 0.25 ? 7 : rd) * dt);
 }
 
 /* engine off / not a rig car: let the shafts wind down instead of snapping
@@ -6083,8 +6392,15 @@ function turboRigTick(t, k, env) {
   // sound of an engine getting greedier by the moment.
   const I = C.intake;
   const revs = clamp(S.rpm / (ENG.max || 7000), 0, 1);
-  const inLvl = (load * I.load + revs * I.rev + Math.min(0.35, S.tRise * 0.22))
-              * (0.5 + boost * 0.7);
+  /* The rise term is the whole "it is COMING ON" sound, and it is worth its
+     own two knobs rather than the hard-coded pair it used to be: `rise` is how
+     hard climbing pressure leans on the induction noise, `riseMax` is how far
+     that lean is allowed to go. On a car with four compressors filling eight
+     litres, the swell as they light is one of the defining noises it makes and
+     it wants to be a long way up from the generic default. */
+  const rise = Math.min(I.riseMax === undefined ? 0.35 : I.riseMax,
+                        S.tRise * (I.rise === undefined ? 0.22 : I.rise));
+  const inLvl = (load * I.load + revs * I.rev + rise) * (0.5 + boost * 0.7);
   R.inBp.frequency.setTargetAtTime((I.hz + revs * 620 + load * 220) * dop, t, k);
   R.inBp.Q.setTargetAtTime(I.q, t, 0.2);
   R.inLp.frequency.setTargetAtTime((1400 + revs * 2600) * (0.4 + 0.6 * near), t, 0.1);
@@ -6105,9 +6421,17 @@ function turboRigTick(t, k, env) {
   R.brBp.frequency.setTargetAtTime(clamp((bHz + boost * 420) * dop, 120, 4000), t, k);
   R.brBp.Q.setTargetAtTime(B.q, t, 0.2);
   // the release rides here too: after a lift the shafts are still turning and
-  // still pushing air round the bypass loop, and that is a rush, not a tone
+  // still pushing air round the bypass loop, and that is a rush, not a tone.
+  // …and so does the RISE: the charge-air rush is at its loudest not when
+  // boost is high but while it is still climbing, because that is when the
+  // compressors are moving the most air relative to what the engine is
+  // swallowing. Holding it flat at full boost is a steady state; the swell
+  // getting there is the event, and it should be the louder of the two.
+  const bRise = Math.min(B.riseMax === undefined ? 0.5 : B.riseMax,
+                         S.tRise * (B.rise === undefined ? 0 : B.rise));
   R.brG.gain.setTargetAtTime(
-    (Math.pow(spd, 1.15) * (0.35 + load * 0.65) + S.tRelease * 0.55) * B.level * hT * cab,
+    (Math.pow(spd, 1.15) * (0.35 + load * 0.65) + S.tRelease * 0.55 + bRise)
+      * B.level * hT * cab,
     t, 0.05);
 
   // --- hiss ---
@@ -6252,7 +6576,9 @@ function sfxTurboRelease(boost, spd, R) {
   // Shorter than it used to be, because the psh above now carries the front
   // of the event and two long noise layers on top of each other is exactly
   // how a release stops sounding tight.
-  const dur = 0.16 + k * 0.34;
+  // `sighDur` stretches the body the same way tailDur stretches the tail —
+  // see there for why this car's release takes its time.
+  const dur = (0.16 + k * 0.34) * (R2.sighDur || 1);
   const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
   n.loop = true; n.playbackRate.value = 1.1 + Math.random() * 0.2;
   const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 0.75;
@@ -6290,10 +6616,17 @@ function sfxTurboRelease(boost, spd, R) {
     }
   }
 
-  // --- the tail ---
-  // The last of the pressure, low and long, under the lot of it. It is what
-  // stops the release ending on a hard edge.
-  const td = 0.5 + k * 0.75;
+  /* --- the tail ---
+     The last of the pressure, low and long, under the lot of it. It is what
+     stops the release ending on a hard edge.
+
+     `tailDur` stretches it in TIME, which is a different knob from `tail` and
+     the one that decides how long the release goes on for. Big plumbing is
+     the reason: the charge pipes, intercoolers and plenum on a quad-turbo
+     8-litre hold a genuinely large volume of compressed air, and emptying it
+     through the bypass valves is not a quick job. A small turbo four is done
+     in half a second; this should still be sighing well after that. */
+  const td = (0.5 + k * 0.75) * (R2.tailDur || 1);
   const tl = ctx.createBufferSource(); tl.buffer = AU.noiseBuf;
   tl.loop = true; tl.playbackRate.value = 0.7;
   const tf = ctx.createBiquadFilter(); tf.type = "lowpass";
@@ -6405,13 +6738,23 @@ function sfxFlutter(boost, amount = 1) {
   const ctx = AU.ctx, t = ctx.currentTime;
   const k = Math.min(1, boost) * clamp(amount, 0, 1.4);
   if (k < 0.04) return;
-  // under the bonnet: right in your face over the wing, muffled through the
-  // bulkhead and the glass from inside
-  const pos = ear().turbo * (inCabin() ? 0.3 : 1);
+  /* Under the bonnet — but how much of it reaches the cabin depends on the
+     thing that causes the flutter in the first place. A car that surges hard
+     is a car with no bypass valve, which means the air is coming back out
+     through the compressor and up the intake tract, and on a big single that
+     tract is a four-inch pipe running to a filter in the wheel arch with
+     nothing but the inner wing between it and your feet. That is why the
+     "stu-tu-tu" is such an interior sound on these cars while a modern
+     recirculating setup barely reaches you. So the cabin figure scales with
+     how prone the setup is instead of being a flat 0.3 for everything. */
+  const pos = ear().turbo * (inCabin() ? 0.3 + 0.35 * clamp(amount, 0, 1) : 1);
   const bus = AU.sfx;
 
-  // how many stalls this surge gets, and how fast it starts
-  const pulses = Math.round(4 + k * 5);
+  // how many stalls this surge gets, and how fast it starts. `flutterChat`
+  // lengthens the burst without touching its level — the difference between a
+  // couple of chuffs and the long machine-gun chatter of a big single.
+  const chat = CC.flutterChat || 1;
+  const pulses = Math.round((4 + k * 5) * chat);
   let gap = 0.052 - k * 0.014;                   // first interval, seconds
   let at = t;
   let pitch = 1750 + k * 1100;                   // blade ring, falls as it spools down
@@ -6448,9 +6791,11 @@ function sfxFlutter(boost, amount = 1) {
     o.start(at); o.stop(at + dur + 0.02);
 
     at += gap;
-    gap *= 1.19;              // the wheel is slowing: the stalls spread out
+    // the wheel is slowing: the stalls spread out. A long chattering surge
+    // spreads more gently, or the burst is over before it has chattered.
+    gap *= chat > 1 ? 1.19 - 0.06 * clamp(chat - 1, 0, 1) : 1.19;
     pitch *= 0.9;             // …and drop in pitch with it
-    amp *= 0.8;               // …and run out of pressure to do it with
+    amp *= chat > 1 ? 0.86 : 0.8;   // …and run out of pressure to do it with
   }
 
   // the last of the pressure leaving through the intake, under the lot of it
@@ -7204,7 +7549,28 @@ function stepPhysics(dt) {
       tgt = Math.max(tgt, 0.55 * clamp((S.rpm - CC.spool * 0.4) / CC.spool, 0, 1));
     const rate = tgt > S.boost ? CC.spoolRate : 4.2;
     S.boost += (tgt - S.boost) * Math.min(1, rate * dt);
-    if (S._prevBoostEff > 0.5 && eff < 0.15 && S.boost > 0.35) {
+    /* --- what counts as "shut the throttle" ---
+       The plain test is a full lift: was on it, now off it, boost still up.
+       That is fine for a car whose surge is an occasional side effect, and
+       wrong for a car whose surge is its signature. A big single with no
+       bypass valve chatters every time the plate moves against pressure — a
+       part-throttle lift into a corner, a quick breath between gears, and
+       every single upshift, because a manual upshift IS a throttle-shut event
+       with the boost still trapped behind it. Miss those and the car only
+       flutters when you come off completely, which is the least of the times
+       it should.
+
+       `flutterEager` opts a car into that wider trigger. Left off, every
+       other turbo car keeps exactly the behaviour it was tuned with. */
+    const eager = !!CC.flutterEager;
+    const inShift = S.shiftCut > 0 || S.cutTimer > 0;
+    const shutHard = S._prevBoostEff > 0.5 && eff < 0.15 && S.boost > 0.35;
+    // one per shift, on the edge — not once per frame for the whole cut
+    const shiftEdge = inShift && !S._flutShift && S._prevBoostEff > 0.35;
+    const eagerShut = eager && S.boost > 0.18
+                   && (((S._prevBoostEff - eff) > 0.28 && eff < 0.62) || shiftEdge);
+    S._flutShift = inShift;
+    if (shutHard || eagerShut) {
       // Throttle slammed shut under boost. What comes out depends entirely on
       // where that trapped air is allowed to go. No bypass valve and it has
       // to fight its way back out through the compressor — that's the
@@ -7215,7 +7581,14 @@ function stepPhysics(dt) {
       const fl = CC.flutter === true ? 1 : (CC.flutter || 0);
       if (fl > 0) sfxFlutter(S.boost, fl);
       if (fl < 0.85) sfxBlowoff(1 - fl * 0.7);
-      S.boost *= 0.22;
+      /* …and how much pressure that actually cost. A slam to zero empties the
+         pipes; a part-throttle breath or a shift with your foot still mostly
+         in it does not, and dumping all of it would mean the eager trigger
+         above gutted the car's boost every time you brushed the pedal. So the
+         dump scales with how far the plate really shut — which is also why the
+         car comes back on boost instantly after a shift instead of having to
+         spool from nothing. */
+      S.boost *= shutHard ? 0.22 : clamp(0.28 + eff * 0.62, 0.22, 0.9);
     }
     S._prevBoostEff = eff;
   } else if (CC.asp === "super" && S.engineOn) {
