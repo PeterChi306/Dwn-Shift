@@ -1554,7 +1554,25 @@ const CARS = [
          recording itself flat, so it gets denser rather than louder. Beyond
          that point, deepen `duck` instead. */
       sample: { releaseAt: 0.78, releaseGain: 1.45,
-                shiftGears: [2, 3, 4], shiftGain: 1.35,
+                /* Once per pull, at the moment the second pair takes over —
+                   see the handover block in turboRigStep.
+
+                   These two numbers are on a scale that needs saying out loud,
+                   because the obvious guess is wrong. tStage is the high pair's
+                   SHARE of total charge, so it cannot exceed that pair's own
+                   share of the rig: it runs 0 -> 0.46 and never reaches 0.5.
+                   Anything at or above 0.46 is unreachable and would mean the
+                   sample never plays at all.
+
+                   0.30 is about 4,200rpm on this rig — past Bugatti's quoted
+                   3,800 (which is only 0.22 here, since the ramp is centred on
+                   that figure rather than started at it) and comfortably into
+                   the swell, so it lands on a shift where the handover is
+                   genuinely underway rather than at the first hint of it.
+                   stageOff at 0.10 is around 3,300rpm: low enough that a shift
+                   cannot rearm the event it just fired, high enough that
+                   dropping back down the range does. */
+                shiftOnce: true, stageAt: 0.30, stageOff: 0.10, shiftGain: 1.35,
                 cabin: 4.4, duck: 1.0 },
       /* Sealed in with four turbochargers, the charger is not the loudest
          thing in here after the engine — it is the loudest thing in here,
@@ -6165,6 +6183,7 @@ function turboRigReset() {
   S.tStage = 0;         // how much of stage two is in it, 0..1
   S.tRise = 0;          // d(boost)/dt, smoothed — "it is BUILDING"
   S.tCharge = 0;        // stored charge energy, 0..1 — packs in, dumps on a shift
+  S._smpHandover = false;   // has the recorded turbo handover played this pull?
   S.tLiftT = 99;        // seconds since the last lift
   S.tLiftBoost = 0;     // how much boost there was at the instant of the lift
   S.tRelease = 0;       // release envelope, 0..1, decays after a lift
@@ -6316,11 +6335,38 @@ function turboRigStep(dt, eff) {
          the tacho. Then it starts again, from lower, in the next ratio. */
       S.tCharge *= 0.12;
       sfxTurboRelease(amt, S.tSpd, R);
-      // the recorded shift bang, on the ratios that earn it — 1→2, 2→3, 3→4
+      /* --- the recorded shift bang: the HANDOVER, and it happens once ---
+         This is not a gearbox noise, which is why it is not on a list of
+         gears. It is the sound of one pair of turbochargers handing over to
+         the other, and on this car that transition happens exactly once on the
+         way up: the small low pair is against its wastegates by 2600, the big
+         high pair is held shut until there is enough exhaust to light it, and
+         once lit it never lets go (see the stages, and Bugatti's own quoted
+         3800rpm). So there is one moment in a pull when the character of the
+         induction actually changes hands, and playing the recording on every
+         shift into 2nd, 3rd and 4th was three announcements of a thing that
+         only happened at one of them.
+
+         So it fires on the first shift after the high pair is genuinely in,
+         and then it is done. `S._smpHandover` latches it; it only rearms when
+         the pair drops back out (below stageOff, with hysteresis so a shift
+         that dips the ratio for a frame doesn't rearm it), which in practice
+         means coming right back down the rev range. Once per pull up through
+         the gears, exactly as the hardware does it. */
       const smp = R.sample;
-      if (smp && smp.shiftGears && typeof destGear === "number"
-          && smp.shiftGears.indexOf(destGear) >= 0)
+      if (smp && smp.shiftOnce) {
+        // NB the default is 0.3, not 0.5: tStage is a SHARE and its ceiling is
+        // the high stage's own share of the rig, which is under a half on any
+        // rig where the low pair does most of the work. See the Molsheim.
+        const on = smp.stageAt === undefined ? 0.3 : smp.stageAt;
+        if ((S.tStage || 0) >= on && !S._smpHandover) {
+          S._smpHandover = true;
+          sfxTurboSample("shift", amt, smp.shiftGain === undefined ? 1 : smp.shiftGain);
+        }
+      } else if (smp && smp.shiftGears && typeof destGear === "number"
+                 && smp.shiftGears.indexOf(destGear) >= 0) {
         sfxTurboSample("shift", amt, smp.shiftGain === undefined ? 1 : smp.shiftGain);
+      }
       S._rigHold = 0.1;          // don't let the lift trigger double up on it
     } else {
       sfxTurboChirp(prev, R);
@@ -6349,6 +6395,15 @@ function turboRigStep(dt, eff) {
      wide throttle AND real boost behind it AND not mid-shift. Coasting at
      high revs does not charge anything, which is the point — it is the effort
      that accumulates, not the speed. */
+  /* the handover latch rearms when the high pair actually falls out of it —
+     see the shift-sample block above. Hysteresis matters: `stageOff` sits well
+     under `stageAt` so the brief dip in the ratio during a shift cannot rearm
+     the very event that shift just fired. */
+  const smpC = R.sample;
+  if (smpC && smpC.shiftOnce
+      && (S.tStage || 0) < (smpC.stageOff === undefined ? 0.10 : smpC.stageOff))
+    S._smpHandover = false;
+
   const CH = R.charge;
   if (CH) {
     const packing = !shifting && pedal > 0.5 && S.boost > 0.22;
@@ -8112,9 +8167,43 @@ function stepPhysics(dt) {
 
   // lift-off crackle & overrun burble (gated by pops rating + exhaust mod)
   const pr = popsRating(), pMul = popEff();
-  if (S._lastEff > 0.6 && eff < 0.05 && S.rpm > ENG.max * 0.5) {
-    if (pr >= 1) sfxCrackle(pr * pMul);
+  /* --- the moment you come off it ---
+     This had the same two faults the turbo flutter did, and they compounded.
+
+     First it compared eff against S._lastEff, the PREVIOUS FRAME — but eff is
+     the smoothed pedal, ramping at thrDn 5.6/sec, so it moves about 0.09 per
+     frame at 60fps. Asking for >0.6 one frame and <0.05 the next is asking for
+     something that cannot happen, so the lift-off crackle only ever fired when
+     the fuel-cut line forced eff to 0 in a single frame. Coming off the gas —
+     the exact thing it is named after — produced nothing.
+
+     Second, even when it did fire it was late. The turbo release triggers off
+     the RAW pedal (S.in.gas, which moves instantly), on the frame the plate
+     starts shutting; this waited for the smoothed value to reach 0.05, about
+     180ms further on. Two sounds that are the same physical event — the plate
+     shuts, the bypass valves crack, and the unburnt charge lights in a hot
+     pipe — arriving a fifth of a second apart.
+
+     So it now watches the raw pedal against a decaying peak, with the same 0.22
+     drop and 0.6 ceiling the rig's lift uses — which puts the bark and the
+     valves on the SAME FRAME, because they are the same event.
+
+     The guard against cruise control and auto-drive is stated outright rather
+     than smuggled in as an `eff` threshold. Using eff for it worked, but only
+     by accident and at a cost: eff needs about four frames to fall far enough,
+     so the bark arrived 67ms after the release for no reason anybody chose.
+     Naming the actual condition — something else is holding the throttle open,
+     so the plate has not shut and nothing should bang — costs nothing and
+     fires on time. */
+  const gasNow = clamp(S.in.gas, 0, 1);
+  S._gasPeak = Math.max(gasNow, (S._gasPeak || 0) - dt * 1.6);
+  const shutDrop = S._gasPeak - gasNow;
+  const held = AD.on || (S.cruise && S.cruise.on);      // not your foot's call
+  if (shutDrop > 0.22 && gasNow < 0.6 && !held && S.rpm > ENG.max * 0.5) {
+    const shutAmt = clamp(shutDrop / 0.75, 0, 1);
+    if (pr >= 1) sfxCrackle(pr * pMul * (0.55 + shutAmt * 0.45));
     else if (!CC.noPop && Math.random() < 0.5) sfxBackfire();
+    S._gasPeak = gasNow;                 // one bark per lift, not one per frame
   }
   const burbleFloor = curEx().burble ? 0.26 : 0.42;   // anti-lag pops way down the range
   const onOverrun = S.engineOn && eff < 0.04 && S.engage > 0.6 &&
@@ -8129,7 +8218,6 @@ function stepPhysics(dt) {
     sfxPop(amp, undefined, voice);
     popFlame((POP_FLAME[voice] || 0.4) * (0.65 + amp * 0.7));
   }
-  S._lastEff = eff;
 
   // check-engine roulette: after a few minutes of running, the light pops on
   // (only the Bavarian does this), followed by the occasional misfire stumble
