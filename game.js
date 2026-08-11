@@ -1441,7 +1441,13 @@ const CARS = [
          does that isn't an explosion, and the moment it is loudest is while
          pressure is still CLIMBING — so `rise` gets more than double the
          generic lean and a ceiling high enough to let it actually get there. */
-      intake: { level: 0.145, hz: 340, q: 0.55, load: 0.78, rev: 0.28,
+      /* `hz` is the band's home before the engine drags it up (the tick adds
+         revs*620 + load*220 on top). At 340 it started ON the recordings' body
+         and then swept a long way past it — 1180Hz at the limiter, against two
+         clips that have nothing left above 700. 250 puts the resting band just
+         under the samples' strongest region and keeps the swept band inside
+         it through the middle of the range, which is where you live. */
+      intake: { level: 0.145, hz: 250, q: 0.55, load: 0.78, rev: 0.28,
                 rise: 0.40, riseMax: 0.70 },
       /* The charge, an octave and a half down and quieter with it. Every
          frequency here is the old one divided by five: 540 -> 108 for the
@@ -1453,54 +1459,88 @@ const CARS = [
          whistle for the same part of the spectrum. Level comes down because a
          deep layer needs far less of it to be present; the old 0.235 at this
          pitch would be a drone. */
-      breath: { level: 0.115, q: 0.58, boostHz: 108, sweep: 84,
+      /* 108Hz was already very close to the truth, and the recordings say so:
+         the release's single strongest third-octave band is 111Hz and the
+         shift has its low peak at 107. What was wrong was the SWEEP. At 84 the
+         band climbed to 192Hz under pressure, but neither clip's low peak
+         moves like that — the low end of a charge system that size is set by
+         the volume of the pipes, not by how hard you are pushing on it, and it
+         sits still. 44 keeps it between 106 and 150, i.e. on the measurement
+         all the way up. Level comes up because this band is now carrying the
+         same weight the recordings put there rather than sitting under it. */
+      breath: { level: 0.135, q: 0.58, boostHz: 106, sweep: 44,
                 rise: 0.30, riseMax: 0.55 },
-      // the whistle now owns this band, so the old broadband hiss steps back
-      // out of its way rather than smearing it
-      hiss:   { level: 0.018, hz: 3400, q: 0.5 },
+      /* The one piece of genuine top end either recording has: a broad air
+         bump around 3.5kHz, ~25dB under the body. It was being swept to
+         4900Hz, past the bump and into a part of the spectrum the clips are
+         silent in. 2400 (+ up to 1500 with shaft speed) lands it on the
+         measurement, and now that the whistle no longer reaches up here this
+         layer is the only thing carrying the air, so it gets a little more. */
+      hiss:   { level: 0.024, hz: 2400, q: 0.5 },
       /* --- the whistle, in four versions ---
-         Four turbochargers behind your head, and what they sound like changes
-         completely across the range. The pitch spacing is deliberately
-         uneven: 620 → 1350 is most of an octave for the first third of the
-         shaft speed, then 1350 → 4400 is nearly two octaves for the last
-         third. That is the "rises sharply" — it loafs, and then it goes.
+         PITCHED TO THE TWO RECORDINGS. This ladder is no longer chosen by
+         taste; it is chosen by measuring Turbo Release.mp3 and Turbo Shift.mp3
+         and putting the sustained charge in the same place they are.
 
-         The `q` column is the other half of it. Down low the band is wide and
-         breathy and you barely pick it out of the induction noise; by full
-         boost it is tight enough to be a genuine note sitting on top of the
-         engine. Clean and hard rather than loud. */
-      /* Deliberately pitched DOWN from where a four-cylinder's turbo would
-         sit, and deliberately noise-led rather than tone-led. Two reasons,
-         and they are the same reason twice: these are big wheels moving an
-         enormous volume of air, and big wheels are low. A small turbo on a
-         hot hatch shrieks at four or five kHz; four large ones on an eight
-         litre engine make a sound closer to a jet on a taxiway, and the note
-         in it is buried in rushing air rather than sitting on top of it.
+         What the analysis says, with both clips taken at the playback rates
+         they are actually heard at (see TURBO_SAMPLES):
 
-         `tone` is the whole difference between "expensive" and "electrical".
+           release   low peak 105Hz · body 255 and 295 · upper 401 · top 616
+                     perceptual (geometric) centroid 268Hz
+           shift     low peak 92Hz · body 265 and 328 · upper 409
+                     perceptual centroid 328Hz
+
+         Both clips are effectively silent above about 700Hz — the release is
+         20dB down by 890Hz and 26dB down by 1.8kHz — and everything either one
+         does lives in a stack on roughly 100Hz: the pipe note at ~105, the
+         body at ~300, the upper at ~410, the last of it at ~615.
+
+         The old ladder ran 380 → 2600 and then the rev term took the top voice
+         to 4800 and the charge lift to 5772. That is the mismatch, and it is a
+         big one: for the whole time you are ON boost you heard a bright, tight
+         band two to three octaves ABOVE anything in the recordings, and then a
+         lift fired a dark 100/300Hz woof out of nowhere. Two instruments, not
+         one — which is exactly the "isolated, weird" the samples had.
+
+         So the ladder is scaled onto the measurement instead. 260 at part
+         throttle sits in the body; 430 crosses the upper peak both clips
+         share; 600 at full boost lands on the release's own top peak, so at
+         the instant you lift, the release recording starts from the note the
+         whistle was already holding. That is the join.
+
+         `q` still tightens with shaft speed for the same reason as before —
+         breathy and unpickable down low, a real note by full boost — but the
+         numbers come down with the pitch: a Q of 8.5 at 600Hz is a far
+         narrower band in musical terms than the same figure at 2600, and it
+         would ring. */
+      /* `tone` is the whole difference between "expensive" and "electrical".
          It is the fraction of this layer that is oscillator rather than
-         filtered air, and it now peaks at 0.55 instead of 0.86 — so even flat
-         out, most of what you hear is air being moved and the blade note is
-         something you notice inside it rather than a synth lead over the
-         top. Turn `tone` up if it needs more edge; that is the knob, and it
-         is the one that will make it sound cheap if it goes too far. */
+         filtered air, and it comes down again — to 0.34 at full boost — for a
+         reason the measurement is blunt about: neither recording has a narrow
+         tonal peak in it anywhere. The strongest features are broad, 15-20Hz
+         wide, and they read as air. A tone fraction that worked at 2600Hz is
+         much more exposed down at 600, where the ear hears pitch far more
+         readily, so holding the old 0.55 here would have put a hummable note
+         where the recordings have a rush. Turn `tone` up if it needs edge;
+         that is the knob, and it is the one that will make it sound cheap. */
       whistle: {
         level: 0.175, load: 0.62, wobble: 10, surge: 0.78,
         /* The climb. This rig's stages saturate at 2600 and 5600, so shaft
-           speed is pinned at 1.0 from about 5500rpm — which means without
-           these two the whistle held one flat note from there to the 7100
-           limiter, through the exact part of the range you actually use.
-           0.85 puts the top voice's 2600Hz up near 4800 at the red, and it
-           gets there gradually (the 1.3 exponent) so the last thousand revs
-           climb hardest. `revLvl` matters as much: pitch rising with no level
-           rising reads as a pitch-shifted loop rather than something being
-           worked harder. */
-        rev: 0.85, revLvl: 0.42,
+           speed is pinned at 1.0 from about 5500rpm, and without a rev term
+           the whistle holds one flat note from there to the 7100 limiter.
+           That still has to be fixed — but 0.85 was fixing it by leaving the
+           recordings' spectrum altogether. 0.30 keeps the last 1600rpm
+           climbing (600Hz up to 780, most of a fourth, and gradually via the
+           1.3 exponent) while staying inside the band the clips occupy.
+           `revLvl` is untouched and now does more of the work: past the point
+           the shafts are pinned, the top of a gear should read as louder and
+           harder rather than as higher, which is the honest version anyway. */
+        rev: 0.30, revLvl: 0.42,
         voices: [
-          { at: 0.00, hz:  380, tone: 0.08, q: 2.0, lvl: 0.10 },  // idle: a breath with a note in it
-          { at: 0.32, hz:  820, tone: 0.24, q: 4.2, lvl: 0.38 },  // moving, part throttle
-          { at: 0.66, hz: 1650, tone: 0.40, q: 6.5, lvl: 0.88 },  // on song, second pair in
-          { at: 0.92, hz: 2600, tone: 0.55, q: 8.5, lvl: 1.15 },  // full boost: hard, still deep
+          { at: 0.00, hz: 150, tone: 0.06, q: 1.6, lvl: 0.10 },  // idle: a breath with a note in it
+          { at: 0.32, hz: 260, tone: 0.14, q: 2.6, lvl: 0.38 },  // part throttle: the clips' body
+          { at: 0.66, hz: 430, tone: 0.22, q: 3.6, lvl: 0.88 },  // on song: their shared upper peak
+          { at: 0.92, hz: 600, tone: 0.34, q: 4.6, lvl: 1.15 },  // full boost: the release's own top note
         ],
       },
       /* …and the slow one underneath it: the stored charge that packs in while
@@ -1510,10 +1550,27 @@ const CARS = [
          tracked revs it would just be the rev term again. The shift dumps it
          (see turboRigStep), and that is the "charging the air and then
          releasing it": the gear winds up, the change lets it go, the next gear
-         starts winding from lower. */
+         starts winding from lower.
+
+         `pitch` stays at 0.20 and it is worth saying why, because it is now
+         doing something it was not doing before. It multiplies the whistle,
+         so a full charge lifts the top voice from 600Hz to 720 — into the
+         release recording's 616Hz top peak and the 733 above it. Which means
+         the fuller the charge, the closer the synthesized layer creeps to the
+         clip that is about to replace it, and at the moment it actually does
+         they are the same note. Before, this lifted 4800Hz to 5772 and the
+         gap to the recording only got wider the more charge you had. */
       charge: { rate: 0.75, fall: 2.4, pitch: 0.20, level: 0.40 },
-      // the top note over the engine — also dropped, for the same reason
-      spool: { level: 0.075, hz: [1700, 3900], q: 0.9 },
+      /* the top note over the engine. Pulled down hard, and by the same
+         measurement as the whistle: at [1700, 3900] this ran to 8.6kHz at the
+         limiter, in a car whose two turbo recordings have nothing above 700Hz
+         and only a faint air bump at 3.5k. It was the single brightest thing
+         in the mix and it belonged to no part of the source material.
+         [520, 1150] tops out around 1.8kHz — still clearly ABOVE the samples,
+         which is this layer's whole job (altitude on hard acceleration), but
+         near enough to read as the same air moving rather than a separate
+         synth sitting over the top of the car. */
+      spool: { level: 0.075, hz: [520, 1150], q: 0.9 },
       /* sighDur/tailDur are the length of the thing. A quad-turbo 8-litre
          carries a huge volume of compressed air in its pipes, coolers and
          plenum, and dumping it takes real time — so the body runs about twice
@@ -4544,9 +4601,20 @@ function loadPshift() {
    size, so four large compressors sit well below the hiss of a small one. The
    shift bang keeps more of its speed; that event really is quick.
    `fade` is how much of the (slowed) clip is spent getting to silence. */
+/* …and the two clips also have to match EACH OTHER, which they did not.
+   Measured perceptual (geometric) centroids of the raw files are 319Hz for the
+   release and 381Hz for the shift, and their body peaks sit at 303/351 and
+   308/381 — close, but not the same instrument. Played at 0.84 and 0.94 the
+   gap OPENED rather than closed: 268Hz against 358Hz, a little over five
+   semitones, which is why the shift read as a different, smaller turbo than
+   the one that had just been whistling and was about to sigh.
+   0.86 on the shift brings it to 328Hz — three and a half semitones, and the
+   body peaks land at 255/295 against 265/328, i.e. interleaved rather than
+   separated. It costs 85ms of extra length on a half-second clip, which is
+   within what a bigger charge system should sound like anyway. */
 const TURBO_SAMPLES = {
   release: { url: "Sound/Turbo Release.mp3", fade: 0.85, norm: 5.4, rate: 0.84 },
-  shift:   { url: "Sound/Turbo Shift.mp3",   fade: 0.24, norm: 3.4, rate: 0.94 },
+  shift:   { url: "Sound/Turbo Shift.mp3",   fade: 0.24, norm: 3.4, rate: 0.86 },
 };
 
 function loadTurboSamples() {
