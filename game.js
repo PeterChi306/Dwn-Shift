@@ -1422,7 +1422,7 @@ const CARS = [
         // their wastegates by 2600 — the reason the car has all its torque
         // from 2000rpm and does not feel like it is waiting for anything
         { at: 800, span: 1250, sat: 2600, share: 0.54, inertia: 0.52,
-          whineHz: 950, whineMul: 1.0, breathHz: 92 },
+          whineHz: 950, whineMul: 1.0, breathHz: 64 },
         /* the high pair: bigger wheels, more inertia, held shut by their
            control valves until there is enough exhaust to light them — and
            once lit they never let go. Bugatti quote 3800rpm as the point the
@@ -1432,7 +1432,7 @@ const CARS = [
            Centring it is the difference between "all four arrive at 3800" and
            "something happens at 3800", and only one of those is a sound. */
         { at: 2900, span: 1850, sat: 5600, share: 0.46, inertia: 0.92,
-          whineHz: 1280, whineMul: 1.25, breathHz: 124 },
+          whineHz: 1280, whineMul: 1.25, breathHz: 87 },
       ],
       spoolUp: 3.1, coast: 0.62, bleed: 8.5, windmill: 0.10,
       whine: { level: 0.150, hzMul: 1, spread: 0.007, wobble: 0.5, wobbleHz: 5.7, hp: 280 },
@@ -1465,10 +1465,13 @@ const CARS = [
          band climbed to 192Hz under pressure, but neither clip's low peak
          moves like that — the low end of a charge system that size is set by
          the volume of the pipes, not by how hard you are pushing on it, and it
-         sits still. 44 keeps it between 106 and 150, i.e. on the measurement
-         all the way up. Level comes up because this band is now carrying the
-         same weight the recordings put there rather than sitting under it. */
-      breath: { level: 0.135, q: 0.58, boostHz: 106, sweep: 44,
+         sits still, so the sweep came down with it. Then the same 30% the rest
+         of the charge took: 74Hz, moving to 105 at full pressure, which is
+         under the clips' own 91Hz low peak for most of the range and arrives
+         at it by the time you lift. Level stays up — this band is carrying the
+         weight the recordings put there rather than sitting under it, and the
+         deeper it goes the more level it needs to stay present at all. */
+      breath: { level: 0.135, q: 0.58, boostHz: 74, sweep: 31,
                 rise: 0.30, riseMax: 0.55 },
       /* The one piece of genuine top end either recording has: a broad air
          bump around 3.5kHz, ~25dB under the body. It was being swept to
@@ -1478,22 +1481,23 @@ const CARS = [
          layer is the only thing carrying the air, so it gets a little more. */
       hiss:   { level: 0.024, hz: 2400, q: 0.5 },
       /* --- the whistle, in four versions ---
-         PITCHED TO THE TWO RECORDINGS. This ladder is no longer chosen by
-         taste; it is chosen by measuring Turbo Release.mp3 and Turbo Shift.mp3
-         and putting the sustained charge in the same place they are.
+         PITCHED TO THE RECORDINGS. This ladder is not chosen by taste; it is
+         chosen by measuring the gas clip both turbo events are now built from
+         (Turbo Shift.mp3, and the 2.5s Turbo Release Long.wav rendered off it)
+         and placing the sustained charge relative to where it actually is.
 
-         What the analysis says, with both clips taken at the playback rates
-         they are actually heard at (see TURBO_SAMPLES):
+         What the analysis says, at the playback rates they are heard at
+         (see TURBO_SAMPLES):
 
-           release   low peak 105Hz · body 255 and 295 · upper 401 · top 616
-                     perceptual (geometric) centroid 268Hz
            shift     low peak 92Hz · body 265 and 328 · upper 409
-                     perceptual centroid 328Hz
+                     perceptual (geometric) centroid 322Hz
+           release   low peak 91Hz · body 255 and 293 · upper 345 and 415
+                     perceptual centroid 304Hz
 
-         Both clips are effectively silent above about 700Hz — the release is
-         20dB down by 890Hz and 26dB down by 1.8kHz — and everything either one
-         does lives in a stack on roughly 100Hz: the pipe note at ~105, the
-         body at ~300, the upper at ~410, the last of it at ~615.
+         Both are effectively silent above about 700Hz — 20dB down by 890Hz,
+         26dB down by 1.8kHz — and everything either one does lives in a stack
+         on roughly 90Hz: the pipe note at ~91, the body at ~260-330, the
+         upper at ~410.
 
          The old ladder ran 380 → 2600 and then the rev term took the top voice
          to 4800 and the charge lift to 5772. That is the mismatch, and it is a
@@ -1502,11 +1506,16 @@ const CARS = [
          lift fired a dark 100/300Hz woof out of nowhere. Two instruments, not
          one — which is exactly the "isolated, weird" the samples had.
 
-         So the ladder is scaled onto the measurement instead. 260 at part
-         throttle sits in the body; 430 crosses the upper peak both clips
-         share; 600 at full boost lands on the release's own top peak, so at
-         the instant you lift, the release recording starts from the note the
-         whistle was already holding. That is the join.
+         So the ladder was scaled onto the measurement — 150/260/430/600, which
+         put part throttle in the body and full boost on the release's own top
+         peak — and then the whole ladder was taken down a further 30% by ear,
+         to 105/182/301/420. That last step is a deliberate offset, not a
+         correction: the charge now sits about half an octave UNDER the clips
+         instead of on top of them, so the sustained layer is the floor the
+         recordings sit on rather than something competing with them in the
+         same band. The join is still there — the rev and charge lifts carry
+         the top voice back up to ~655Hz at the limiter on a full charge, which
+         is where the samples live — but the approach to it is from below.
 
          `q` still tightens with shaft speed for the same reason as before —
          breathy and unpickable down low, a real note by full boost — but the
@@ -1537,10 +1546,10 @@ const CARS = [
            harder rather than as higher, which is the honest version anyway. */
         rev: 0.30, revLvl: 0.42,
         voices: [
-          { at: 0.00, hz: 150, tone: 0.06, q: 1.6, lvl: 0.10 },  // idle: a breath with a note in it
-          { at: 0.32, hz: 260, tone: 0.14, q: 2.6, lvl: 0.38 },  // part throttle: the clips' body
-          { at: 0.66, hz: 430, tone: 0.22, q: 3.6, lvl: 0.88 },  // on song: their shared upper peak
-          { at: 0.92, hz: 600, tone: 0.34, q: 4.6, lvl: 1.15 },  // full boost: the release's own top note
+          { at: 0.00, hz: 105, tone: 0.06, q: 1.6, lvl: 0.10 },  // idle: a breath with a note in it
+          { at: 0.32, hz: 182, tone: 0.14, q: 2.6, lvl: 0.38 },  // part throttle: the clips' body
+          { at: 0.66, hz: 301, tone: 0.22, q: 3.6, lvl: 0.88 },  // on song: their shared upper peak
+          { at: 0.92, hz: 420, tone: 0.34, q: 4.6, lvl: 1.15 },  // full boost: the release's own top note
         ],
       },
       /* …and the slow one underneath it: the stored charge that packs in while
@@ -1566,11 +1575,11 @@ const CARS = [
          limiter, in a car whose two turbo recordings have nothing above 700Hz
          and only a faint air bump at 3.5k. It was the single brightest thing
          in the mix and it belonged to no part of the source material.
-         [520, 1150] tops out around 1.8kHz — still clearly ABOVE the samples,
-         which is this layer's whole job (altitude on hard acceleration), but
-         near enough to read as the same air moving rather than a separate
-         synth sitting over the top of the car. */
-      spool: { level: 0.075, hz: [520, 1150], q: 0.9 },
+         [364, 805] tops out around 1.25kHz — still clearly ABOVE the rest of
+         the charge, which is this layer's whole job (altitude on hard
+         acceleration), but near enough to read as the same air moving rather
+         than a separate synth sitting over the top of the car. */
+      spool: { level: 0.075, hz: [364, 805], q: 0.9 },
       /* sighDur/tailDur are the length of the thing. A quad-turbo 8-litre
          carries a huge volume of compressed air in its pipes, coolers and
          plenum, and dumping it takes real time — so the body runs about twice
@@ -1611,6 +1620,10 @@ const CARS = [
          recording itself flat, so it gets denser rather than louder. Beyond
          that point, deepen `duck` instead. */
       sample: { releaseAt: 0.78, releaseGain: 1.45,
+                /* the release clip is 2.5s now — see TURBO_SAMPLES. The engine
+                   gets out of the way for the bang and the front of the sigh,
+                   then comes back under the tail. */
+                duckHold: 1.1,
                 /* Once per pull, at the moment the second pair takes over —
                    see the handover block in turboRigStep.
 
@@ -4601,20 +4614,31 @@ function loadPshift() {
    size, so four large compressors sit well below the hiss of a small one. The
    shift bang keeps more of its speed; that event really is quick.
    `fade` is how much of the (slowed) clip is spent getting to silence. */
-/* …and the two clips also have to match EACH OTHER, which they did not.
-   Measured perceptual (geometric) centroids of the raw files are 319Hz for the
-   release and 381Hz for the shift, and their body peaks sit at 303/351 and
-   308/381 — close, but not the same instrument. Played at 0.84 and 0.94 the
-   gap OPENED rather than closed: 268Hz against 358Hz, a little over five
-   semitones, which is why the shift read as a different, smaller turbo than
-   the one that had just been whistling and was about to sigh.
-   0.86 on the shift brings it to 328Hz — three and a half semitones, and the
-   body peaks land at 255/295 against 265/328, i.e. interleaved rather than
-   separated. It costs 85ms of extra length on a half-second clip, which is
-   within what a bigger charge system should sound like anyway. */
+/* The two clips also have to match EACH OTHER, and the old pair did not: their
+   measured perceptual centroids landed 268Hz against 358Hz, over five
+   semitones apart, so the shift read as a smaller turbo than the one that had
+   just been whistling and was about to sigh.
+
+   That is now solved at the source rather than by rate-matching two unrelated
+   recordings: BOTH events are the same gas sound. Turbo Release Long.wav is
+   built from Turbo Shift.mp3 — the 0.86 playback pitch baked in, the first
+   120ms of bang kept intact, and the tail granular-stretched 5.1x to fill 2.5
+   seconds with the pitch preserved. Grain positions are jittered, because at
+   that much stretch regular grains comb-filter noise into a tone.
+   On top of the stretch it gets what pressure actually leaving a large charge
+   system does: an exponential decay, and a one-pole lowpass sweeping 9kHz down
+   to 400Hz, so it goes quiet AND dark rather than just quiet.
+   Measured back: 304Hz centroid against the shift's 322, with peaks at
+   91/255/293/345/415 against 92/265/328/410. The same instrument, held.
+
+   `rate` is 1 because the pitch is already in the file, and `norm` is 1.01
+   because the file is rendered to deliver exactly the RMS the old release
+   delivered after its own 5.4 — so `releaseGain` and the duck stay tuned.
+   `fade` is short for the same reason: the decay is baked into the render, and
+   a long fade here would only fade an already-silent tail. */
 const TURBO_SAMPLES = {
-  release: { url: "Sound/Turbo Release.mp3", fade: 0.85, norm: 5.4, rate: 0.84 },
-  shift:   { url: "Sound/Turbo Shift.mp3",   fade: 0.24, norm: 3.4, rate: 0.86 },
+  release: { url: "Sound/Turbo Release Long.wav", fade: 0.25, norm: 1.01, rate: 1 },
+  shift:   { url: "Sound/Turbo Shift.mp3",        fade: 0.24, norm: 3.4,  rate: 0.86 },
 };
 
 function loadTurboSamples() {
@@ -4670,9 +4694,18 @@ function sfxTurboSample(which, amt = 1, gain = 1) {
      The hold covers almost the whole clip — the synthesized release only ducks
      for its own ~200ms transient, and the release recording is 1.26s. */
   const dk = clamp(amt, 0, 1) * (smp.duck === undefined ? 1 : smp.duck);
-  if (dk > 0.05)
+  /* The hold used to be a fixed fraction of the clip, which was fine at 1.26
+     seconds and is not fine at 2.5: holding the engine at 5% for well over two
+     seconds after every lift is not "the turbos dominate the cabin", it is the
+     engine having disappeared. `duckHold` caps it in seconds, so the duck
+     covers the bang and the start of the sigh and then the engine swells back
+     underneath while the long tail is still running — which is the shape the
+     real thing has anyway. Uncapped by default, so nothing else changes. */
+  if (dk > 0.05) {
+    const full = (buf.duration / (spec.rate || 1)) * (inCabin() ? 0.9 : 0.7);
     duckBed(1 - dk * (inCabin() ? 0.95 : 0.72), 0.06,
-            (buf.duration / (spec.rate || 1)) * (inCabin() ? 0.9 : 0.7));
+            Math.min(full, smp.duckHold === undefined ? Infinity : smp.duckHold));
+  }
 
   const s = ctx.createBufferSource(); s.buffer = buf;
   // slowed per the spec above, with a little jitter on top so it is never
