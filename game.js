@@ -65,6 +65,7 @@ const CARS = [
     cyl: 3, idle: 900, max: 6600, cut: 6750, inertia: 0.22,
     curve: [[0, 55], [900, 86], [2200, 112], [3800, 121], [5200, 117], [6000, 104], [6900, 72]],
     mass: 1040, finalDrive: 4.2, clutchCap: 190, cdA: 0.62, brakeMax: 9000,
+    conv: true,                   // ordinary small-car automatic — see TORQUE CONVERTER
     asp: "na", pops: 0, tachMax: 7, redK: 6.6, kmhMax: 180, mphMax: 120,
     sound: {
       // a 1.0 triple thrums, it doesn't sing
@@ -695,9 +696,11 @@ const CARS = [
     curve: [[0, 240], [800, 500], [2250, 850], [3500, 850], [4500, 830], [5500, 760],
             [6800, 640], [7300, 400]],
     shiftLag: 0.06,               // 8-speed torque converter: smooth, and never instant
+    conv: true,
     mass: 2200, finalDrive: 3.2, clutchCap: 1900, cdA: 0.92, brakeMax: 17000,
     grip: 1.95, awd: true,        // all-wheel drive and 2.2 tonnes pressing down on it
     asp: "turbo", pops: 2.0, boostMax: 0.85, spool: 1900, spoolRate: 2.6, psiMax: 20,
+    twin: 0.8,                    // a pair in the vee — see TWIN RELEASE. Recirculated and buried.
     flutter: 0.35,                               // recirculated, but the vee still chuffs
     whistleMul: 0.4, whistleFreqMul: 0.8,        // hot-vee: the turbos are buried…
     turboBreath: 2.3, breathHz: 1300,            // …so you get breath, never whistle
@@ -812,6 +815,7 @@ const CARS = [
             [4400, 150], [4800, 80]],
     mass: 1980, finalDrive: 3.9, clutchCap: 650, cdA: 0.75, brakeMax: 11000,
     asp: "turbo", pops: 0, boostMax: 0.75, spool: 1400, spoolRate: 3.0, psiMax: 26,
+    conv: true,                   // a truck box: low stall, locks up early, stays locked
     flutter: 0.5,                        // no bypass valve on a work truck. it chuffs.
     whistleMul: 0.05, whistleFreqMul: 0.45,      // a truck turbo does not whistle. it woofles.
     turboBreath: 2.0, breathHz: 1100,            // workhorse charge-air hiss
@@ -862,6 +866,9 @@ const CARS = [
     mass: 1580, finalDrive: 3.13, clutchCap: 2800, cdA: 0.62, brakeMax: 14000, grip: 2.0,
     tire: 1.35, rawCabin: 0.9,                    // gutted: a cage, a seat and a bare floor
     asp: "turbo", pops: 2, boostMax: 3.0, spool: 4200, spoolRate: 1.1, psiMax: 55,
+    // a big loose drag converter: it flashes to four thousand off the line,
+    // multiplies like a first gear of its own, and never locks up at all
+    conv: { stallMul: 1.55, mult: 2.3, lockGear: 99 },
     // 98mm of it. the turbo IS the soundtrack — and a wheel that big stalls
     // longer and slower than the road car's, so it chatters harder again
     flutter: 1, flutterEager: true, flutterChat: 1.9,
@@ -890,6 +897,7 @@ const CARS = [
     mass: 1760, finalDrive: 3.3, clutchCap: 820, cdA: 0.68, brakeMax: 12000,
     grip: 1.35,                                   // hooks harder, still loves to spin
     asp: "super", pops: 1, boostMax: 0.35, whineMult: 8.5, psiMax: 9,
+    conv: true,                   // three pedals were an option nobody ticked
     tachMax: 7, redK: 6.4, kmhMax: 320, mphMax: 200, dial: "classic",
     sound: {
       // 6.2 litres of pushrod V8. this is a bass drum.
@@ -903,9 +911,11 @@ const CARS = [
     curve: [[0, 180], [700, 340], [2000, 520], [3500, 580], [5000, 560], [6200, 520],
             [7000, 470], [7500, 300]],
     shiftLag: 0.055,              // torque-converter auto: the softest, longest hand-over
+    conv: true,
     mass: 1740, finalDrive: 3.2, clutchCap: 950, cdA: 0.66, brakeMax: 13000,
     grip: 1.6,
     asp: "turbo", pops: 1.5, boostMax: 0.9, spool: 2200, spoolRate: 2.4, psiMax: 18,
+    twin: 1,                      // aftermarket twins, and nothing about them is polite
     flutter: 0.65,                       // aftermarket twins, and nothing about it is polite
     whistleMul: 0.45, whistleFreqMul: 0.8,       // twins barely whistle…
     turboBreath: 2.2, breathHz: 1500,            // …they breathe — "zshhh", like a bus
@@ -928,6 +938,7 @@ const CARS = [
     shiftLag: 0.05,               // wet-clutch MCT — a shade lazier than a true DCT
     mass: 1780, finalDrive: 3.06, clutchCap: 1600, cdA: 0.65, brakeMax: 13500, grip: 1.6,
     asp: "turbo", pops: 2.5, boostMax: 0.85, spool: 1700, spoolRate: 2.8, psiMax: 20,
+    twin: 0.85,                   // factory hot-vee pair, valves and all
     flutter: 0.3,                                // recirculated, but the vee still chuffs
     whistleMul: 0.5, whistleFreqMul: 0.85,       // hot-vee turbos hide in the valley…
     turboBreath: 2.0, breathHz: 1400,            // …you hear breath, not whistle
@@ -955,6 +966,7 @@ const CARS = [
     shiftLag: 0.04,               // 7-speed twin-clutch, pre-selected and instant
     mass: 1420, finalDrive: 3.7, clutchCap: 1500, cdA: 0.60, brakeMax: 15000, grip: 1.75,
     asp: "turbo", pops: 2.8, boostMax: 0.9, spool: 2600, spoolRate: 2.3, psiMax: 21,
+    twin: 1.05,                   // small hot wheels, short pipes, no interest in hiding
     flutter: 0.75, whistleMul: 1.1, whistleFreqMul: 1.15,   // you HEAR these turbos…
     turboChop: 0.4, turboBreath: 1.4, breathHz: 1700,       // …flutter, chatter, gasp
     tachMax: 9, redK: 8.1, kmhMax: 340, mphMax: 210, shiftLights: true,
@@ -1012,6 +1024,7 @@ const CARS = [
     shiftLag: 0.05,               // twin-clutch daily
     mass: 1720, finalDrive: 3.46, clutchCap: 1000, cdA: 0.63, brakeMax: 13000, grip: 1.45,
     asp: "turbo", pops: 1.5, boostMax: 0.8, spool: 1900, spoolRate: 2.6, psiMax: 18,
+    twin: 0.9,                    // whatever valve it had gave up years ago
     flutter: 0.6,                        // tuned, and whatever valve it has gave up years ago
     whistleMul: 0.3, whistleFreqMul: 0.7, turboBreath: 1.6, breathHz: 1300,
     tachMax: 8, redK: 7.2, kmhMax: 300, mphMax: 190,
@@ -1043,6 +1056,8 @@ const CARS = [
     grip: 1.7,                                    // AWD, but it weighs what it weighs
     vmaxKmh: 250,                                 // limited, like every M car
     asp: "turbo", pops: 1.8, boostMax: 0.72, spool: 1500, spoolRate: 3.0, psiMax: 22,
+    conv: true,                   // a converter behind two tonnes and an e-motor
+    twin: 0.45,                   // two tonnes of insulated SUV between you and the valves
     whistleMul: 0.07, whistleFreqMul: 0.5,        // two tonnes of insulated SUV in the way…
     turboBreath: 1.9, breathHz: 1200,             // …so it breathes, and that is all it does
     tachMax: 8, redK: 7, kmhMax: 280, mphMax: 175,
@@ -1150,6 +1165,7 @@ const CARS = [
     shiftLag: 0.04,               // 8-speed twin-clutch
     mass: 1545, finalDrive: 3.62, clutchCap: 1600, cdA: 0.58, brakeMax: 15500, grip: 1.85,
     asp: "turbo", pops: 0.8, boostMax: 0.78, spool: 2400, spoolRate: 2.6, psiMax: 26,
+    twin: 0.85,                   // a foot behind the bulkhead, like everything else on it
     whistleMul: 0.55, whistleFreqMul: 1.05, turboBreath: 1.0, breathHz: 1600,
     tachMax: 9, redK: 8.5, kmhMax: 340, mphMax: 210,
     // hybrid eDrive: silent electric running up to ~50mph. The V6 never fires
@@ -1245,6 +1261,7 @@ const CARS = [
     shiftLag: 0.04,               // 8-speed twin-clutch
     mass: 1670, finalDrive: 3.7, clutchCap: 1750, cdA: 0.57, brakeMax: 16500, grip: 2.15,
     asp: "turbo", pops: 1.6, boostMax: 0.82, spool: 2300, spoolRate: 2.9, psiMax: 28,
+    twin: 0.85,                   // ditto — and three e-motors do not muffle air
     whistleMul: 0.6, whistleFreqMul: 1.0, turboBreath: 1.1, breathHz: 1500,
     tachMax: 9, redK: 8, kmhMax: 340, mphMax: 211,
     // plug-in hybrid: the two front e-motors alone move it in silence to
@@ -1422,7 +1439,7 @@ const CARS = [
         // their wastegates by 2600 — the reason the car has all its torque
         // from 2000rpm and does not feel like it is waiting for anything
         { at: 800, span: 1250, sat: 2600, share: 0.54, inertia: 0.52,
-          whineHz: 950, whineMul: 1.0, breathHz: 64 },
+          whineHz: 950, whineMul: 1.0, breathHz: 92 },
         /* the high pair: bigger wheels, more inertia, held shut by their
            control valves until there is enough exhaust to light them — and
            once lit they never let go. Bugatti quote 3800rpm as the point the
@@ -1432,7 +1449,7 @@ const CARS = [
            Centring it is the difference between "all four arrive at 3800" and
            "something happens at 3800", and only one of those is a sound. */
         { at: 2900, span: 1850, sat: 5600, share: 0.46, inertia: 0.92,
-          whineHz: 1280, whineMul: 1.25, breathHz: 87 },
+          whineHz: 1280, whineMul: 1.25, breathHz: 124 },
       ],
       spoolUp: 3.1, coast: 0.62, bleed: 8.5, windmill: 0.10,
       whine: { level: 0.150, hzMul: 1, spread: 0.007, wobble: 0.5, wobbleHz: 5.7, hp: 280 },
@@ -1465,13 +1482,10 @@ const CARS = [
          band climbed to 192Hz under pressure, but neither clip's low peak
          moves like that — the low end of a charge system that size is set by
          the volume of the pipes, not by how hard you are pushing on it, and it
-         sits still, so the sweep came down with it. Then the same 30% the rest
-         of the charge took: 74Hz, moving to 105 at full pressure, which is
-         under the clips' own 91Hz low peak for most of the range and arrives
-         at it by the time you lift. Level stays up — this band is carrying the
-         weight the recordings put there rather than sitting under it, and the
-         deeper it goes the more level it needs to stay present at all. */
-      breath: { level: 0.135, q: 0.58, boostHz: 74, sweep: 31,
+         sits still. 44 keeps it between 106 and 150, i.e. on the measurement
+         all the way up. Level comes up because this band is now carrying the
+         same weight the recordings put there rather than sitting under it. */
+      breath: { level: 0.135, q: 0.58, boostHz: 106, sweep: 44,
                 rise: 0.30, riseMax: 0.55 },
       /* The one piece of genuine top end either recording has: a broad air
          bump around 3.5kHz, ~25dB under the body. It was being swept to
@@ -1480,76 +1494,50 @@ const CARS = [
          measurement, and now that the whistle no longer reaches up here this
          layer is the only thing carrying the air, so it gets a little more. */
       hiss:   { level: 0.024, hz: 2400, q: 0.5 },
-      /* --- the whistle, in four versions ---
-         PITCHED TO THE RECORDINGS. This ladder is not chosen by taste; it is
-         chosen by measuring the gas clip both turbo events are now built from
-         (Turbo Shift.mp3, and the 2.5s Turbo Release Long.wav rendered off it)
-         and placing the sustained charge relative to where it actually is.
+      /* --- THE CHARGE: one note, and it only gets louder ---
+         This layer had four different pitches in it and two things climbing on
+         top of them: a rev term that lifted the note with the tacho, and a
+         charge term that lifted it again with stored pressure. Between them
+         the sustained charge sound spent the whole of every gear moving, and
+         what a moving pitch actually reads as is a siren wired to the rev
+         counter — you hear the tacho, not the plumbing.
 
-         What the analysis says, at the playback rates they are heard at
-         (see TURBO_SAMPLES):
+         So all of that is gone and the layer holds ONE note. 260Hz, which is
+         not a taste decision: it is where both recordings put their body (the
+         shift peaks at 265, the release at 255), so the sustained charge is
+         now sitting on exactly the note the clips are about to arrive on, and
+         the handover from synthesis to recording happens without a step.
 
-           shift     low peak 92Hz · body 265 and 328 · upper 409
-                     perceptual (geometric) centroid 322Hz
-           release   low peak 91Hz · body 255 and 293 · upper 345 and 415
-                     perceptual centroid 304Hz
+         And it IS a note, deliberately. `tone` is the fraction of this layer
+         that is oscillator rather than filtered air, and it goes UP, to 0.42,
+         held there at every shaft speed — because what this is meant to be is
+         a whine, low and constant, and a whine is tonal. `q` holds at 5.5 for
+         the same reason: a band that tightens as it spools is a character
+         change, and there are no character changes left in here.
 
-         Both are effectively silent above about 700Hz — 20dB down by 890Hz,
-         26dB down by 1.8kHz — and everything either one does lives in a stack
-         on roughly 90Hz: the pipe note at ~91, the body at ~260-330, the
-         upper at ~410.
+         What DOES change is level, and there are three of them, all pulling in
+         the same direction:
 
-         The old ladder ran 380 → 2600 and then the rev term took the top voice
-         to 4800 and the charge lift to 5772. That is the mismatch, and it is a
-         big one: for the whole time you are ON boost you heard a bright, tight
-         band two to three octaves ABOVE anything in the recordings, and then a
-         lift fired a dark 100/300Hz woof out of nowhere. Two instruments, not
-         one — which is exactly the "isolated, weird" the samples had.
+           voices' lvl    shaft speed. Faint at idle, four times that by the
+                          time the wheels are properly turning.
+           revLvl         RPM, and this is the big one — it is the term that
+                          makes holding a gear to the limiter sound like
+                          something building rather than something waiting.
+           charge.level   stored pressure: the slow one, filling across a whole
+                          gear and dumped by the shift.
 
-         So the ladder was scaled onto the measurement — 150/260/430/600, which
-         put part throttle in the body and full boost on the release's own top
-         peak — and then the whole ladder was taken down a further 30% by ear,
-         to 105/182/301/420. That last step is a deliberate offset, not a
-         correction: the charge now sits about half an octave UNDER the clips
-         instead of on top of them, so the sustained layer is the floor the
-         recordings sit on rather than something competing with them in the
-         same band. The join is still there — the rev and charge lifts carry
-         the top voice back up to ~655Hz at the limiter on a full charge, which
-         is where the samples live — but the approach to it is from below.
-
-         `q` still tightens with shaft speed for the same reason as before —
-         breathy and unpickable down low, a real note by full boost — but the
-         numbers come down with the pitch: a Q of 8.5 at 600Hz is a far
-         narrower band in musical terms than the same figure at 2600, and it
-         would ring. */
-      /* `tone` is the whole difference between "expensive" and "electrical".
-         It is the fraction of this layer that is oscillator rather than
-         filtered air, and it comes down again — to 0.34 at full boost — for a
-         reason the measurement is blunt about: neither recording has a narrow
-         tonal peak in it anywhere. The strongest features are broad, 15-20Hz
-         wide, and they read as air. A tone fraction that worked at 2600Hz is
-         much more exposed down at 600, where the ear hears pitch far more
-         readily, so holding the old 0.55 here would have put a hummable note
-         where the recordings have a rush. Turn `tone` up if it needs edge;
-         that is the knob, and it is the one that will make it sound cheap. */
+         They sum to about 2 at the top, which is where wsLvl clamps, so the
+         car arrives at full charge with all three in and nothing left over —
+         and it gets there by getting louder, which is the whole point. */
       whistle: {
         level: 0.175, load: 0.62, wobble: 10, surge: 0.78,
-        /* The climb. This rig's stages saturate at 2600 and 5600, so shaft
-           speed is pinned at 1.0 from about 5500rpm, and without a rev term
-           the whistle holds one flat note from there to the 7100 limiter.
-           That still has to be fixed — but 0.85 was fixing it by leaving the
-           recordings' spectrum altogether. 0.30 keeps the last 1600rpm
-           climbing (600Hz up to 780, most of a fourth, and gradually via the
-           1.3 exponent) while staying inside the band the clips occupy.
-           `revLvl` is untouched and now does more of the work: past the point
-           the shafts are pinned, the top of a gear should read as louder and
-           harder rather than as higher, which is the honest version anyway. */
-        rev: 0.30, revLvl: 0.42,
+        rev: 0,             // no pitch from revs. The note does not move.
+        revLvl: 0.62,       // …it just gets louder, and this is that.
         voices: [
-          { at: 0.00, hz: 105, tone: 0.06, q: 1.6, lvl: 0.10 },  // idle: a breath with a note in it
-          { at: 0.32, hz: 182, tone: 0.14, q: 2.6, lvl: 0.38 },  // part throttle: the clips' body
-          { at: 0.66, hz: 301, tone: 0.22, q: 3.6, lvl: 0.88 },  // on song: their shared upper peak
-          { at: 0.92, hz: 420, tone: 0.34, q: 4.6, lvl: 1.15 },  // full boost: the release's own top note
+          { at: 0.00, hz: 260, tone: 0.42, q: 5.5, lvl: 0.06 },  // idle: just there
+          { at: 0.32, hz: 260, tone: 0.42, q: 5.5, lvl: 0.30 },  // part throttle
+          { at: 0.66, hz: 260, tone: 0.42, q: 5.5, lvl: 0.66 },  // on song
+          { at: 0.92, hz: 260, tone: 0.42, q: 5.5, lvl: 0.95 },  // full boost
         ],
       },
       /* …and the slow one underneath it: the stored charge that packs in while
@@ -1569,17 +1557,27 @@ const CARS = [
          clip that is about to replace it, and at the moment it actually does
          they are the same note. Before, this lifted 4800Hz to 5772 and the
          gap to the recording only got wider the more charge you had. */
-      charge: { rate: 0.75, fall: 2.4, pitch: 0.20, level: 0.40 },
+      /* `pitch` is 0 now: a full charge does not raise the note, it leans on
+         it. All of this layer's contribution is level, which is the third of
+         the three level terms above and the slowest of them. */
+      charge: { rate: 0.75, fall: 2.4, pitch: 0, level: 0.45 },
       /* the top note over the engine. Pulled down hard, and by the same
          measurement as the whistle: at [1700, 3900] this ran to 8.6kHz at the
          limiter, in a car whose two turbo recordings have nothing above 700Hz
          and only a faint air bump at 3.5k. It was the single brightest thing
          in the mix and it belonged to no part of the source material.
-         [364, 805] tops out around 1.25kHz — still clearly ABOVE the rest of
-         the charge, which is this layer's whole job (altitude on hard
-         acceleration), but near enough to read as the same air moving rather
-         than a separate synth sitting over the top of the car. */
-      spool: { level: 0.075, hz: [364, 805], q: 0.9 },
+         [520, 1150] tops out around 1.8kHz — still clearly ABOVE the samples,
+         which is this layer's whole job (altitude on hard acceleration), but
+         near enough to read as the same air moving rather than a separate
+         synth sitting over the top of the car. */
+      /* …and this one had the last moving pitch in the charge: it swept 520
+         to 1150 on shaft speed, so with the whistle holding a flat note the
+         spool would have been the only thing left climbing, and the one thing
+         climbing is the thing you hear. Held at 540 instead. It keeps its job
+         — altitude over the engine when the car is being asked for everything
+         — but it does that job the same way everything else in here now does,
+         by arriving rather than by rising. */
+      spool: { level: 0.075, hz: [520, 560], q: 0.9 },
       /* sighDur/tailDur are the length of the thing. A quad-turbo 8-litre
          carries a huge volume of compressed air in its pipes, coolers and
          plenum, and dumping it takes real time — so the body runs about twice
@@ -1620,10 +1618,6 @@ const CARS = [
          recording itself flat, so it gets denser rather than louder. Beyond
          that point, deepen `duck` instead. */
       sample: { releaseAt: 0.78, releaseGain: 1.45,
-                /* the release clip is 2.5s now — see TURBO_SAMPLES. The engine
-                   gets out of the way for the bang and the front of the sigh,
-                   then comes back under the tail. */
-                duckHold: 1.1,
                 /* Once per pull, at the moment the second pair takes over —
                    see the handover block in turboRigStep.
 
@@ -1725,10 +1719,14 @@ const CARS = [
        the briefest torque interruption in the garage. What you get is a
        single ratio that appears to run from rest to the governor. */
     autoOnly: true, seamless: true,
+    // it locks up as early as anything here: slip is heat, heat is a fan, and
+    // a fan is a noise. Waftability is a mechanical specification.
+    conv: { lockKmh: 30, lockGear: 2 },
     mass: 2560, finalDrive: 2.81, clutchCap: 2000, cdA: 0.86, brakeMax: 16000,
     grip: 1.35, noPop: true,                      // it does not do fireworks
     vmaxKmh: 250,                                 // governed, of course
     asp: "turbo", pops: 0, boostMax: 0.55, spool: 900, spoolRate: 3.6, psiMax: 12,
+    twin: 0.18,                   // it happens; 130kg of insulation means you barely hear it
     whistleMul: 0.04, whistleFreqMul: 0.45,       // you will not hear the turbos
     turboBreath: 0.35, breathHz: 900,
     tachMax: 6, redK: 5.3, kmhMax: 260, mphMax: 160,
@@ -1811,6 +1809,7 @@ const CARS = [
     shiftLag: 0.025,              // LST: 20–30ms, and it is the fastest thing here
     mass: 1390, finalDrive: 2.80, clutchCap: 2400, cdA: 0.523, brakeMax: 16500, grip: 1.9,
     asp: "turbo", pops: 2.2, boostMax: 0.68, spool: 2500, spoolRate: 2.3, psiMax: 25,
+    twin: 1,                      // five litres, two large wheels, straight out of the top
     flutter: 0.7, whistleMul: 0.7, whistleFreqMul: 1.05, turboBreath: 1.3, breathHz: 1550,
     tachMax: 9, redK: 8.5, kmhMax: 540, mphMax: 330, shiftLights: true,
     dash: { accent: "#cfe0ee" },
@@ -1868,7 +1867,8 @@ const ENGINE_FIELDS = [
   // about the charger and its pipework, not about the car around it
   "turboBreath", "breathHz", "turboChop", "whineMult",
   "flutter", "flutterEager", "flutterChat",
-  "seqTurbo", "turboRig",              // the plumbing comes with the engine
+  "seqTurbo", "turboRig", "twin",      // the plumbing comes with the engine
+  "conv",                              // …and so does what is bolted to the back of it
   "tachMax", "redK", "shiftLights",
   "edrive", "evCapKmh", "evForce", "badge", "fireLbl",
 ];
@@ -2144,9 +2144,12 @@ const S = {
   listen: "driver",                    // which microphone — see LISTEN
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
   spinV: 0, slipR: 0, tracF: 0, tcCut: 0, lockup: false,
+  tcLock: 0, tcSlip: 0,                // the torque converter — see TORQUE CONVERTER
   traffic: false, rain: false, passT: 2, splashT: 2, wiperT: 0.7, wiperDir: 1,
   night: false, cricketT: 2, lampT: 1.5,
   dmgOn: false,                        // consequences mode — opt-in, see DMG
+  softLim: false,                      // soft limiter — opt-in, see THE SOFT LIMITER
+  softCut: 1,                          // …and how much fuelling it is allowing right now
   fuel: 1,                             // 0..1 in the tank — only moves in consequences
   // --- electric car only (see the EV DASH section) ---
   evBoost: 0, evCool: 0,               // ludicrous-mode timer / cooldown, seconds
@@ -4614,31 +4617,20 @@ function loadPshift() {
    size, so four large compressors sit well below the hiss of a small one. The
    shift bang keeps more of its speed; that event really is quick.
    `fade` is how much of the (slowed) clip is spent getting to silence. */
-/* The two clips also have to match EACH OTHER, and the old pair did not: their
-   measured perceptual centroids landed 268Hz against 358Hz, over five
-   semitones apart, so the shift read as a smaller turbo than the one that had
-   just been whistling and was about to sigh.
-
-   That is now solved at the source rather than by rate-matching two unrelated
-   recordings: BOTH events are the same gas sound. Turbo Release Long.wav is
-   built from Turbo Shift.mp3 — the 0.86 playback pitch baked in, the first
-   120ms of bang kept intact, and the tail granular-stretched 5.1x to fill 2.5
-   seconds with the pitch preserved. Grain positions are jittered, because at
-   that much stretch regular grains comb-filter noise into a tone.
-   On top of the stretch it gets what pressure actually leaving a large charge
-   system does: an exponential decay, and a one-pole lowpass sweeping 9kHz down
-   to 400Hz, so it goes quiet AND dark rather than just quiet.
-   Measured back: 304Hz centroid against the shift's 322, with peaks at
-   91/255/293/345/415 against 92/265/328/410. The same instrument, held.
-
-   `rate` is 1 because the pitch is already in the file, and `norm` is 1.01
-   because the file is rendered to deliver exactly the RMS the old release
-   delivered after its own 5.4 — so `releaseGain` and the duck stay tuned.
-   `fade` is short for the same reason: the decay is baked into the render, and
-   a long fade here would only fade an already-silent tail. */
+/* …and the two clips also have to match EACH OTHER, which they did not.
+   Measured perceptual (geometric) centroids of the raw files are 319Hz for the
+   release and 381Hz for the shift, and their body peaks sit at 303/351 and
+   308/381 — close, but not the same instrument. Played at 0.84 and 0.94 the
+   gap OPENED rather than closed: 268Hz against 358Hz, a little over five
+   semitones, which is why the shift read as a different, smaller turbo than
+   the one that had just been whistling and was about to sigh.
+   0.86 on the shift brings it to 328Hz — three and a half semitones, and the
+   body peaks land at 255/295 against 265/328, i.e. interleaved rather than
+   separated. It costs 85ms of extra length on a half-second clip, which is
+   within what a bigger charge system should sound like anyway. */
 const TURBO_SAMPLES = {
-  release: { url: "Sound/Turbo Release Long.wav", fade: 0.25, norm: 1.01, rate: 1 },
-  shift:   { url: "Sound/Turbo Shift.mp3",        fade: 0.24, norm: 3.4,  rate: 0.86 },
+  release: { url: "Sound/Turbo Release.mp3", fade: 0.85, norm: 5.4, rate: 0.84 },
+  shift:   { url: "Sound/Turbo Shift.mp3",   fade: 0.24, norm: 3.4, rate: 0.86 },
 };
 
 function loadTurboSamples() {
@@ -4694,18 +4686,9 @@ function sfxTurboSample(which, amt = 1, gain = 1) {
      The hold covers almost the whole clip — the synthesized release only ducks
      for its own ~200ms transient, and the release recording is 1.26s. */
   const dk = clamp(amt, 0, 1) * (smp.duck === undefined ? 1 : smp.duck);
-  /* The hold used to be a fixed fraction of the clip, which was fine at 1.26
-     seconds and is not fine at 2.5: holding the engine at 5% for well over two
-     seconds after every lift is not "the turbos dominate the cabin", it is the
-     engine having disappeared. `duckHold` caps it in seconds, so the duck
-     covers the bang and the start of the sigh and then the engine swells back
-     underneath while the long tail is still running — which is the shape the
-     real thing has anyway. Uncapped by default, so nothing else changes. */
-  if (dk > 0.05) {
-    const full = (buf.duration / (spec.rate || 1)) * (inCabin() ? 0.9 : 0.7);
+  if (dk > 0.05)
     duckBed(1 - dk * (inCabin() ? 0.95 : 0.72), 0.06,
-            Math.min(full, smp.duckHold === undefined ? Infinity : smp.duckHold));
-  }
+            (buf.duration / (spec.rate || 1)) * (inCabin() ? 0.9 : 0.7));
 
   const s = ctx.createBufferSource(); s.buffer = buf;
   // slowed per the spec above, with a little jitter on top so it is never
@@ -4722,6 +4705,101 @@ function sfxTurboSample(which, amt = 1, gain = 1) {
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   s.connect(g); g.connect(AU.sfxTurbo || AU.sfx);
   s.start(t); s.stop(t + dur + 0.02);
+}
+
+/* ================================================================
+   TWIN RELEASE — the gas going back round, synthesized
+   ================================================================
+   The two recordings belong to the quad-turbo car and to nothing else. They
+   are eight litres of charge pipe emptying through four large valves, and
+   pasting that onto a twin-turbo V8 makes the V8 sound like it borrowed
+   something — the clip is too big, too long and far too obviously a clip.
+
+   So the twins get the same EVENT built rather than recorded, which is the
+   right way round for it: this is the sigh of a bypass valve cracking and
+   sending the charge back to the compressor inlet, and it is a short rush of
+   air with a shape, not a performance.
+
+   Three parts, and the shape is all in how they decay:
+
+     the crack     the valve opening — the only sharp thing in here, and it is
+                   over in twenty milliseconds
+     the rush      a band that starts up around 2kHz and falls to under 600 as
+                   the pressure behind it goes. Air escaping goes quiet AND
+                   dark, and something that only goes quiet sounds synthetic.
+     the breath    a low layer underneath, the volume of the pipe itself
+                   emptying. It is what stops it being a hiss.
+
+   AND IT DOES NOT ANNOUNCE ITSELF. This is the part that matters. Nothing is
+   ducked for it: the engine keeps playing right through, and the release sits
+   in the mix rather than in front of it. From outside you hear it properly,
+   because outside is where a bypass valve actually is. Sealed in, it drops to
+   under a third — the opposite of the quad-turbo car's rig, which gets LOUDER
+   with the windows up because on that car the plumbing genuinely is the
+   loudest thing in the cabin. On an ordinary twin-turbo road car it is a
+   detail you notice, and noticing is the whole brief.
+
+   The per-car `twin` value is how much of it that particular plumbing lets
+   out: 1 is a pair of open aftermarket valves, 0.18 is a Phantom. */
+const TWIN_RELEASE = {
+  level: 0.5,         // peak, for a full-pressure lift on a car that lets it all out
+  cabin: 0.3,         // …and well under that with the windows up. See above.
+  boost: 0.34,        // below this there is not enough in the pipes to bother
+  cool: 0.28,         // one per event, not one per frame of a long lift
+};
+
+/* `amt` is how far the plate shut; `boost` is what was behind it. Both matter:
+   a full lift off maximum boost is the big one, a breath between gears is the
+   same sound with less in it. */
+function sfxTwinRelease(amt, boost) {
+  if (!AU.ready) return;
+  const w = CC.twin === true ? 1 : (CC.twin || 0);
+  if (w <= 0 || boost < TWIN_RELEASE.boost) return;
+  if ((S._twinCool || 0) > 0) return;
+  S._twinCool = TWIN_RELEASE.cool;
+
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const p = clamp(amt, 0, 1) * clamp(boost, 0, 1);
+  const a = p * w * TWIN_RELEASE.level * ear().turbo
+          * (inCabin() ? TWIN_RELEASE.cabin : 1) * (stockOn() ? 0.8 : 1);
+  if (a < 0.015) return;
+  /* how high this car's plumbing sits, reused from the whistle rather than
+     invented again: a 765's small hot wheels let go higher and shorter than a
+     Phantom's big lazy ones, and the car already carries that number. */
+  const fMul = clamp(CC.whistleFreqMul === undefined ? 1 : CC.whistleFreqMul, 0.75, 1.25);
+  // more pressure behind it means it takes longer to leave
+  const dur = (0.24 + 0.26 * p) / (0.7 + 0.3 * fMul);
+  const out = AU.sfxTurbo || AU.sfx;
+
+  // --- the rush: the body of it, falling and darkening together
+  const n = ctx.createBufferSource();
+  n.buffer = AU.noiseBuf; n.loop = true;
+  n.playbackRate.value = 0.85 + 0.4 * fMul;
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass"; bp.Q.value = 0.75;
+  bp.frequency.setValueAtTime(2050 * fMul, t);
+  bp.frequency.exponentialRampToValueAtTime(560 * fMul, t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(a, t + 0.018);        // the valve cracking open
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  n.connect(bp); bp.connect(g); g.connect(out);
+  n.start(t); n.stop(t + dur + 0.03);
+
+  // --- the breath underneath: the pipe volume, not the valve. Slower in and
+  //     slower out, so the event has a body rather than just an edge.
+  const n2 = ctx.createBufferSource();
+  n2.buffer = AU.noiseBuf; n2.loop = true; n2.playbackRate.value = 0.55;
+  const lp = ctx.createBiquadFilter();
+  lp.type = "bandpass"; lp.Q.value = 0.5;
+  lp.frequency.setValueAtTime(430 * fMul, t);
+  lp.frequency.exponentialRampToValueAtTime(240 * fMul, t + dur * 1.2);
+  const g2 = ctx.createGain();
+  g2.gain.setValueAtTime(0.0001, t);
+  g2.gain.linearRampToValueAtTime(a * 0.5, t + 0.05);
+  g2.gain.exponentialRampToValueAtTime(0.0001, t + dur * 1.2);
+  n2.connect(lp); lp.connect(g2); g2.connect(out);
+  n2.start(t); n2.stop(t + dur * 1.2 + 0.03);
 }
 
 /* dog-ring engagement — NOT the paddle, the GEARBOX: a hard steel CLACK as
@@ -7716,6 +7794,78 @@ function matchRpm(g) {
   return clamp(rpm, ENG.idle, ENG.max * 0.98);
 }
 
+/* ================================================================
+   THE TORQUE CONVERTER
+   ================================================================
+   What makes an automatic sound like an automatic is not the shift points. It
+   is that there is no solid connection between the engine and the road: there
+   are two bladed wheels facing each other in a case of oil, and the only way
+   the first one drives the second is by throwing fluid at it. That has three
+   consequences you hear on every single drive, and this file had none of them.
+
+     1  IT SLIPS UNDER LOAD. Lean on it and the engine runs a few hundred rpm
+        above where the gearing says it should be, and it stays there while the
+        car catches up. Floor it from rest and the revs do not climb with road
+        speed at all — they jump to the stall speed and SIT there while the
+        speedo does the moving. That one behaviour is the whole sound of an
+        automatic pulling away, and a rigid driveline cannot make it.
+
+     2  IT MULTIPLIES TORQUE. A stator between the two wheels turns the
+        returning fluid around and adds it back in, so below the coupling point
+        the turbine puts out nearly twice what the engine makes. It is why an
+        automatic launches better than its power figures suggest, and why the
+        car creeps forward at idle with nothing but the brake holding it.
+
+     3  IT LOCKS UP. Slip is heat, so every modern box bolts the two halves
+        together once it is cruising. The rpm drops a couple of hundred as it
+        goes in, the engine's voice steps back, and the car suddenly has engine
+        braking it did not have a moment ago. Ask for torque and it drops out
+        again, and the revs rise before a single gear has been changed.
+
+   This is a property of the CAR, not of the mode: a twin-clutch supercar
+   driven in D has no converter in it and should not behave as if it does — it
+   has clutch plates, and it steps. So only cars that declare `conv` get one.
+   Manual and Manual+Clutch never do; they are driven through the clutch. */
+const TC_DEF = {
+  mult:     1.95,   // torque ratio at stall — everything the stator is worth
+  couple:   0.86,   // the speed ratio it is all spent by
+  stallMul: 1,      // multiplies the derived stall speed. Big number = loose.
+  lockKmh:  48,     // the lockup clutch: not below this…
+  lockGear: 3,      // …not in the low gears…
+  lockThr:  0.62,   // …and not while you are asking for anything.
+};
+
+/* this car's converter, or null if what it has is a clutch */
+function convOf() {
+  if (S.mode !== "auto" || CC.ev || !CC.conv) return null;
+  const c = CC.conv;
+  if (c === true) return TC_DEF;
+  if (!c._def) Object.assign(c, { ...TC_DEF, ...c, _def: true });   // memoised
+  return c;
+}
+
+/* The stall speed: where the engine sits, flat out, with the brakes on. It is
+   a property of the converter, but a converter is chosen to suit the engine
+   behind it, so it is derived rather than carried by every car — a big lazy
+   motor with all its torque at 1700 gets a low one, something that makes
+   nothing until it is spinning gets a high one, and `stallMul` covers the
+   deliberate outliers. */
+function tcStall(C) {
+  return clamp((ENG.idle * 2.4 + ENG.max * 0.08) * (C.stallMul || 1), 1400, 4200);
+}
+
+/* the lockup clutch's own logic. Everything here is a reason NOT to lock:
+   it will not do it slowly, in the low gears, under load, on the brakes, or
+   anywhere the engine would end up lugging. */
+function tcLockWant(C, wheelRpm) {
+  if (S.autoSel !== "D" || !S.engineOn || S.stalled) return false;
+  if (S.shiftCut > 0 || S.shiftCool > 0.35) return false;
+  if (S.autoGear < (C.lockGear || 3)) return false;
+  if (Math.abs(S.v) * 3.6 < (C.lockKmh || 48)) return false;
+  if (S.throttle > (C.lockThr || 0.62) || S.brake > 0.3) return false;
+  return wheelRpm > ENG.idle * 1.35;
+}
+
 function computeEngage() {
   if (S.gear === 0) return 0;
   if (S.mode === "clutch") {
@@ -7724,6 +7874,11 @@ function computeEngage() {
   }
   if (S.shiftCut > 0) return 0;
   if (CC.ev) return 1;                       // direct drive — torque from zero rpm
+  /* An automatic with a converter has no clutch to feather and nothing to
+     stall: the slipping is done in oil, downstream of here, and it is done
+     properly. So engagement is simply "is the gearbox connected" — which it
+     is, whenever it is not mid-shift. See TORQUE CONVERTER. */
+  if (convOf()) return 1;
   // manual / auto: centrifugal-style auto clutch — cannot stall. A wide,
   // eased ramp (rather than a narrow linear one) spreads the bite over a
   // longer stretch of rpm so a gas-pedal launch builds speed continuously
@@ -7790,18 +7945,56 @@ function stepPhysics(dt) {
   S.shiftCut = Math.max(0, S.shiftCut - dt);
   S.shiftCool = Math.max(0, S.shiftCool - dt);
   S.cutTimer = Math.max(0, S.cutTimer - dt);
+  S._twinCool = Math.max(0, (S._twinCool || 0) - dt);   // see TWIN RELEASE
   const blipWas = S.blip;
   S.blip = Math.max(0, S.blip - dt);
 
-  // rev limiter
-  if (S.rpm > ENG.cut) S.cutTimer = 0.07;
-  // …and a far lower one with the automatic in Park or Neutral. Nothing is
-  // loading the engine, so the ECU refuses to let you sit it on the redline —
-  // lean on the throttle at a standstill and it just holds here.
-  if (S.mode === "auto" && (S.autoSel === "P" || S.autoSel === "N")) {
-    S.parkLimit = Math.min(PARK_REV_LIMIT, ENG.cut * 0.95);
-    if (S.rpm > S.parkLimit) S.cutTimer = Math.max(S.cutTimer, 0.05);
-  } else S.parkLimit = 0;
+  /* --- rev limiter ---
+     Where the ceiling is this frame. Normally the ECU's cut — but with the
+     automatic in Park or Neutral it is far lower, because nothing is loading
+     the engine and no ECU will let you sit an unloaded engine on the redline.
+     Lean on the throttle at a standstill and it just holds here. */
+  const inPN = S.mode === "auto" && (S.autoSel === "P" || S.autoSel === "N");
+  S.parkLimit = inPN ? Math.min(PARK_REV_LIMIT, ENG.cut * 0.95) : 0;
+  const ceiling = S.parkLimit || ENG.cut;
+  S.softCut = 1;
+  if (S.softLim && S.engineOn && !CC.ev) {
+    /* --- THE SOFT LIMITER (workshop → ECU & SETUP) ---
+       A stock limiter is a switch. Past the number the ECU stops the fuel, the
+       revs fall, it lights it again, and the engine hammers off that wall
+       several times a second — which is the bounce you hear, and also a series
+       of small explosions of unburnt fuel in a hot exhaust.
+
+       A soft limiter switches nothing off. It takes the fuelling away
+       PROGRESSIVELY across the last few hundred rpm, so the engine runs out of
+       torque just before it runs out of rev range: it arrives at the ceiling
+       and stays there, flat and quiet, with no bounce and no bark. You can
+       hold it against the stop for as long as you like and it never crosses
+       it, and nothing ever hits anything. The limit stops being a thing you
+       hit and becomes a wall you lean on.
+
+       The taper is a fraction of the rev range rather than a fixed number of
+       rpm, so a 4,550rpm diesel and an 18,000rpm twin get the same SHAPE
+       instead of the same width — a fixed 400rpm would be a rounding error on
+       one and a third of the powerband on the other. And it is smoothstepped
+       rather than linear, because a straight ramp starts costing you power the
+       moment it opens: this way the engine keeps very nearly everything until
+       it is genuinely near the ceiling, and then lets go quickly.
+
+       It applies to whatever the ceiling is, so the Park limit gets it too. */
+    const band = Math.max(160, (ENG.cut - ENG.idle) * 0.055);
+    const top = ceiling - band * 0.2;         // it settles a hair under the cut
+    const x = clamp((top - S.rpm) / band, 0, 1);
+    S.softCut = x * x * (3 - 2 * x);
+    /* …and the hard cut stays behind it as a backstop, a long way up. Nothing
+       you can do with the throttle should ever reach it — but a money shift or
+       a wheel landing can put the revs somewhere the fuelling has no say in,
+       and that is exactly the case the real ECU keeps a hard cut for. */
+    if (S.rpm > ceiling + band * 0.5) S.cutTimer = Math.max(S.cutTimer, 0.05);
+  } else {
+    if (S.rpm > ENG.cut) S.cutTimer = 0.07;
+    if (S.parkLimit && S.rpm > S.parkLimit) S.cutTimer = Math.max(S.cutTimer, 0.05);
+  }
 
   // idle governor keeps the engine alive at no throttle (free or lightly
   // loaded). Its authority grows as the revs sink below idle — tiny engines
@@ -7891,6 +8084,8 @@ function stepPhysics(dt) {
     }
   }
   if (S.cutTimer > 0 || (S.shiftCut > 0 && S.blip <= 0) || !S.engineOn) eff = 0;
+  // …and the soft limiter, which is the same decision made gradually
+  else if (S.softCut < 1) eff *= S.softCut;
   S.effThrottle = eff;
 
   // crackle as the blip closes
@@ -7987,7 +8182,13 @@ function stepPhysics(dt) {
       // both, which is why `flutter` is a number and not a flag.
       const fl = CC.flutter === true ? 1 : (CC.flutter || 0);
       if (fl > 0) sfxFlutter(S.boost, fl);
-      if (fl < 0.85) sfxBlowoff(1 - fl * 0.7);
+      /* …and the air going back round to the intake. A car with a pair of them
+         has its own, better-shaped version of that sigh (see TWIN RELEASE), and
+         the two must not both fire: one lift making two sighs a few
+         milliseconds apart just sounds like a seam. Note this runs BEFORE the
+         dump below — what comes out is measured by what was in there. */
+      if (CC.twin) sfxTwinRelease(shutHard ? 1 : clamp((S._effPeak - eff) / 0.7, 0.3, 1), S.boost);
+      else if (fl < 0.85) sfxBlowoff(1 - fl * 0.7);
       /* …and how much pressure that actually cost. A slam to zero empties the
          pipes; a part-throttle breath or a shift with your foot still mostly
          in it does not, and dumping all of it would mean the eager trigger
@@ -8025,6 +8226,7 @@ function stepPhysics(dt) {
 
   const engage = computeEngage();
   S.engage = engage;
+  const TC = convOf();                       // null on anything with a clutch
   const ratio = currentRatio();
   const cap = CAR.clutchCap * engage * dmgClutchHold();
 
@@ -8075,9 +8277,61 @@ function stepPhysics(dt) {
   } else if (ratio === 0 || cap < 1) {
     // engine free-revving
     S.locked = false;
+    S.tcLock = 0;                            // …and the converter is out of it
     if (S.engineOn || S.rpm > 1) {
       S.rpm += (Te / ENG.inertia) * omegaToRpm * dt;
     }
+  } else if (TC) {
+    /* --- through the fluid. See TORQUE CONVERTER. ---------------------- */
+    const spinAdd = S.gear === "R" ? 0 : S.spinV;
+    const wheelV = S.lockup ? 0 : S.v + spinAdd;
+    const wheelRpm = (wheelV / CAR.wheelR) * ratio * omegaToRpm;   // the turbine
+    const stall = tcStall(TC);
+    /* The capacity constant, derived from this car's own stall speed rather
+       than tuned: at stall the fluid has to absorb exactly what the engine
+       makes there, or the engine would either bog down into it or run away
+       from it. One number, and the whole curve falls out of it. */
+    const Kc = Math.max(1e-6, torqueAt(stall) * ENG.tqMul) / (stall * stall);
+    // speed ratio: turbine over impeller. 0 is stopped against a spinning
+    // engine, 1 is the two halves turning together.
+    const sr = wheelRpm / Math.max(S.rpm, ENG.idle * 0.4);
+    /* How much of its capacity the converter is using. 1 at stall; 0 at lock,
+       because a coupling with no slip in it transmits nothing at all; and
+       NEGATIVE past lock — the wheels driving the engine back through the same
+       fluid, which is exactly why an automatic engine-brakes so much more
+       softly than a manual, and why the revs sag rather than hold on a
+       trailing throttle. Bounded, because the arithmetic on the overrun is
+       otherwise unbounded and this is a fluid, not a solid shaft. */
+    const fill = clamp(1 - sr * Math.abs(sr), -1.5, 1);
+    const Tf = Kc * S.rpm * S.rpm * fill;
+    // torque multiplication — the stator's entire reason for being there, and
+    // all of it is spent by the coupling point
+    const TR = 1 + (TC.mult - 1) * clamp(1 - sr / TC.couple, 0, 1);
+    /* Solved rather than chased. The load rises as the SQUARE of engine speed,
+       and stepping that explicitly on a light flywheel rings and then
+       diverges. This is the same step written implicitly — the load's own
+       slope carried in the denominator — which is stable at any inertia, and
+       the garage runs from a 49cc single to a 986kg V12. */
+    const k = omegaToRpm * dt / ENG.inertia;
+    const slope = 2 * Kc * Math.max(S.rpm, 1) * Math.abs(fill);
+    S.rpm += k * (Te - Tf) / (1 + k * slope);
+    driveF = (Tf * TR * ratio * CAR.eff) / CAR.wheelR;
+
+    /* --- the lockup clutch ---
+       It goes in over half a second and comes out in a fifth, because that is
+       the asymmetry the hardware has: engaging is a decision, releasing is a
+       reaction. Blending both the rpm and the drive toward the solid case
+       means full lock IS the rigid driveline, arrived at continuously — so the
+       needle settles down onto the ratio as it takes up, and lifts back off it
+       the moment you ask for something. */
+    const want = tcLockWant(TC, wheelRpm) ? 1 : 0;
+    S.tcLock = clamp(S.tcLock + (want ? dt / 0.55 : -dt / 0.18), 0, 1);
+    if (S.tcLock > 0.01) {
+      S.rpm += (wheelRpm - S.rpm) * S.tcLock;
+      driveF += ((Te * ratio * CAR.eff) / CAR.wheelR - driveF) * S.tcLock;
+    }
+    S.locked = S.tcLock > 0.9;
+    S.tcSlip = S.rpm - wheelRpm;             // what the dash would call "slip"
   } else {
     // wheelspin adds surface speed; a lockup stops the wheels dead
     const spinAdd = S.gear === "R" ? 0 : S.spinV;
@@ -8208,8 +8462,14 @@ function stepPhysics(dt) {
   }
   F += driveF;
 
-  // creep for the automatic's torque converter feel
-  if (S.mode === "auto" && S.autoSel === "D" && S.engineOn && S.v < 1.8 && S.brake < 0.2)
+  /* Creep. On a car with a real converter this is not needed and must not be
+     added: the fluid is already pushing — an idling engine against a stopped
+     turbine is the maximum-slip case, which is the maximum-torque case, and it
+     falls away on its own as the car gathers speed and the two halves come
+     together. That IS creep, and it is the same equation that launches the
+     car. Everything else in D is a clutch pack being held just closed, which
+     has no equation in here, so it keeps the constant it was tuned with. */
+  if (!TC && S.mode === "auto" && S.autoSel === "D" && S.engineOn && S.v < 1.8 && S.brake < 0.2)
     F += CAR.mass * 0.32 * (1 - S.v / 1.8);
   if (S.mode === "auto" && S.autoSel === "R" && S.engineOn && S.v > -1.5 && S.brake < 0.2)
     F -= CAR.mass * 0.29;
@@ -8348,17 +8608,57 @@ function stepPhysics(dt) {
     if (S.flyX > 380) S.flyX = -380;
   }
 
-  // automatic gearbox logic — a comfort auto, not a sport one: it short-shifts
-  // early and lives in the tall gears for a smooth, quiet ride. A hard rev
-  // ceiling (~4.5-5k) means it upshifts well before then no matter how hard you
-  // push, so the revs stay low and civil like a real automatic.
-  if (S.mode === "auto" && S.autoSel === "D" && S.engineOn && S.shiftCool <= 0 && !CC.ev) {
-    const span = ENG.max - ENG.idle;
-    const ceiling = Math.min(4800, ENG.idle + span * 0.5);   // never revs past ~4.5-5k
-    const up = Math.min(ceiling, ENG.idle + span * (0.13 + S.throttle * 0.26));
-    const dn = ENG.idle + span * (0.05 + S.throttle * 0.08);
-    if (S.rpm > up && S.autoGear < CAR.top) autoShift(S.autoGear + 1);
-    else if (S.rpm < dn && S.autoGear > 1) autoShift(S.autoGear - 1);
+  /* --- automatic gearbox logic ---
+     An automatic does not have a shift map. It has two, and a switch between
+     them, and the switch is a physical detent at the bottom of the pedal
+     travel. Above it the box is the comfort box this always was: it
+     short-shifts early, lives in the tall gears, and never sees five thousand
+     however long you hold it there. Through it, none of that applies — you
+     have stopped driving an automatic and started asking one for everything,
+     and it answers by dropping as many gears as it can and using all of the
+     tacho. Both are the same gearbox; which one you get is your right foot. */
+  if (S.mode === "auto" && S.autoSel === "D" && S.engineOn && !CC.ev) {
+    /* how hard the car is actually gathering speed, over about a second. A box
+       that cannot tell "pulling" from "not pulling" cannot hold a lower gear up
+       a hill, and holding a gear up a hill is the single thing everybody
+       notices an automatic either doing or failing to do. */
+    S._vSlow = (S._vSlow || 0) + (Math.abs(S.v) - (S._vSlow || 0)) * Math.min(1, dt * 1.1);
+    const gaining = Math.abs(S.v) - S._vSlow;
+    if (S.shiftCool <= 0) {
+      const span = ENG.max - ENG.idle;
+      const kick = clamp((S.throttle - 0.78) / 0.16, 0, 1);       // the detent
+      const comfort = Math.min(4800, ENG.idle + span * 0.5);      // ~4.5-5k, as before
+      const ceiling = comfort + (ENG.max * 0.95 - comfort) * kick;
+      const up = Math.min(ceiling, ENG.idle + span * (0.13 + S.throttle * 0.26 + kick * 0.55));
+      const dn = ENG.idle + span * (0.05 + S.throttle * 0.08);
+      /* Scheduled on the OUTPUT side of the converter rather than off the
+         tacho. With fluid in between, engine rpm sits above the ratio whenever
+         the car is loaded — so shifting on the tacho would have the box
+         reacting to its own slip, and upshifting early at exactly the moment
+         you were asking it not to. Road speed through the gear is what a real
+         box counts, and on a clutch car the two are the same number anyway. */
+      const geared = convOf() ? matchRpm(S.autoGear) : S.rpm;
+      if (geared > up && S.autoGear < CAR.top) autoShift(S.autoGear + 1);
+      else if (geared < dn && S.autoGear > 1) autoShift(S.autoGear - 1);
+      else if (kick > 0.5 && S.autoGear > 1) {
+        /* KICKDOWN. Flooring it in top at fifty does not mean "change up
+           later"; it means change DOWN, now, as far as it will go. So it takes
+           the lowest gear that does not throw the engine into the limiter —
+           which is two ratios more often than one, and is the whole reason an
+           automatic feels like it woke up rather than like it leaned forward. */
+        let g = S.autoGear;
+        while (g > 1 && matchRpm(g - 1) < ENG.max * 0.86) g--;
+        if (g < S.autoGear) autoShift(g);
+      } else if (S.autoGear > 1 && S.throttle > 0.45 && gaining < 0.12
+                 && Math.abs(S.v) > 4
+                 && matchRpm(S.autoGear) < ENG.idle + span * 0.42) {
+        // …and the hill: pedal well in, revs below anything worth having, and
+        // the car no longer gaining. It is in too tall a gear, and a real box
+        // goes and finds one instead of waiting for the revs to fall to the
+        // down line — by which time you would already have slowed down.
+        autoShift(S.autoGear - 1);
+      }
+    }
   }
 }
 
@@ -10126,7 +10426,7 @@ function selectCar(id) {
   accNagStop(); accBedStop(0.2);
   clearVox();
   S.powered = false; S.eDrive = "gas";
-  S.rpm = 0; S.v = 0; S.boost = 0; S.locked = false;
+  S.rpm = 0; S.v = 0; S.boost = 0; S.locked = false; S.tcLock = 0;
   S.seqStage = 0; S._seqPrev = 0;
   turboRigReset();               // four cold turbochargers, not the last car's
   armCel();
@@ -10799,6 +11099,12 @@ function buildWorkshop() {
     $("ltimer").classList.remove("done");
     $("ltBig").classList.remove("golive");
   });
+  $("wsSoft").addEventListener("click", () => {
+    S.softLim = !S.softLim;
+    refreshWorkshop();
+    sfxClunk(0.4);
+    save();
+  });
   $("wsDmg").addEventListener("click", () => {
     S.dmgOn = !S.dmgOn;
     DMG.on = S.dmgOn;
@@ -10901,6 +11207,9 @@ function refreshWorkshop() {
   $("wsLtVal").textContent = ltLabel();
   $("wsTune").classList.toggle("on", curMod().tune);
   const aidsOn = curMod().abs !== false;
+  $("wsSoft").classList.toggle("on", S.softLim);
+  $("wsSoft").querySelector(".ws-card-name").textContent =
+    "SOFT LIMITER — " + (S.softLim ? "ON" : "OFF");
   $("wsDmg").classList.toggle("on", S.dmgOn);
   $("wsDmg").querySelector(".ws-card-name").textContent =
     "CONSEQUENCES — " + (S.dmgOn ? "ON" : "OFF");
@@ -11811,7 +12120,7 @@ function save() {
       car: CC.id, tunnel: S.tunnel, flyby: S.flyby, cabin: S.cabin, stock: S.stock, mods: S.mods,
       listen: S.listen, space: S.space,
       traffic: S.traffic, rain: S.rain, lt: S.ltTgt, ltBest: LT.best,
-      dmgOn: S.dmgOn, evV8: S.evV8, batt: S.batt, fuel: S.fuel,
+      dmgOn: S.dmgOn, softLim: S.softLim, evV8: S.evV8, batt: S.batt, fuel: S.fuel,
       night: S.night, station: S.station,
       stations: MUS.saved, tapeNames: MUS.names,
       musVol: MUS.vol, musEcho: MUS.echo, musWide: MUS.wide,
@@ -12392,6 +12701,9 @@ function frame(now) {
     let n = Math.ceil(9 * clamp((S.rpm - start) / (end - start), 0, 1));
     if (S.rpm > ENG.cut * 0.995)
       n = performance.now() % 160 < 80 ? 9 : 0;      // strobe on the limiter
+    // …and a soft limiter does not hammer, so neither does the bar: it lights
+    // the lot and holds them, which is what the engine is doing
+    else if (S.softCut < 0.15 && S.rpm > ENG.idle * 2) n = 9;
     for (let i = 0; i < shiftLightEls.length; i++)
       shiftLightEls[i].classList.toggle("lit", i < n);
   }
@@ -12513,6 +12825,7 @@ function frame(now) {
   LT.best = saved.ltBest || {};
   S.dmgOn = !!saved.dmgOn;
   DMG.on = S.dmgOn;
+  S.softLim = !!saved.softLim;
   S.evV8 = !!saved.evV8;
   // the tank and the pack only survive a reload if they mean anything —
   // with consequences off they're both notionally full forever

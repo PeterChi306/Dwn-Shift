@@ -110,6 +110,75 @@ pressurised air has to go somewhere:
 All of it happens under the bonnet, so it is much quieter from inside the
 car than from over the wing — and almost inaudible from the tailpipe.
 
+Every twin-turbo car in the garage builds that sigh rather than plays a
+recording of one — the two recordings belong to the quad-turbo car, and eight
+litres of charge pipe pasted onto a V8 sounds like a V8 that borrowed
+something. What the twins get instead is the event itself, in three parts: the
+crack of the valve, a rush that falls and *darkens* as the pressure behind it
+goes, and a low breath underneath that is the pipe volume emptying.
+
+And it stays a detail. Nothing is ducked for it, so the engine plays straight
+through — and where the quad-turbo car's plumbing gets *louder* with the
+windows up, because on that car it genuinely is the loudest thing in the
+cabin, this drops to under a third when you seal yourself in. You hear it
+properly from outside, which is where a bypass valve actually is. How much
+there is to hear is a property of the plumbing: open aftermarket valves let all
+of it out, and a Phantom, built around you not hearing anything, lets out
+almost none.
+
+## Two kinds of automatic
+
+**AUTO** is not one gearbox, because the cars in here do not have one gearbox.
+A twin-clutch supercar in D has clutch plates in it and behaves like clutch
+plates: the revs step across a shift, and what the tacho says is what the
+gearing says. The ordinary cars — the hatch, the truck, the muscle car, the
+SUVs, the Phantom, the drag missile — have a torque converter, which is two
+bladed wheels facing each other in a case of oil, and that changes what the
+needle does all day long:
+
+- **It slips.** Lean on it and the engine sits a few hundred rpm above where
+  the gearing says it should be. Floor it from a standstill and the revs do
+  not climb with road speed at all — they flash to the stall speed and *sit*
+  there while the speedo does the moving.
+- **It multiplies torque.** Below the coupling point the turbine puts out
+  nearly twice what the engine makes. It is also why the car creeps forward
+  at idle with nothing holding it: maximum slip is maximum torque, and it
+  falls away by itself as the car gathers speed.
+- **It locks up.** Cruising, the two halves bolt together — the revs drop a
+  couple of hundred, the engine steps back, and suddenly there is engine
+  braking that was not there before. Ask for torque and it drops straight
+  out again, and the revs rise before a single gear has changed.
+
+The stall speed is derived from the engine behind it rather than typed in, so
+a 6¾-litre V12 with its torque at 1700 gets a low one and the drag car gets a
+deliberately loose 4,200.
+
+## Kickdown
+
+An automatic has two shift maps and a switch between them, and the switch is a
+detent at the bottom of the pedal. Above it, the box is the comfort box: it
+short-shifts, lives in the tall gears and never sees five thousand however
+long you hold it. Through it, none of that applies — it drops as many gears as
+it can without hitting the limiter, often two at once, and uses all of the
+tacho. It will also go and find a lower gear on its own when the pedal is well
+in, the revs are below anything useful and the car has stopped gaining speed,
+which is what a hill is.
+
+## The soft limiter
+
+Workshop → **ECU & SETUP**. A stock limiter is a switch: past the number the
+ECU stops the fuel, the revs fall, it lights again, and the engine hammers off
+that wall several times a second. That bounce is the sound of a limiter.
+
+A soft limiter switches nothing off. It takes the fuelling away *progressively*
+across the last few hundred rpm, so the engine runs out of torque just before
+it runs out of rev range — it arrives at the ceiling and stays there, flat and
+quiet, no bounce and no bang. You can hold it against the stop all day and
+never cross it. The taper is a fraction of each car's rev range rather than a
+fixed number of rpm, so a 4,550rpm diesel and an 18,000rpm twin get the same
+shape instead of the same width, and it applies to whatever ceiling is in
+force — including the low one the automatic imposes in Park and Neutral.
+
 ## Running out
 
 Consequences mode (workshop → **ECU & SETUP**) does three things to the car's
