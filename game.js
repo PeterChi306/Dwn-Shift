@@ -1515,29 +1515,44 @@ const CARS = [
          the same reason: a band that tightens as it spools is a character
          change, and there are no character changes left in here.
 
-         What DOES change is level, and there are three of them, all pulling in
-         the same direction:
+         What changes is level, and the SHAPE of that is the point of the whole
+         layer: this is a low-rpm event, and it gets out of the way.
 
-           voices' lvl    shaft speed. Faint at idle, four times that by the
-                          time the wheels are properly turning.
-           revLvl         RPM, and this is the big one — it is the term that
-                          makes holding a gear to the limiter sound like
-                          something building rather than something waiting.
-           charge.level   stored pressure: the slow one, filling across a whole
-                          gear and dumped by the shift.
+         Think about what is actually happening. Down low the engine has almost
+         nothing to say — sixteen cylinders at two thousand rpm are a rumble —
+         and the four compressors are doing all the work, packing air in. So
+         that is what you hear: the charge, right there in front, loud and low
+         and constant. Then the revs climb, the W16 comes on song, and it stops
+         being a rumble and starts being the loudest thing on the road. The
+         charge does not compete with that. It fades out from under it, and
+         what is left is the engine.
 
-         They sum to about 2 at the top, which is where wsLvl clamps, so the
-         car arrives at full charge with all three in and nothing left over —
-         and it gets there by getting louder, which is the whole point. */
+         So there are three level terms and they do not all pull the same way:
+
+           voices' lvl    shaft speed. Faint at idle and then up fast, because
+                          the compressors are worth something the moment they
+                          are turning. Flat from there — they saturate, and so
+                          does this.
+           revLvl         RPM, and it is NEGATIVE. This is the fade: by the top
+                          of a gear it has taken the whole layer away, so the
+                          approach to the limiter is the engine's, not the
+                          turbo's.
+           charge.level   stored pressure, the slow one — filling across a gear
+                          and dumped by the shift. It is what stops the fade
+                          being a straight line down.
+
+         Which makes a gear a handover rather than a climb: charge first, then
+         engine, then the shift dumps the lot and the next gear starts again
+         from the bottom with the whine back in front. */
       whistle: {
         level: 0.175, load: 0.62, wobble: 10, surge: 0.78,
         rev: 0,             // no pitch from revs. The note does not move.
-        revLvl: 0.62,       // …it just gets louder, and this is that.
+        revLvl: -1.25,      // …and it does not survive the revs either. See above.
         voices: [
-          { at: 0.00, hz: 260, tone: 0.42, q: 5.5, lvl: 0.06 },  // idle: just there
-          { at: 0.32, hz: 260, tone: 0.42, q: 5.5, lvl: 0.30 },  // part throttle
-          { at: 0.66, hz: 260, tone: 0.42, q: 5.5, lvl: 0.66 },  // on song
-          { at: 0.92, hz: 260, tone: 0.42, q: 5.5, lvl: 0.95 },  // full boost
+          { at: 0.00, hz: 260, tone: 0.42, q: 5.5, lvl: 0.10 },  // idle: just there
+          { at: 0.32, hz: 260, tone: 0.42, q: 5.5, lvl: 0.75 },  // spooling: this is its moment
+          { at: 0.66, hz: 260, tone: 0.42, q: 5.5, lvl: 1.00 },  // …and it holds there
+          { at: 0.92, hz: 260, tone: 0.42, q: 5.5, lvl: 1.05 },  // the shafts have nothing left to give
         ],
       },
       /* …and the slow one underneath it: the stored charge that packs in while
@@ -1557,10 +1572,11 @@ const CARS = [
          clip that is about to replace it, and at the moment it actually does
          they are the same note. Before, this lifted 4800Hz to 5772 and the
          gap to the recording only got wider the more charge you had. */
-      /* `pitch` is 0 now: a full charge does not raise the note, it leans on
-         it. All of this layer's contribution is level, which is the third of
-         the three level terms above and the slowest of them. */
-      charge: { rate: 0.75, fall: 2.4, pitch: 0, level: 0.45 },
+      /* `pitch` is 0: a full charge does not raise the note, it leans on it.
+         All of this layer's contribution is level — the third of the three
+         terms above, the slowest of them, and the one holding the whine up
+         against the rev fade while you are still hard on it. */
+      charge: { rate: 0.75, fall: 2.4, pitch: 0, level: 0.30 },
       /* the top note over the engine. Pulled down hard, and by the same
          measurement as the whistle: at [1700, 3900] this ran to 8.6kHz at the
          limiter, in a car whose two turbo recordings have nothing above 700Hz
@@ -1578,15 +1594,26 @@ const CARS = [
          — but it does that job the same way everything else in here now does,
          by arriving rather than by rising. */
       spool: { level: 0.075, hz: [520, 560], q: 0.9 },
-      /* sighDur/tailDur are the length of the thing. A quad-turbo 8-litre
-         carries a huge volume of compressed air in its pipes, coolers and
-         plenum, and dumping it takes real time — so the body runs about twice
-         the generic length and the low tail more than twice, which puts the
-         whole release out past two seconds instead of ending in one. The
-         shafts are still coasting underneath it the entire time (see `coast`),
-         so the whine falling away has something to fall away over. */
+      /* sighDur/tailDur are the length of the thing, and on this car it is a
+         long thing. A quad-turbo 8-litre carries an enormous volume of
+         compressed air in its pipes, coolers and plenum, and dumping it takes
+         real time — the body runs nearly three times the generic length and
+         the low tail further still, which puts the whole release out past
+         three seconds. That is deliberate and it is what the shift is FOR:
+         with the charge now fading out under the revs (see the whistle), the
+         release is the moment the plumbing gets the last word, and it should
+         still be sighing while the next gear is already pulling.
+
+         `decay` is the other half of the length and it is the half people
+         forget. It is the clock the release ENVELOPE runs on — the thing the
+         rush and the whistle's surge ride — so a one-shot can sigh for three
+         seconds and still sound short if the continuous layers have snapped
+         back to their on-boost state underneath it. At 0.55 the envelope
+         holds open roughly twice as long as it did, and the shafts are still
+         coasting under all of it (see `coast`), so the whine falling away has
+         something to fall away over. */
       release: { level: 1.18, sigh: 1.12, chuff: 0.55, tail: 1.22, psh: 1.48, chirp: 1.2,
-                 sighDur: 2.1, tailDur: 2.3, decay: 0.85,
+                 sighDur: 2.9, tailDur: 3.2, decay: 0.55,
                  duck: 1.0, shift: 1.0, shiftAt: 0.16, shiftThrough: 4,
                  redlineAt: 0.88, redlineLift: 1.28 },
       /* --- the two recorded events ---
@@ -4742,8 +4769,16 @@ function sfxTurboSample(which, amt = 1, gain = 1) {
    The per-car `twin` value is how much of it that particular plumbing lets
    out: 1 is a pair of open aftermarket valves, 0.18 is a Phantom. */
 const TWIN_RELEASE = {
-  level: 0.5,         // peak, for a full-pressure lift on a car that lets it all out
-  cabin: 0.3,         // …and well under that with the windows up. See above.
+  /* These two move together and it matters that they do. `level` is what the
+     release is worth OUTSIDE, where a bypass valve actually is and where it
+     should be an unmistakable part of the car — so it is up where it can be
+     heard over the exhaust rather than under it. `cabin` then comes DOWN by
+     the same factor, so sealing yourself in leaves the interior exactly where
+     it was: a detail you notice, not an event. Turn one of these up without
+     turning the other down and you have made it louder everywhere, which is
+     the thing this pair exists to avoid. */
+  level: 0.9,         // outside: a full-pressure lift on a car that lets it all out
+  cabin: 0.17,        // …and 0.9 x 0.17 is where the interior already sat
   boost: 0.34,        // below this there is not enough in the pipes to bother
   cool: 0.28,         // one per event, not one per frame of a long lift
 };
@@ -4768,7 +4803,10 @@ function sfxTwinRelease(amt, boost) {
      Phantom's big lazy ones, and the car already carries that number. */
   const fMul = clamp(CC.whistleFreqMul === undefined ? 1 : CC.whistleFreqMul, 0.75, 1.25);
   // more pressure behind it means it takes longer to leave
-  const dur = (0.24 + 0.26 * p) / (0.7 + 0.3 * fMul);
+  /* …and it lasts a little longer out here, too. Inside the car you are
+     hearing it through a bulkhead, which eats the tail before the tail eats
+     itself; standing next to the thing you hear the whole of it. */
+  const dur = (0.24 + 0.26 * p) * (inCabin() ? 1 : 1.25) / (0.7 + 0.3 * fMul);
   const out = AU.sfxTurbo || AU.sfx;
 
   // --- the rush: the body of it, falling and darkening together

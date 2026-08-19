@@ -117,14 +117,16 @@ something. What the twins get instead is the event itself, in three parts: the
 crack of the valve, a rush that falls and *darkens* as the pressure behind it
 goes, and a low breath underneath that is the pipe volume emptying.
 
-And it stays a detail. Nothing is ducked for it, so the engine plays straight
-through — and where the quad-turbo car's plumbing gets *louder* with the
+Where you are standing decides how much of it you get. Outside — which is
+where a bypass valve actually is — it is unmistakable, one of the things the
+car is for, and it runs a little longer out there because nothing is eating
+the tail. Sealed in it drops to under a fifth of that: nothing is ducked for
+it, the engine plays straight through, and it stays a detail you notice. That
+is the opposite of the quad-turbo car, whose plumbing gets *louder* with the
 windows up, because on that car it genuinely is the loudest thing in the
-cabin, this drops to under a third when you seal yourself in. You hear it
-properly from outside, which is where a bypass valve actually is. How much
-there is to hear is a property of the plumbing: open aftermarket valves let all
-of it out, and a Phantom, built around you not hearing anything, lets out
-almost none.
+cabin. How much there is to hear at all is a property of the plumbing: open
+aftermarket valves let all of it out, and a Phantom, built around you not
+hearing anything, lets out almost none.
 
 ## Two kinds of automatic
 
@@ -178,6 +180,21 @@ never cross it. The taper is a fraction of each car's rev range rather than a
 fixed number of rpm, so a 4,550rpm diesel and an 18,000rpm twin get the same
 shape instead of the same width, and it applies to whatever ceiling is in
 force — including the low one the automatic imposes in Park and Neutral.
+
+## What a gear sounds like in the quad-turbo car
+
+Down low the W16 has almost nothing to say — sixteen cylinders at two thousand
+rpm are a rumble — and the four compressors are doing all the work. So that is
+what you hear: the charge, one flat low note, right at the front of the mix.
+Then the revs climb and the engine arrives, and the charge does not compete
+with it. It fades out from underneath: by the limiter it is seven times
+quieter than it was at four thousand, and the last part of every gear belongs
+to the engine alone.
+
+Then the shift dumps the lot — the stored charge goes out through the valves —
+and the release is long, because eight litres of pipework does not empty
+quickly. It is still sighing while the next gear is already pulling, and that
+next gear starts again from the bottom with the whine back in front.
 
 ## Running out
 
