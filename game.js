@@ -112,6 +112,7 @@ const CARS = [
     mass: 930, finalDrive: 3.5, clutchCap: 560, cdA: 0.58, brakeMax: 15000,
     grip: 1.9,                                    // slicks — launches at nearly 1g
     tire: 1.6, rawCabin: 1,                       // open cockpit: there is no "inside"
+    lever: "carbon",
     asp: "na", pops: 2, tachMax: 13, redK: 12.2, kmhMax: 360, mphMax: 240, shiftLights: true,
     sound: {
       // a formula engine IS this bright. all of it stays.
@@ -135,6 +136,7 @@ const CARS = [
     asp: "na", pops: 1.2, tachMax: 13, redK: 12.1, kmhMax: 360, mphMax: 220,
     shiftLights: true, dial: "classic", dash: { face: "light" },
     fan: true,                            // the 400mm turbine behind your head
+    lever: "gate",                        // machined alloy, on show, like everything else on it
     /* a 3.9L V12 that revs to twelve-one: not the chest-thump of the big
        twelves but a silvery, hyper-precise shriek — a scaled-down grand-prix
        engine. Light sub, dense uppers, huge scream, machine-tool tight
@@ -610,6 +612,7 @@ const CARS = [
        way to drive it would be removing the entire point of the car. See
        forcedMode(). */
     gatedOnly: true,
+    lever: "gate",       // milled out of a billet, exposed, and it rings
     cyl: 12, idle: 800, max: 7500, cut: 7700, inertia: 0.42,   // 7.3 litres of iron and a big flywheel
     start: { rpm: 220, dur: 0.95, fires: 5, flare: 0.75, flareT: 1.1, grit: 1.3 },
     /* The M120: a 7.3-litre 60° V12 that started life in an S-class and was
@@ -1112,6 +1115,98 @@ const CARS = [
                ["square", 0.5, 0.26, 0.08], ["triangle", 4.5, 0, 0.14]],
       noiseMul: 1.2, drive: 0.6, pulseDepth: 0.14, raspMul: 1.35, scream: 3200, volTrim: 1.1,
       formants: [[380, 1.4, 4.5], [2600, 2.6, 6], [4200, 2.2, 4]], loadDrive: 0.4,
+    },
+  },
+  {
+    id: "carreragt", name: "Zuffenhausen GT", tag: "the Le Mans V10 that got out · six speeds and a beech ball",
+    layout: "V10 · 5.7L NA · 68°",
+    indicator: "crisp",
+    crackle: "dry",           // titanium, short, and barely silenced
+    /* The key is on the LEFT, because of Le Mans and because they never
+       stopped doing it. A real barrel: to ON, then hold it over. */
+    ignKey: true,
+    /* THREE PEDALS OR NOTHING.
+       This engine was designed for a Le Mans prototype and the car around it
+       was designed for that engine. There was never a paddle version, there
+       was never an automatic, and the whole reason the car is remembered the
+       way it is — for better and for worse — is the thing between the seats
+       and the thing under your left foot. See forcedMode(). */
+    gatedOnly: true,
+    /* AND NO TRACTION CONTROL. Not "switchable" — not fitted. The car has ABS
+       and it has you, and that is the entire electronic safety net. Every
+       story ever told about this car starts here. See hasTC(). */
+    noTC: true,
+    /* The 169mm ceramic-composite twin-plate. It weighs almost nothing, which
+       is why the engine revs the way it does — and it takes up over about a
+       centimetre of pedal travel, which is why the car has a reputation for
+       being impossible to move off in. `width` is that centimetre. `judder`
+       is what a ceramic disc does when you try to slip it: it does not slur,
+       it grabs and lets go and grabs, several times a second, and the whole
+       car shakes. See BITE and clutchJudder(). */
+    clutch: { start: 0.14, width: 0.15, judder: 1.7 },
+    lever: "wood",       // the beech-laminate ball, and it sounds like wood
+    cyl: 10, idle: 950, max: 8400, cut: 8600, inertia: 0.095,
+    start: { rpm: 265, dur: 0.62, fires: 4, flare: 1.0, flareT: 0.85 },
+    /* 612 metric horsepower at 8,000 and 590Nm at 5,750, out of 5.7 litres of
+       68° V10 with a flat-plane-ish split-pin crank, titanium rods and dry
+       sump. Note where the torque ISN'T: below three thousand this is a
+       big engine doing very little, and the whole car happens above five. */
+    curve: [[0, 150], [1000, 300], [2500, 410], [4000, 505], [5750, 590], [7000, 570],
+            [8000, 548], [8400, 515], [9000, 330]],
+    /* the real six-speed's spread, and a final drive scaled for this rig's
+       fixed rolling radius so top gear still runs out at ~330 where it should */
+    ratios: { R: -2.86, 1: 3.16, 2: 2.06, 3: 1.52, 4: 1.19, 5: 0.96, 6: 0.79 },
+    mass: 1380, finalDrive: 3.75, clutchCap: 640, cdA: 0.68, brakeMax: 16000,
+    grip: 1.55,               // rear drive, cup rubber, and nothing watching
+    asp: "na", pops: 1.6, tachMax: 9, redK: 8.4, kmhMax: 340, mphMax: 210,
+    dial: "classic", dash: { accent: "#d6cdb8", face: "dark" },
+    /* Two big intakes and their trumpets sit directly behind the bulkhead, a
+       forearm's length from the back of your head, under a cover that is
+       mostly air. There is no firewall worth the name. */
+    rawCabin: 0.62,
+    /* the transaxle: not straight-cut, but geared up and hung off the back of
+       a carbon tub with nothing between it and you, so you hear it work */
+    gearWhine: 6, gearWhineMul: 0.5,
+    /* A 68° V10 is a Formula One engine that had to be widened to fit a car
+       with luggage in it, and it sounds exactly like that compromise: not the
+       brassy trumpet of the Motomachi V10 and not the round howl of a big
+       Italian one, but something DRY, HARD and hollow, with an enormous
+       amount of induction in it and almost no bass at all.
+
+       The bits that matter:
+         · the half-order is real. 68° with split pins is nearly even-firing,
+           NEARLY — and that residual beat is why the idle wobbles and why the
+           midrange has a rip in it instead of a hum.
+         · the odd orders carry it. 3rd and 5th are loud all the way up; the
+           evens stay back. That is the hollow, and it is the difference
+           between this and every V8 in the garage.
+         · very little sub. 5.7 litres, but a titanium bottom end spinning
+           past eight thousand does not thump, it SHRIEKS.
+         · noise is not garnish here. Ten trumpets and a dry-sump scavenge
+           pump are a large fraction of what you actually hear. */
+    sound: {
+      f0Mul: 1.0, air: 3, jitter: 1.15,
+      hp: 92,                  // short titanium pipes: no boom to speak of
+      intakeLoad: 2.0,         // the trumpets, behind your head, uncovered
+      layers: [
+        ["sine",     0.5,   0.12, 0.03],   // a hint of chest, and no more
+        ["square",   0.5,   0.13, 0.04],
+        ["sawtooth", 0.995, 0.24, 0.30],   // unison low…
+        ["sawtooth", 1,     0.46, 0.52],   // …centre…
+        ["sawtooth", 1.008, 0.25, 0.33],   // …unison high, deliberately wide
+        ["sawtooth", 1.5,   0.16, 0.30],   // 68°: the beat that never quite goes
+        ["sawtooth", 2.01,  0.09, 0.28],   // evens stay back — this is the hollow
+        ["sawtooth", 3.02,  0.14, 0.58],   // THE rip. Odd, and it owns the top end.
+        ["sawtooth", 5.03,  0.05, 0.42],   // …and the next odd one, still shouting
+        ["sawtooth", 4.03,  0.015, 0.14],
+        ["triangle", 7.04,  0.0,  0.24],
+        ["sine",     9.05,  0.0,  0.13],
+      ],
+      // low body for the swept volume, a hard bark where the rip lives, and a
+      // metallic ring up top that only shows up when it is working
+      formants: [[165, 1.0, 3.5], [1450, 2.1, 7], [3600, 2.5, 7], [5600, 2.4, 5]],
+      loadDrive: 0.62, noiseMul: 1.3, volTrim: 1.35, scream: 4200,
+      drive: 0.76, pulseDepth: 0.16, raspMul: 1.5, hunt: 1.25,
     },
   },
   {
@@ -2092,8 +2187,20 @@ function curMod() {
   // listen to, not a tyre model you fight — spending your first minute in a new
   // car spinning the rears at every light is not the experience, and anyone who
   // wants the fight can switch it off per car and that choice is remembered.
-  if (m.grip === undefined) m.grip = true;     // the workshop's infinite-grip cheat
-  if (m.shift === undefined) m.shift = "stock";
+  /* …with one exception, and it is the whole reason that car is in the
+     garage. A car that was sold WITHOUT traction control is a car whose
+     entire character is that nothing is helping, and handing it infinite
+     rubber by default deletes the thing you came to it for. So `noTC` cars
+     arrive with the cheat off. It is still a switch, and it is still yours. */
+  if (m.grip === undefined) m.grip = !CC.noTC;   // the workshop's infinite-grip cheat
+  /* "" = whatever the car came with, which is now the default: a Zonda's
+     open gate and a Carrera GT's beech ball are facts about those cars, not
+     preferences. The old saves that said "stock" mean rubber-bushed. */
+  if (m.shift === undefined) m.shift = "";
+  if (m.shift === "stock") m.shift = "rubber";
+  if (m.shift === "click") m.shift = "short";
+  if (m.shift === "metal") m.shift = "gate";
+  if (m.clutchAid === undefined) m.clutchAid = true;
   if (m.paddle === undefined) m.paddle = "carbon";  // default = the real recorded click
   if (!EXHAUSTS[m.ex]) m.ex = "stock";     // repair saves hit by the old card bug
   return m;
@@ -2172,6 +2279,19 @@ const S = {
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
   spinV: 0, slipR: 0, tracF: 0, tcCut: 0, lockup: false,
   tcLock: 0, tcSlip: 0,                // the torque converter — see TORQUE CONVERTER
+  /* --- the H-pattern gearbox, modelled rather than switched. See SYNCHRO. --- */
+  inShaft: 0,          // gearbox input-shaft speed, in engine rpm. The whole model.
+  syncTo: null,        // the gear the ring is currently trying to match
+  syncT: 0,            // how long it has been trying
+  syncNeed: 0,         // how long it will take at the current rate
+  syncGrind: 0,        // 0..1 how hard it is graunching right now
+  baulk: 0,            // >0 = the ring is locked out and shoving is pointless
+  judder: 0,           // 0..1 clutch shudder — see clutchJudder()
+  revMatch: 0,         // 0..1 how well the last engagement was matched (for the HUD)
+  lastShift: 0,        // seconds since the last gear went in
+  /* --- the rear axle letting go. See THE SLIDE. --- */
+  yaw: 0, yawV: 0, lock: 0, spinOut: 0, loose: 0, looseV: 0, scrub: 0,
+  slipSigned: 0, syncMiss: 0,
   traffic: false, rain: false, passT: 2, splashT: 2, wiperT: 0.7, wiperDir: 1,
   night: false, cricketT: 2, lampT: 1.5,
   dmgOn: false,                        // consequences mode — opt-in, see DMG
@@ -3089,6 +3209,18 @@ function initAudio() {
   wHp.connect(wPanL); wPanL.connect(AU.comp);
   wHp.connect(wDel); wDel.connect(wPanR); wPanR.connect(AU.comp);
   applyStereoWide();
+
+  /* --- the lever in motion (gated) ---
+     Friction, not impact: the boot, the bushings and the ball riding the
+     gate while your hand moves it. Rides the INTERIOR bus, because it is
+     happening under your palm. See THE LEVER. */
+  AU.levSrc = ctx.createBufferSource(); AU.levSrc.buffer = nbuf; AU.levSrc.loop = true;
+  AU.levSrc.playbackRate.value = 1;
+  AU.levBp = ctx.createBiquadFilter(); AU.levBp.type = "bandpass";
+  AU.levBp.frequency.value = 600; AU.levBp.Q.value = 1;
+  AU.levG = ctx.createGain(); AU.levG.gain.value = 0;
+  AU.levSrc.connect(AU.levBp); AU.levBp.connect(AU.levG); AU.levG.connect(AU.inner);
+  AU.levSrc.start();
 
   // --- gearbox grind (gated) ---
   const gsrc = ctx.createBufferSource(); gsrc.buffer = nbuf; gsrc.loop = true; gsrc.playbackRate.value = 1.7;
@@ -4390,7 +4522,12 @@ function audioTick() {
   // band sits lower — that's what makes it read as "inside" rather than louder
   AU.rushBp.frequency.setTargetAtTime((inCabin() ? 380 : 500) + sp * (inCabin() ? 10 : 14), t, 0.2);
 
-  AU.grindGain.gain.setTargetAtTime(S.grinding ? 0.22 : 0, t, 0.02);
+  /* the synchro. Not a switch — a matched shift that is merely slow makes a
+     soft rustle, an unclutched stab into second at seven thousand is the
+     noise everyone in the car pretends not to have heard, and the difference
+     between them is a continuous number the gearbox already computed. */
+  const gr = S.grinding ? clamp(0.28 + (S.syncGrind || 0) * 0.8, 0, 1) : 0;
+  AU.grindGain.gain.setTargetAtTime(gr * 0.3, t, 0.02);
 
   // tire screech — spinning rubber or locked wheels. Keyed off SLIP RATIO,
   // not raw spin speed: a tire scrubbing 15% at 200km/h is doing far more
@@ -4399,7 +4536,16 @@ function audioTick() {
   // The howl starts as the tire goes past its peak and gets no louder once
   // it's fully alight — from there it just gets rougher.
   const slip = S.slipR || 0;
+  /* …and a tire being dragged SIDEWAYS makes a completely different noise
+     from one being dragged backwards. Longitudinal slip is the tread blocks
+     shearing along their own grain and it scrubs; a slide is the whole
+     carcass rolling over onto its shoulder, and it is louder, lower and it
+     WAILS, because the contact patch is now long in the wrong direction.
+     Where a rear-drive car goes wrong you get both at once, and hearing them
+     separate is how you know which one you are in. See THE SLIDE. */
+  const lat = clamp((S.scrub || 0) * 2.2, 0, 1.35);
   const scAmt = clamp((slip - 0.14) / 0.5, 0, 1) * clamp(0.35 + Math.abs(S.v) / 22, 0.35, 1.25)
+              + lat * clamp(Math.abs(S.v) / 14, 0, 1.2)
               + (S.lockup ? 0.7 : 0);
   const scAudible = Math.abs(S.v) > 1.2 || S.spinV > 0.6 ? 1 : 0;
   // …and a slick does not squeal like a road tyre. A treaded tyre squirms
@@ -4410,8 +4556,10 @@ function audioTick() {
   const tg = CC.tire || 1;
   AU.scG.gain.setTargetAtTime(Math.min(0.44 * tg, scAmt * 0.36 * tg) * scAudible, t, 0.04);
   // the squeal climbs as the rubber shears harder, and never sits still
+  // a slide pulls the band DOWN — the wail sits under the scrub, not over it
   AU.scBp.frequency.setTargetAtTime(
-    (700 + clamp(slip, 0, 1.4) * 340 + Math.random() * 180) / Math.sqrt(tg), t, 0.05);
+    ((700 + clamp(slip, 0, 1.4) * 340 + Math.random() * 180) / Math.sqrt(tg))
+    * (1 - lat * 0.34), t, 0.05);
 
   // ambience beds
   AU.trHumG.gain.setTargetAtTime(S.traffic ? 0.06 : 0, t, 0.3);
@@ -4556,13 +4704,369 @@ function sfxShift(strength = 1) {
      filter entirely, and sealing yourself in the car makes it LOUDER and
      closer rather than duller, exactly the way it does in real life. From
      outside, all you get is a muffled knock through the bodywork.
-     (1.7 keeps the outdoor level roughly where it has always been, since the
-      interior bus sits at 0.55 out there and 1.55 in here.) */
-  const s = curMod().shift, bus = AU.inner || AU.sfx;
-  strength *= 1.7;
-  if (s === "click") sfxShiftClick(strength, bus);
-  else if (s === "metal") sfxShiftMetal(strength, bus);
-  else sfxClunk(strength, bus);
+
+     Which material it is made of is the whole question, and leverHit() has
+     the answer. See THE LEVER. */
+  leverHit("home", strength);
+}
+
+/* ================================================================
+   THE GEARBOX ITSELF — the four noises an H-pattern actually makes
+   ================================================================
+   The lever has a voice and the workshop lets you pick it (sfxShift, above).
+   These are not that. These are the GEARBOX, eighteen inches behind the
+   lever, and they are what tells you how the shift went — which is the whole
+   reason a manual is worth simulating. Four events, and you can tell them
+   apart with your eyes shut:
+
+     OUT    the collar leaving the teeth. Loose, dull, almost nothing.
+     SNICK  a matched shift. Small, precise, oily. Almost no energy changed
+            hands, so there is almost nothing to hear, and that IS the reward.
+     IN     an unmatched shift that went in anyway. The collar teeth arrive
+            with a speed difference still in them and you hear every bit of
+            it: a hard clack with weight behind it.
+     BLOCK  something that will not move. A dead stop with no ring on it at
+            all, because nothing is vibrating — it is just stopped.
+
+   All four ride the interior bus, like the lever: they are inside the car
+   with you, so sealing the windows brings them CLOSER, not duller. */
+
+function gateBus() { return AU.inner || AU.sfx; }
+
+/* the collar coming out — loose linkage, no impact worth the name */
+function sfxGateOut(strength = 1) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime, dest = gateBus();
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.1;
+  const f = ctx.createBiquadFilter(); f.type = "bandpass";
+  f.frequency.value = 520 + Math.random() * 90; f.Q.value = 1.1;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.24 * strength, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+  n.connect(f); f.connect(g); g.connect(dest); n.start(t); n.stop(t + 0.06);
+  const o = ctx.createOscillator(); o.type = "sine";
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(72, t + 0.05);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.18 * strength, t);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+  o.connect(og); og.connect(dest); o.start(t); o.stop(t + 0.09);
+}
+
+/* THE GOOD ONE. Rev-matched, so the two sets of teeth meet at the same speed
+   and there is nothing to absorb: a short bright tick, a whisper of oil, and
+   it is in. Quieter than the bad shift on purpose — in a real car a perfect
+   change is the one you can barely hear, and that is worth building. */
+function sfxGateSnick(strength = 1) {
+  if (!AU.ready) return;
+  sfxShift(0.45 * strength);
+  const ctx = AU.ctx, t = ctx.currentTime, dest = gateBus();
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 2.2;
+  const f = ctx.createBiquadFilter(); f.type = "bandpass";
+  f.frequency.value = 2400 + Math.random() * 300; f.Q.value = 2.4;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.26 * strength, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.022);
+  n.connect(f); f.connect(g); g.connect(dest); n.start(t); n.stop(t + 0.035);
+  const o = ctx.createOscillator(); o.type = "sine";
+  o.frequency.value = 2950 * (0.98 + Math.random() * 0.04);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.07 * strength, t + 0.003);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.038);
+  o.connect(og); og.connect(dest); o.start(t + 0.003); o.stop(t + 0.05);
+}
+
+/* the same shift, unmatched. Everything the snick left out arrives here:
+   a broad hard clack, a ring off the casing, and the thump through the
+   tunnel you are sitting on. Strength comes straight off the mismatch. */
+function sfxGateIn(strength = 1) {
+  if (!AU.ready) return;
+  sfxShift(0.8);
+  const ctx = AU.ctx, t = ctx.currentTime, dest = gateBus();
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.5;
+  const f = ctx.createBiquadFilter(); f.type = "bandpass";
+  f.frequency.value = 1150 + Math.random() * 200; f.Q.value = 1.0;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.55 * strength, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.055);
+  n.connect(f); f.connect(g); g.connect(dest); n.start(t); n.stop(t + 0.07);
+  [[1750, 0.13, 0.1], [2600, 0.06, 0.06]].forEach(([hz, amp, dur]) => {
+    const o = ctx.createOscillator(); o.type = "sine";
+    o.frequency.value = hz * (0.98 + Math.random() * 0.04);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(amp * strength, t + 0.005);
+    og.gain.exponentialRampToValueAtTime(0.001, t + 0.005 + dur);
+    o.connect(og); og.connect(dest); o.start(t + 0.005); o.stop(t + 0.005 + dur + 0.02);
+  });
+  const k = ctx.createOscillator(); k.type = "sine";
+  k.frequency.setValueAtTime(185, t);
+  k.frequency.exponentialRampToValueAtTime(48, t + 0.1);
+  const kg = ctx.createGain();
+  kg.gain.setValueAtTime(0.5 * strength, t);
+  kg.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+  k.connect(kg); kg.connect(dest); k.start(t); k.stop(t + 0.16);
+}
+
+/* a gate that refuses: the reverse guard, or a slot that is not there.
+   No ring, no decay to speak of — a stop is not an impact. */
+function sfxGateBlock() {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime, dest = gateBus();
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 0.85;
+  const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 620;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.4, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+  n.connect(f); f.connect(g); g.connect(dest); n.start(t); n.stop(t + 0.05);
+}
+
+/* ---- CLUTCH JUDDER ----
+   A slipping clutch that cannot decide. Organic linings smear and the car
+   just crawls; a ceramic puck does not smear — it grips, lets go, grips
+   again, twenty times a second, and the whole car shakes with it. It is the
+   single most recognisable thing about driving a car with a race clutch in
+   traffic, and it is the reason people say the Carrera GT is difficult.
+
+   One pulse per call, fired from the physics at the shudder frequency. */
+function sfxJudder(strength = 1) {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime, dest = gateBus();
+  const o = ctx.createOscillator(); o.type = "sine";
+  o.frequency.setValueAtTime(66 + Math.random() * 14, t);
+  o.frequency.exponentialRampToValueAtTime(34, t + 0.055);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.001, t);
+  g.gain.linearRampToValueAtTime(0.42 * strength, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+  o.connect(g); g.connect(dest); o.start(t); o.stop(t + 0.09);
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 0.6;
+  const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 340;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.2 * strength, t);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+  n.connect(f); f.connect(ng); ng.connect(dest); n.start(t); n.stop(t + 0.06);
+}
+
+/* ================================================================
+   THE LEVER — materials, and every movement it makes
+   ================================================================
+   A gear lever used to make exactly one noise in here, once, at the moment
+   the gear landed. Nothing else in a car works that way and nothing else in
+   this file works that way either.
+
+   Move a real lever and it is talking the entire time. The detent ball pops
+   out of its notch. The boot drags. The shaft brushes the gate. You cross the
+   sprung centre plane and feel a distinct bump. You run it into the end wall
+   and it stops dead. The ball enters the slot, and only THEN does it seat
+   home. Let go in neutral and the spring throws it back to the middle. And
+   the whole time the engine is shaking the linkage under your palm.
+
+   That is eight sounds, not one, and you can hear the difference between all
+   of them with your eyes shut. So they are eight sounds.
+
+   ---- AND THE MATERIAL DECIDES WHAT THEY SOUND LIKE ----
+
+   This is the other half of it, and it is not decoration. What a shifter is
+   MADE OF changes the sound more than what it is DOING, because every one of
+   these events is an impact and an impact is a spectrum:
+
+     · A factory lever is a steel rod in RUBBER bushings under a leather boot.
+       Rubber is a damper. It eats the transient, kills every ring before it
+       starts, and passes only the low thud. That is why a normal car goes
+       "thunk" and nothing else.
+     · A SHORT SHIFTER replaces those bushings with solid alloy. Same impact,
+       nothing absorbing it — so the transient survives, the pitch goes up,
+       and you get the notchy "k-chk" people fit them for.
+     · An OPEN GATE is a polished steel ball moving through a milled alloy
+       plate with nothing over it. The plate is a bell. Every finger it
+       touches on the way across is a click, and every gear is a ring that
+       hangs in the cabin.
+     · A WOOD ball — beech laminate on the Carrera GT, mahogany on a Zonda —
+       is the interesting one, and it is the opposite of what people expect
+       from a knob that looks expensive. Wood is a superb damper across the
+       grain. You get a dense, dry, woody KNOCK with real body and almost no
+       ring at all, and it is unmistakable.
+     · CARBON AND TITANIUM weighs nothing, so there is no body to speak of —
+       just a fast bright tick and a short glassy ring on top of silence.
+
+   All five are the same eight events with different numbers. */
+
+const LEVER_MATS = {
+  rubber: {
+    label: "rubber-bushed",
+    // the impact transient: where it sits, how tight, how long
+    tick: { hz: 780, q: 0.9, rate: 1.05, amp: 0.34, dec: 0.05 },
+    // ring partials [hz, amp, decay] — rubber has none, and that IS the sound
+    rings: [],
+    // the body: the mass of the thing, felt through the tunnel
+    body: { hz: 140, to: 52, amp: 0.62, dec: 0.13 },
+    // the boot and the bushings dragging while it moves
+    scrape: { hz: 430, q: 0.8, amp: 1.0, rate: 0.75 },
+    bright: 0.55,
+  },
+  short: {
+    label: "solid-bushed short shifter",
+    tick: { hz: 2300, q: 2.3, rate: 1.7, amp: 0.42, dec: 0.03 },
+    rings: [[1850, 0.07, 0.055], [3050, 0.035, 0.035]],
+    body: { hz: 175, to: 68, amp: 0.34, dec: 0.075 },
+    scrape: { hz: 1250, q: 1.6, amp: 0.5, rate: 1.3 },
+    bright: 1.0,
+  },
+  gate: {
+    label: "exposed alloy gate",
+    tick: { hz: 3100, q: 2.0, rate: 2.1, amp: 0.5, dec: 0.035 },
+    // the plate is a bell, and a bell that is bolted to nothing rings for
+    // a long time. Two detuned partials, because a plate is not a tuning fork.
+    rings: [[3150, 0.10, 0.24], [4680, 0.06, 0.19], [6100, 0.025, 0.12]],
+    body: { hz: 145, to: 58, amp: 0.3, dec: 0.08 },
+    // and the ball clicking across every finger of the gate on the way over
+    scrape: { hz: 2600, q: 3.2, amp: 0.85, rate: 2.0, ticks: 1 },
+    bright: 1.25,
+  },
+  wood: {
+    label: "wooden ball",
+    /* dense, dry, and it stops dead. The transient is LOW and broad rather
+       than bright and tight — that is what "woody" means — and there is
+       nothing after it, because wood across the grain is one of the best
+       dampers you can hold in your hand. */
+    tick: { hz: 620, q: 1.3, rate: 0.9, amp: 0.46, dec: 0.042 },
+    rings: [[820, 0.045, 0.05]],          // one dull partial, gone almost at once
+    body: { hz: 195, to: 72, amp: 0.52, dec: 0.1 },
+    scrape: { hz: 700, q: 1.1, amp: 0.7, rate: 0.95 },
+    bright: 0.7,
+  },
+  carbon: {
+    label: "carbon and titanium",
+    tick: { hz: 4200, q: 2.6, rate: 2.5, amp: 0.4, dec: 0.022 },
+    rings: [[5200, 0.055, 0.09], [7400, 0.03, 0.06]],
+    body: { hz: 240, to: 110, amp: 0.14, dec: 0.045 },   // there is no mass here
+    scrape: { hz: 3400, q: 2.6, amp: 0.55, rate: 2.3 },
+    bright: 1.45,
+  },
+};
+
+/* the eight things a lever does, and how hard it does each of them. `hi`
+   tilts the transient up or down — a detent ball popping is a small bright
+   event, a lever hitting the end of its travel is a big dull one. */
+const LEVER_EVENTS = {
+  out:    { amp: 0.5,  hi: 0.9,  ring: 0.35, body: 0.7 },   // out of the notch
+  detent: { amp: 0.42, hi: 1.25, ring: 0.5,  body: 0.35 },  // over the centre plane
+  wall:   { amp: 0.8,  hi: 0.6,  ring: 0.15, body: 1.15 },  // the end of the gate
+  mouth:  { amp: 0.34, hi: 1.1,  ring: 0.3,  body: 0.3 },   // into the slot
+  home:   { amp: 1.0,  hi: 1.0,  ring: 1.0,  body: 1.0 },   // seated
+  spring: { amp: 0.45, hi: 1.15, ring: 0.55, body: 0.4 },   // thrown back to centre
+  rattle: { amp: 0.16, hi: 1.0,  ring: 0.2,  body: 0.5 },   // idle shake
+  block:  { amp: 0.6,  hi: 0.45, ring: 0.0,  body: 1.0 },   // it will not move
+};
+
+/* which lever the car has. The workshop overrides it; otherwise the car
+   decides, because a Zonda came with an open gate and a Carrera GT came with
+   a beech ball and neither of them is a matter of taste. */
+function leverMat() {
+  const m = curMod().shift;
+  if (m && LEVER_MATS[m]) return LEVER_MATS[m];
+  // the old mod ids, kept working
+  if (m === "click") return LEVER_MATS.short;
+  if (m === "metal") return LEVER_MATS.gate;
+  if (m === "stock") return LEVER_MATS.rubber;
+  return LEVER_MATS[CC.lever] || LEVER_MATS.rubber;
+}
+
+/* One impact, built out of the material and the event. Everything in here is
+   the same three ingredients — a transient, some ring, and some body — and
+   all the character lives in the numbers the material brought with it. */
+function leverHit(kind, force = 1, out) {
+  if (!AU.ready) return;
+  const M = leverMat(), E = LEVER_EVENTS[kind] || LEVER_EVENTS.home;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  /* the lever is bolted through the tunnel you are sitting ON, eighteen
+     inches from your elbow. It rides the interior bus with the chimes: seal
+     the car and it gets CLOSER, not duller. */
+  const dest = out || AU.inner || AU.sfx;
+  const a = E.amp * force * 1.5;
+  if (a < 0.004) return;
+
+  // 1. the transient — the two surfaces meeting
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf;
+  n.playbackRate.value = M.tick.rate * (0.94 + Math.random() * 0.12);
+  const f = ctx.createBiquadFilter(); f.type = "bandpass";
+  f.frequency.value = M.tick.hz * E.hi * (0.96 + Math.random() * 0.08);
+  f.Q.value = M.tick.q;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(M.tick.amp * a, t);
+  g.gain.exponentialRampToValueAtTime(0.0008, t + M.tick.dec);
+  n.connect(f); f.connect(g); g.connect(dest); n.start(t); n.stop(t + M.tick.dec + 0.02);
+
+  // 2. the ring — what the material does AFTER the impact, which is most of
+  //    what tells you what it is made of
+  for (const [hz, amp, dec] of M.rings) {
+    const ra = amp * a * E.ring;
+    if (ra < 0.002) continue;
+    const o = ctx.createOscillator(); o.type = "sine";
+    o.frequency.value = hz * (0.985 + Math.random() * 0.03);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(ra, t + 0.004);
+    og.gain.exponentialRampToValueAtTime(0.0008, t + 0.004 + dec);
+    o.connect(og); og.connect(dest); o.start(t + 0.004); o.stop(t + 0.006 + dec);
+  }
+
+  // 3. the body — the mass of the assembly, arriving through the floor
+  const B = M.body, ba = B.amp * a * E.body;
+  if (ba > 0.003) {
+    const o = ctx.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(B.hz * (0.95 + Math.random() * 0.1), t);
+    o.frequency.exponentialRampToValueAtTime(B.to, t + B.dec);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(ba, t);
+    og.gain.exponentialRampToValueAtTime(0.0008, t + B.dec + 0.02);
+    o.connect(og); og.connect(dest); o.start(t); o.stop(t + B.dec + 0.04);
+  }
+}
+
+/* four events in the order a hand makes them — the workshop's preview */
+function leverAudition() {
+  leverHit("out", 0.9);
+  setTimeout(() => leverHit("detent", 0.9), 110);
+  setTimeout(() => leverHit("mouth", 0.9), 200);
+  setTimeout(() => leverHit("home", 0.95), 265);
+}
+
+/* ---- THE LEVER IN MOTION ----
+   Between the impacts there is friction, and it is not silent: the boot
+   dragging over the shaft, the bushings turning, the ball riding the gate. It
+   is a quiet, continuous, speed-dependent rustle and it is the single thing
+   that makes a shift feel like an object being moved rather than a state
+   being set. One gated noise band, driven straight off how fast the lever is
+   actually travelling — so a slow deliberate change through the gate whispers
+   the whole way across and a fast one is a rip. */
+function leverMotion(speed) {
+  if (!AU.ready || !AU.levG) return;
+  const M = leverMat(), t = AU.ctx.currentTime;
+  const v = clamp(speed / 900, 0, 1);              // px/s of lever travel
+  AU.levG.gain.setTargetAtTime(Math.pow(v, 1.3) * 0.09 * M.scrape.amp, t, 0.03);
+  AU.levBp.frequency.setTargetAtTime(M.scrape.hz * (0.8 + v * 0.5), t, 0.04);
+  AU.levBp.Q.setTargetAtTime(M.scrape.q, t, 0.1);
+  AU.levSrc.playbackRate.setTargetAtTime(M.scrape.rate * (0.7 + v * 0.6), t, 0.05);
+}
+
+/* ---- LINKAGE RATTLE ----
+   An idling engine shakes everything bolted to it, and a gear lever in
+   neutral with the clutch out is bolted to it through a rod. On a big lazy
+   engine at 700rpm with a light knob on the end you can watch it move. It
+   stops the instant you press the clutch, because the input shaft stops
+   being dragged. Everyone who has driven an old car knows this noise and no
+   simulator has ever made it. */
+function leverRattle(dt) {
+  if (!AU.ready || S.mode !== "clutch" || !S.engineOn || S.stalled) return;
+  if (S.gear !== 0 || S.clutchPedal > 0.4 || GATE.dragging) return;
+  // rough, slow and lightly loaded is when a linkage chatters
+  const rough = clamp((1400 - S.rpm) / 700, 0, 1) * clamp((CC.sound && CC.sound.jitter) || 1, 0.6, 2);
+  const amt = rough * (1 - S.throttle) * 0.8;
+  if (amt < 0.12) return;
+  S._ratT = (S._ratT || 0) - dt;
+  if (S._ratT > 0) return;
+  S._ratT = 0.05 + Math.random() * 0.13;
+  leverHit("rattle", amt * (0.5 + Math.random() * 0.7));
 }
 
 /* ---- paddle-shifter voices (manual mode) ---- */
@@ -5118,55 +5622,6 @@ function sfxPaddleMetal(strength = 1) {
   kg.gain.setValueAtTime(0.55 * strength, t);
   kg.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
   k.connect(kg); kg.connect(AU.sfx); k.start(t); k.stop(t + 0.13);
-}
-
-/* crisp mechanical detent — "k-CHK", a short-shifter with a tight spring:
-   release click, engage clack, and a small knuckle thump underneath */
-function sfxShiftClick(strength = 1, out) {
-  if (!AU.ready) return;
-  const ctx = AU.ctx, t = ctx.currentTime, dest = out || AU.sfx;
-  [[0, 2600, 0.20], [0.045, 1700, 0.46]].forEach(([dt, hz, amp]) => {
-    const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.6;
-    const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = hz; f.Q.value = 2.2;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(amp * strength, t + dt);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.045);
-    n.connect(f); f.connect(g); g.connect(dest);
-    n.start(t + dt); n.stop(t + dt + 0.06);
-  });
-  const o = ctx.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(180, t + 0.045);
-  o.frequency.exponentialRampToValueAtTime(70, t + 0.1);
-  const og = ctx.createGain();
-  og.gain.setValueAtTime(0.2 * strength, t + 0.045);
-  og.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
-  o.connect(og); og.connect(dest); o.start(t + 0.045); o.stop(t + 0.13);
-}
-
-/* open-gate metal snick — the ball knob through an exposed gate: a bright
-   tick, the gate plate ringing (two detuned partials), and the lever's clack */
-function sfxShiftMetal(strength = 1, out) {
-  if (!AU.ready) return;
-  const ctx = AU.ctx, t = ctx.currentTime, dest = out || AU.sfx;
-  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 2;
-  const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 2800;
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0.45 * strength, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-  n.connect(f); f.connect(g); g.connect(dest); n.start(t); n.stop(t + 0.07);
-  [[3150, 0.085], [4680, 0.05]].forEach(([hz, amp]) => {
-    const o = ctx.createOscillator(); o.type = "sine";
-    o.frequency.value = hz * (0.98 + Math.random() * 0.04);
-    const og = ctx.createGain();
-    og.gain.setValueAtTime(amp * strength, t + 0.01);
-    og.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-    o.connect(og); og.connect(dest); o.start(t + 0.01); o.stop(t + 0.25);
-  });
-  const o2 = ctx.createOscillator(); o2.type = "sine"; o2.frequency.setValueAtTime(140, t);
-  o2.frequency.exponentialRampToValueAtTime(60, t + 0.07);
-  const g2 = ctx.createGain();
-  g2.gain.setValueAtTime(0.28 * strength, t);
-  g2.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-  o2.connect(g2); g2.connect(dest); o2.start(t); o2.stop(t + 0.11);
 }
 
 /* the starter button itself: a proper tactile switch. A crisp plastic tick as
@@ -7904,11 +8359,34 @@ function tcLockWant(C, wheelRpm) {
   return wheelRpm > ENG.idle * 1.35;
 }
 
+/* ================================================================
+   THE CLUTCH — BITE
+   ================================================================
+   A clutch pedal is not a fader. There is dead travel at the top where the
+   release bearing is doing nothing at all, then a BAND — the bite — where the
+   plates are touching and slipping and the car is deciding whether to move,
+   and then the rest, where it is simply in. All of the driving happens in the
+   band, and how wide that band is decides how hard the car is to launch.
+
+   An ordinary road clutch spreads its bite over half the pedal, which is why
+   you can be taught to drive in one. A 169mm ceramic twin-plate spreads it
+   over about a centimetre — the same event, compressed into a tenth of the
+   travel — and that is the entire reason a Carrera GT has the reputation it
+   has. It is not that the clutch is vicious. It is that the window you have
+   to work in is the width of your shoelace.
+
+   So the window is a property of the car, and `start`/`width` are it. */
+function biteWindow() {
+  const c = CC.clutch || {};
+  return { start: c.start === undefined ? 0.25 : c.start,
+           width: c.width === undefined ? 0.5 : c.width };
+}
+
 function computeEngage() {
   if (S.gear === 0) return 0;
   if (S.mode === "clutch") {
-    // bite point: engagement begins at 25% pedal release, full at 75%
-    return clamp(((1 - S.clutchPedal) - 0.25) / 0.5, 0, 1);
+    const b = biteWindow();
+    return clamp(((1 - S.clutchPedal) - b.start) / b.width, 0, 1);
   }
   if (S.shiftCut > 0) return 0;
   if (CC.ev) return 1;                       // direct drive — torque from zero rpm
@@ -7926,6 +8404,378 @@ function computeEngage() {
   return raw * raw * (3 - 2 * raw);          // smoothstep
 }
 
+/* ================================================================
+   SYNCHRO — what actually happens when you move the lever
+   ================================================================
+   Every other driving game treats a manual gearbox as a switch with a
+   permission on it: hold the clutch, press the key, you are in the gear. That
+   is not a gearbox, that is a menu with a foot pedal.
+
+   Here is the machine. Between the engine and the road there is a shaft — the
+   INPUT SHAFT — and it carries the gears. The clutch decides whether that
+   shaft is bolted to the engine or free. The lever decides which gear on it
+   is locked to the output. And the one thing that has to be true before any
+   gear will go in is that BOTH SIDES ARE TURNING AT THE SAME SPEED.
+
+   Nothing else in the car does that job. The synchroniser does: a little
+   brass cone that is dragged against the gear you asked for and rubs until
+   the speeds match, and only then unlocks and lets the collar slide across.
+   Three consequences fall straight out of that, and all three are things
+   every driver knows in their hands and no game models:
+
+     1. A SHIFT TAKES TIME, AND HOW MUCH DEPENDS ON THE SHIFT.
+        3rd to 4th at a steady speed is a small speed change and the lever
+        drops in. 6th to 2nd is an enormous one and the lever HANGS at the
+        gate for a beat while the cone does its work. That hesitation is not
+        lag, it is the gearbox, and it is most of what a manual feels like.
+
+     2. THE CLUTCH IS NOT A PERMISSION, IT IS A DISCONNECTION.
+        Press it and the input shaft is free and light and the synchro has
+        almost nothing to move. Half-press it and the shaft is still dragging
+        on a spinning engine, so the little brass cone is now trying to change
+        the speed of a V10 — it can't, it locks out, and you get the noise. It
+        is not "you didn't press the button hard enough". It is a cone the
+        size of a bottle cap being asked to stop an engine.
+
+     3. …WHICH IS WHY YOU CAN SHIFT WITHOUT THE CLUTCH AT ALL.
+        Match the engine to the gear with your right foot, and there is no
+        speed difference for the synchro to kill. The lever slides through
+        like there is nothing in the box. Float-shifting is not a cheat or a
+        trick — it is the direct consequence of the same rule, and this
+        gearbox will let you do it, silently, if you actually get it right.
+
+   And it is why REV-MATCHING earns something. Blip on the way down and the
+   mismatch collapses, the hang disappears, and the shift is instant and
+   silent. Don't, and the shift is slow and the car shunts when you let the
+   clutch out. The reward is not a score. It is time. */
+
+/* the input shaft's speed expressed in engine rpm, which is where every
+   other number in here already lives */
+function shaftRpmFor(gear) {
+  const r = ratioOf(gear);
+  if (!r) return null;
+  return (Math.abs(S.v) / CAR.wheelR) * Math.abs(r) * (60 / (2 * Math.PI));
+}
+
+/* the ratio of any gear, without touching the current one */
+function ratioOf(gear) {
+  if (gear === 0 || gear === null || gear === undefined) return 0;
+  const r = CAR.ratios[gear];
+  return r === undefined ? 0 : r * CAR.finalDrive;
+}
+
+/* How fast the synchro can drag the input shaft, in rpm per second.
+
+   Free (clutch fully down) it is moving a shaft, a couple of gears and a
+   clutch disc — light, and a road synchro does it in a couple of tenths over
+   a big step. Still connected, it is trying to move the ENGINE as well, and
+   the engine's inertia is two orders of magnitude more than the shaft's, so
+   the rate collapses toward nothing. That collapse IS the grind. */
+function synchroRate(engage) {
+  const base = (CC.synchro || 1) * 9000;              // rpm/s on a free shaft
+  // a light flywheel makes even a badly-declutched shift possible; a 7.3-litre
+  // V12 with an iron flywheel does not forgive it at all
+  const drag = 1 + engage * engage * 34 * clamp(ENG.inertia / 0.22, 0.5, 3);
+  return base / drag;
+}
+
+/* Everything the gearbox knows about the shift you are currently asking for.
+   Called every frame while the lever is at the mouth of a slot. */
+function synchroState(target, dt) {
+  const want = shaftRpmFor(target);
+  if (want === null) return { ok: true, mismatch: 0, grind: 0, baulked: false };
+
+  const engage = S.mode === "clutch"
+    ? clamp(((1 - S.clutchPedal) - biteWindow().start) / biteWindow().width, 0, 1) : 0;
+
+  /* Where the input shaft actually is. In gear it is geared to the road; out
+     of gear with the clutch up it is turning with the engine; out of gear
+     with the clutch down it is coasting, dragged slowly toward the engine by
+     the oil and the bearing. That last case is why double-declutching works:
+     blip the engine while you're in neutral WITH THE CLUTCH OUT and you spin
+     the shaft up yourself, and the synchro has nothing left to do. */
+  const cur = S.inShaft;
+  const mismatch = Math.abs(want - cur);
+
+  const rate = synchroRate(engage);
+  const need = mismatch / rate;                  // seconds of rubbing
+
+  /* Past about half a second the ring is not synchronising, it is failing:
+     the cone is glazing, the teeth are chattering across each other and the
+     collar is locked out. Shoving harder does nothing — that is what the
+     baulk ring is FOR, and it is the reason a missed shift makes a noise
+     instead of destroying the gearbox. */
+  const baulked = need > 0.55;
+
+  S.syncNeed = need;
+  return {
+    ok: S.syncT >= need,
+    mismatch, need, baulked,
+    // how loudly it is complaining: nothing at a matched shift, everything at
+    // a full-speed clutchless stab into second
+    grind: clamp((need - 0.06) / 0.5, 0, 1),
+  };
+}
+
+/* the input shaft, integrated every frame. This is the state that makes
+   double-declutching work, and it is three lines. */
+function shaftTick(dt) {
+  const inGear = shaftRpmFor(S.gear);
+  if (inGear !== null && S.gear !== 0) {
+    // locked to the road through the selected gear
+    S.inShaft = inGear;
+    return;
+  }
+  // while a synchro is rubbing, IT owns the shaft — gateTick() is dragging it
+  // toward the gear you asked for and nothing else gets a vote
+  if (S.syncTo !== null && S.syncTo !== undefined) return;
+
+  const engaged = S.mode !== "clutch" ? 1
+    : clamp(((1 - S.clutchPedal) - biteWindow().start) / biteWindow().width, 0, 1);
+  if (engaged > 0.55) {
+    /* out of gear, clutch OUT: the shaft is bolted to the engine and turns
+       with it. This is the branch double-declutching lives in — blip in
+       neutral with your foot off the clutch and you spin the box up yourself,
+       so when you go for the lower gear the synchro has nothing left to do
+       and the lever drops straight through. It is the oldest technique in
+       driving and it works here for the same reason it works in a lorry. */
+    S.inShaft += (S.rpm - S.inShaft) * Math.min(1, dt * 26);
+  } else {
+    // out of gear, clutch IN: free, and slowing down on oil drag alone.
+    // Which is also why waiting at a light in gear with the clutch down and
+    // then asking for first gets you a small graunch: the shaft has stopped.
+    S.inShaft += (S.rpm * engaged - S.inShaft) * Math.min(1, dt * 2.2);
+    S.inShaft = Math.max(0, S.inShaft - dt * 850);
+  }
+}
+
+/* whether the model's left foot is helping. On by default — a keyboard has
+   one clutch position — and switchable in the workshop. */
+function clutchAssist() { return curMod().clutchAid !== false; }
+
+/* ---- JUDDER ----
+   A clutch caught between gripping and slipping is a stick-slip oscillator,
+   and it behaves like one: it grabs, the driveline winds up, the wind-up
+   overcomes the grip, it lets go, and round again — several times a second,
+   through the pedal, the seat and the wheel. An organic lining smears its way
+   through that and you mostly get a shudder you can ignore. A ceramic puck
+   cannot smear. It has almost no travel between grip and slip, so the cycle
+   is violent and the whole car does it.
+
+   The frequency is real (10-16Hz, and it rises as the plates come together),
+   and so is the trigger: low revs, high engagement, and a load the engine is
+   struggling with. Ride the clutch properly and it never happens. Try to move
+   off a race clutch at idle and it is all you will get. */
+function clutchJudder(dt, biteSlip, eNow) {
+  const j = (CC.clutch && CC.clutch.judder) || 0.5;
+  const engaged = S.mode === "clutch" && S.gear !== 0 && S.engineOn && !S.stalled;
+  // the band: plates touching, still slipping, engine down near its knees
+  const band = engaged && eNow > 0.12 && eNow < 0.92 && biteSlip > 40
+             && S.rpm < ENG.idle * 2.4;
+  let want = 0;
+  if (band) {
+    const low = clamp((ENG.idle * 2.4 - S.rpm) / (ENG.idle * 1.4), 0, 1);
+    const load = clamp(Math.abs(S.v) < 8 ? 1 : 8 / Math.abs(S.v), 0, 1);
+    want = clamp(low * load * j * (1 - Math.abs(eNow - 0.5) * 1.2), 0, 1);
+  }
+  S.judder += (want - S.judder) * Math.min(1, dt * (want > S.judder ? 14 : 6));
+  if (S.judder < 0.05) { S._judT = 0; return; }
+  // one thump per cycle, and the cycle tightens as the plates close up
+  const hz = 9 + eNow * 7;
+  S._judT = (S._judT || 0) + dt;
+  if (S._judT >= 1 / hz) { S._judT = 0; sfxJudder(S.judder * 0.9); }
+}
+
+/* ================================================================
+   TRACTION CONTROL — its own switch, and not every car has one
+   ================================================================
+   ABS is a brake system and TC is an engine system and they were sharing a
+   toggle in here, which meant switching off the anti-lock also switched off
+   the thing that stops the back end coming round, and there was no way to
+   have one without the other. Two boxes, two switches.
+
+   And `noTC` is not "TC defaults to off". It is NOT FITTED — the car left the
+   factory without the hardware, the workshop card says so and cannot be
+   pressed, and there is nothing to switch back on when it gets away from you.
+   That is what a 2004 Carrera GT is, and it is most of what the car means. */
+function hasTC() {
+  if (CC.noTC) return false;
+  const m = curMod();
+  if (m.tc !== undefined) return m.tc !== false;
+  return m.abs !== false;      // older saves: one switch did both
+}
+
+/* ================================================================
+   THE SLIDE — what "rear-wheel drive, traction control off" means
+   ================================================================
+   Everything above this point is a car on a rope: force forward, force back,
+   one number for speed. That is honest for most of what a rig like this does,
+   and it is exactly wrong for the one question this car exists to ask.
+
+   Because a rear-drive car with the electronics off does not fail by spinning
+   its wheels. It fails by ROTATING. And the reason is worth stating properly,
+   because it is not a special case bolted onto the model — it falls out of
+   the tire curve that is already here:
+
+     A tire's grip rises with slip to a peak and falls away past it. BELOW the
+     peak, the slope is positive, so any small disturbance is self-correcting
+     — push the back end sideways and the tire pushes back harder. PAST the
+     peak the slope is NEGATIVE. Push the back end sideways now and the tire
+     pushes back LESS. The car is no longer a spring, it is an amplifier, and
+     the only thing left holding it straight is a person.
+
+   That flip is the whole event, and it explains everything drivers know:
+
+     · IT NEEDS SPEED. At walking pace past the peak you get a burnout,
+       because there is no lateral energy to work with. At a hundred you get
+       an incident, and the same slip ratio does it.
+     · THE THROTTLE IS THE STEERING. Loose is a function of how far past the
+       peak you are, and you own that with your right foot. Lifting is not
+       giving up, it is the correction.
+     · …BUT NOT ALL AT ONCE. Lift hard at a big angle and the rear snaps back
+       to grip while the car is still rotating, and all that stored yaw has to
+       go somewhere. It goes the other way, faster. That is the second slide,
+       it is always worse than the first, and it is what actually crashes
+       these cars.
+     · OPPOSITE LOCK RUNS OUT. The hands are quick but not instant, and there
+       is a physical stop. Past about forty degrees you are steering with the
+       throttle and hope.
+     · AND IT COSTS YOU. A car pointing five degrees off its direction of
+       travel is scrubbing, not accelerating. The speedo stops climbing while
+       the tacho screams, which is the most reliable way to tell a fast lap
+       from a loud one.
+
+   The hands on the wheel are modelled rather than mapped to a key, because
+   there is no steering axis in this rig and pretending otherwise would be
+   worse than the honest version: a driver holds the lock for you, late and
+   limited, and what YOU keep is the pedal — which is the input that decides
+   the outcome anyway. */
+/* put the tyres, the slide and the driver's hands back to nothing. Called
+   whenever something changes underneath the physics — a new car, a different
+   switch — so a slide can never survive the thing that caused it. */
+function resetTraction() {
+  S.spinV = 0; S.slipR = 0; S.slipSigned = 0; S.tracF = 0; S.tcCut = 0; S.lockup = false;
+  S.yaw = 0; S.yawV = 0; S.lock = 0; S.spinOut = 0;
+  S.loose = 0; S.looseV = 0; S.scrub = 0; S._seed = 0; S._snapT = 0;
+}
+
+function slideTick(dt, driveF, sSigned, SP, rwd, gripLock, tcOn) {
+  const spd = Math.abs(S.v);
+
+  /* who this happens to: rear drive, no cheat rubber, and nothing watching.
+     Traction control does not merely reduce this — it is specifically the
+     machine that exists to prevent it, and while it is awake it holds the
+     rear at the peak of the curve, which is the side of the peak where the
+     car is a spring. So with TC on there is no slide, and that is not a
+     simplification, that is what the box is for. */
+  const eligible = rwd && !gripLock && !tcOn && S.engineOn && spd > 2;
+
+  if (!eligible && !S.spinOut) {
+    S.loose = 0; S.looseV = 0;
+    S.yaw += (0 - S.yaw) * Math.min(1, dt * 6);
+    S.yawV *= Math.max(0, 1 - dt * 8);
+    S.lock += (0 - S.lock) * Math.min(1, dt * 6);
+    S.scrub = 0;
+    if (Math.abs(S.yaw) < 0.05) S.yaw = 0;
+    return driveF;
+  }
+
+  /* --- 1. how far past the peak the rear axle is, either way ---
+     Power oversteer is the tire outrunning the road; a botched downshift is
+     the road outrunning the tire. Both are past the peak, both take the
+     lateral grip with them, and the car cannot tell the difference. */
+  const power = clamp((sSigned - SP) / (SP * 2.0), 0, 1);
+  const trail = clamp((-sSigned - SP * 0.7) / (SP * 1.6), 0, 1);
+  const want = Math.max(power, trail * 0.9);
+  const prev = S.loose;
+  // rubber does not change its mind instantly, and the RATE of that change is
+  // what the snap is made of, so it has to be a real derivative
+  S.loose += (want - S.loose) * Math.min(1, dt * (want > S.loose ? 22 : 15));
+  S.looseV = dt > 0 ? (S.loose - prev) / dt : 0;
+
+  /* --- 2. the disturbance ---
+     No road is flat, no car is symmetric and no diff splits torque perfectly.
+     A slow random walk, so the car wanders rather than twitching — a
+     per-frame coin flip reads as noise, and this is supposed to read as
+     camber and crown and a slightly greasy patch. */
+  S._seed = clamp((S._seed || 0) * 0.93 + (Math.random() - 0.5) * 2.4, -1, 1);
+  const seed = S._seed * 12 * clamp((spd - 2) / 6, 0, 1);
+
+  /* --- 3. the amplifier ---
+     Grows with the angle already there (that is what makes it divergent) and
+     with speed (that is what makes it survivable at 20 and not at 120). */
+  const spdF = clamp(spd / 18, 0, 1) * clamp(1 + spd / 60, 1, 2);
+  const diverge = S.loose * spdF * (seed + S.yaw * 4.4);
+
+  /* --- 4. the hands ---
+     Proportional to the angle and to how fast it is growing, which is what
+     "catching it early" means. Late by about a sixth of a second, because
+     that is what a person is, and out of lock past forty degrees, because
+     that is what a steering rack is. */
+  const wantLock = clamp(S.yaw * 0.06 + S.yawV * 0.055, -1, 1);
+  S.lock += (wantLock - S.lock) * Math.min(1, dt / 0.16);
+  S.lock = clamp(S.lock, -1, 1);
+  const authority = (1 - clamp((Math.abs(S.yaw) - 38) / 24, 0, 0.85))
+                  * (S.spinOut ? 0.25 : 1);
+  const counter = S.lock * 26 * authority;
+
+  /* --- 5. the spring, when there is one ---
+     Everything the rear axle has NOT given up still wants to point the car
+     where it is going. This is the term that makes lifting work. */
+  const restore = S.yaw * (1 - S.loose) * 7 * clamp(spd / 6, 0, 1);
+
+  let acc = diverge - counter - restore - S.yawV * 2.4;
+
+  /* --- 6. THE SNAP ---
+     The rear finding grip again while the car is still rotating. All the yaw
+     the slide built up is still there, and now there is a tire underneath it
+     to react against, so it comes back — the other way, and faster, because
+     it arrives with the driver's opposite lock still wound in. The trigger is
+     the derivative, not the value: it is how QUICKLY you lifted that hurts
+     you, which is why the advice is always to unwind it gently. */
+  if (S.looseV < -0.9 && Math.abs(S.yaw) > 7) {
+    const kick = -Math.sign(S.yaw) * Math.abs(S.yaw) * (-S.looseV) * 0.9;
+    S.yawV += kick * dt * 9;
+    if (!S._snapT || S._snapT <= 0) {
+      S._snapT = 0.9;
+      if (Math.abs(S.yaw) > 14) sayEvent("snap", "Snap", { cool: 4, rate: 1.2 });
+    }
+  }
+  S._snapT = Math.max(0, (S._snapT || 0) - dt);
+
+  S.yawV += acc * dt;
+  S.yaw += S.yawV * dt;
+
+  /* --- 7. gone ---
+     Past sixty degrees there is no steering input that recovers it and no
+     throttle position that helps. The car is a mass travelling sideways, the
+     tires are scrubbing at right angles to their tread, and the only thing
+     that happens next is that it stops. */
+  if (!S.spinOut && Math.abs(S.yaw) > 60) {
+    S.spinOut = 1;
+    sayEvent("spun", "Spun", { cool: 6, rate: 0.95, volume: 0.75 });
+  }
+  if (S.spinOut) {
+    S.yaw = clamp(S.yaw + Math.sign(S.yaw) * 40 * dt, -170, 170);
+    S.yawV *= Math.max(0, 1 - dt * 1.4);
+    if (spd < 2.4) { S.spinOut = 0; S.yaw *= 0.3; S.yawV = 0; S.lock = 0; }
+  }
+  S.yaw = clamp(S.yaw, -170, 170);
+
+  /* --- 8. what it costs ---
+     A car at an angle is not going where it is pointing. Only the cosine of
+     the drive reaches the direction of travel, and the sine of the car's
+     mass is being dragged across four contact patches that would rather it
+     wasn't. This is why a big slide is slow, and it is the only feedback in
+     here that punishes showing off. */
+  const rad = S.yaw * Math.PI / 180;
+  const sa = Math.abs(Math.sin(rad));
+  S.scrub = sa;
+  driveF *= Math.max(0, Math.cos(rad));
+  const scrubF = sa * sa * CAR.mass * 9.81 * (CC.grip || 1) * 0.30 * (S.spinOut ? 1.5 : 1);
+  return driveF - Math.sign(S.v || 1) * scrubF;
+}
+
 function stepPhysics(dt) {
   // pedal smoothing (keyboard is binary; ramps make it analog)
   S.throttle += clamp(S.in.gas - S.throttle, -RATES.thrDn * dt, RATES.thrUp * dt);
@@ -7940,28 +8790,65 @@ function stepPhysics(dt) {
   // actually support (engine torque vs clutch capacity) and slips there until
   // the wheels catch up to the crank — only then does it drop the rest of the
   // travel. If the revs droop anyway, the foot eases the pedal back in.
-  let cltDn = RATES.cltDn;
+  /* CLUTCH ASSIST. A keyboard has one clutch position and a real left foot has
+     a hundred, so by default there is a driver's foot in here doing the part
+     the key cannot: it comes fast through the dead travel, holds the pedal at
+     the engagement the ENGINE can actually support, slips there until the
+     wheels catch the crank, and only then drops the rest.
+
+     Switch it off in the workshop and that foot is yours. The pedal goes
+     exactly as fast as you let the key up, which on a car with half the pedal
+     to work in is fine, and on a 169mm ceramic twin-plate with a centimetre
+     of window is the reason you are sitting at the lights not moving. That is
+     not a difficulty setting — it is the difference between being told about
+     a clutch and using one. See BITE. */
+  const assist = clutchAssist();
+  const bw = biteWindow();
+  let cltDn = assist ? RATES.cltDn : RATES.cltDn * 3.2;
   const biting = S.mode === "clutch" && S.gear !== 0 && S.engineOn && !S.locked &&
-                 S.clutchPedal < 0.85 && S.clutchPedal > 0.12;
+                 S.clutchPedal < 1 - bw.start * 0.4 && S.clutchPedal > 0.12;
   let biteSlip = 0, eNow = 0, eHold = 1;
   if (biting) {
     const br = currentRatio();
     const wheelRpm = (Math.abs(S.v) / CAR.wheelR) * Math.abs(br) * (60 / (2 * Math.PI));
     biteSlip = S.rpm - wheelRpm;
-    eNow = clamp(((1 - S.clutchPedal) - 0.25) / 0.5, 0, 1);
+    eNow = clamp(((1 - S.clutchPedal) - bw.start) / bw.width, 0, 1);
     // the most engagement the engine can hold while the plates still slip
     eHold = clamp((torqueAt(Math.max(S.rpm, ENG.idle)) * ENG.tqMul * 0.9) / CAR.clutchCap, 0.04, 1);
-    if (S.in.clutch < S.clutchPedal) {
-      if (biteSlip < 120)            cltDn = RATES.cltDn * 2;          // matched — drop it
-      else if (eNow < eHold * 0.85)  cltDn = 0.6 + Math.abs(S.v) * 0.3; // ease to the bite
-      else                           cltDn = 0.03;                      // hold and slip
+    if (assist && S.in.clutch < S.clutchPedal) {
+      /* All three of these are pedal-travel rates, so they have to be scaled
+         by how much pedal this car's bite actually occupies. A rate tuned for
+         a clutch that bites over half the travel is thirty times too slow on
+         one that bites over a fiftieth of it — which is how a foot that was
+         supposed to help ended up holding a Carrera GT at walking pace
+         forever. The bite is what is being crossed, so the bite is the unit. */
+      if (biteSlip < 120)           cltDn = RATES.cltDn * 2;        // matched — drop it
+      else if (eNow < eHold * 0.85) cltDn = bw.width / 0.35;        // ease down to the bite…
+      else                          cltDn = bw.width / 1.4;         // …then across it, and out
+
+      /* A real driver's clutch is fully out inside two seconds of a standing
+         start, every time, whatever the engine is doing — that is what makes
+         it a launch and not a smoking clutch. Holding it at the bite until
+         the slip figure agreed to come down never terminates if the right
+         foot is on the floor, because the engine simply sits on the limiter
+         and out-runs the wheels for as long as you let it. So the foot gets a
+         deadline as well as a rule. */
+      S._biteT = (S._biteT || 0) + dt;
+      if (S._biteT > 1.6) cltDn = Math.max(cltDn, bw.width / 0.5);
     }
   }
+  if (!biting || S.in.clutch > 0.5) S._biteT = 0;      // the deadline resets with the pedal
   S.clutchPedal += clamp(S.in.clutch - S.clutchPedal, -cltDn * dt, RATES.cltUp * dt);
   // catch reflex: over-engaged and drooping — back into the pedal, fast
-  if (biting && S.in.clutch === 0 && biteSlip > 120 &&
+  if (assist && biting && S.in.clutch === 0 && biteSlip > 120 &&
       (eNow > eHold * 1.15 || S.rpm < ENG.stall * 1.4))
     S.clutchPedal = Math.min(0.8, S.clutchPedal + 5 * dt);
+
+  /* the input shaft and the lever, in that order: the gearbox has to know
+     where the shaft is before it can decide whether the gear will go in */
+  shaftTick(dt);
+  gateTick(dt);
+  clutchJudder(dt, biteSlip, eNow);
 
   // cruise control: a slow PI foot on the throttle. Any brake or clutch
   // input cancels it (like the real thing); throttle above the cruise
@@ -8274,12 +9161,16 @@ function stepPhysics(dt) {
   const roll = Math.abs(S.v) > 0.05 ? CAR.roll * Math.sign(S.v) : 0;
   F -= drag + roll;
 
-  // driver aids: with them off, hard braking locks the wheels
-  const aidsOff = curMod().abs === false;
+  /* ABS and traction control are two different boxes doing two different
+     jobs, and lumping them under one switch was wrong. ABS watches the
+     brakes; TC watches the throttle; a Carrera GT was sold with the first and
+     never had the second at all. Now they switch separately, and a car can
+     say it never had one. See hasTC(). */
+  const absOff = curMod().abs === false;
   // GRIP: the workshop's cheat tire. Not more grip — ALL the grip. Nothing
   // ever breaks traction at either end, so the brakes never lock either.
   const gripLock = curMod().grip === true;
-  S.lockup = aidsOff && !gripLock && S.brake > 0.9 && Math.abs(S.v) > 6;
+  S.lockup = absOff && !gripLock && S.brake > 0.9 && Math.abs(S.v) > 6;
   // brake pedal isn't grabby off the top: a soft-shaped curve means light
   // pressure trails the car gently and only a firm push delivers full stopping
   // power (real pedal feel, not an on/off switch)
@@ -8424,7 +9315,8 @@ function stepPhysics(dt) {
                  dwarfs the wheels themselves. It's why first gear lights up
                  slowly and progressively while third snaps.  */
   const spun = !gripLock && (evNow || (S.gear !== 0 && S.gear !== "R"));
-  const gripCoef = aidsOff ? 0.345 : 0.42;   // no TC modulation → less usable grip
+  const tcOn = hasTC();
+  const gripCoef = tcOn ? 0.42 : 0.345;      // no TC modulation → less usable grip
   // Weight transfer. A rear-drive car LIVES on this — full throttle plants it
   // on the axle that's doing the work, and that's the whole difference
   // between a launch and a burnout. All-wheel drive barely moves at all,
@@ -8432,21 +9324,33 @@ function stepPhysics(dt) {
   // driving. Which is exactly why AWD gets a flat bonus instead: its usable
   // traction is very nearly the whole weight of the car whatever the car is
   // doing, where a RWD car only ever has the back half to work with.
+  //
+  // And it cuts the other way, which nothing here used to model: lift or
+  // brake and the load comes OFF the back axle. That is why a trailing
+  // throttle unsettles a rear-engined car, and why the worst thing you can do
+  // mid-slide is exactly the thing your feet want to do.
+  const rwd = !CC.awd && !CC.fwd;
   const wt = (CC.awd ? 1.2 : 1)
-           + clamp((S.tracF || 0) / (CAR.mass * 9.81), 0, 1) * (CC.awd ? 0.1 : 0.34);
+           + clamp((S.tracF || 0) / (CAR.mass * 9.81), 0, 1) * (CC.awd ? 0.1 : 0.34)
+           - (CC.awd ? 0 : clamp(S.brake * 0.9 + (1 - S.throttle) * 0.05, 0, 1) * 0.12);
   const gripMax = CAR.mass * 9.81 * gripCoef * (CC.grip || (CC.awd ? 1.8 : 1))
-                * wt * (S.rain ? 0.76 : 1);
-  // slip ratio: extra tire surface speed over road speed. At a standstill
-  // the ratio is undefined, so launches are referenced to a walking pace —
-  // otherwise the first metre is a divide by nothing.
-  const sRatio = spun ? S.spinV / Math.max(Math.abs(S.v), 2.2) : 0;
+                * Math.max(0.35, wt) * (S.rain ? 0.76 : 1);
+  /* Slip ratio, and it is SIGNED now. Positive is the tire outrunning the
+     road — wheelspin, which is the half everyone models. Negative is the road
+     outrunning the tire, which happens every time an engine is asked to slow
+     the driven wheels faster than the rubber can take it: dump the clutch in
+     too low a gear and the rear axle briefly locks. On a rear-drive car that
+     is not a footnote, it is how people spin them, and it belongs to the same
+     curve — a tire does not care which way it is being dragged. */
+  const sSigned = spun ? S.spinV / Math.max(Math.abs(S.v), 2.2) : 0;
+  const sRatio = Math.abs(sSigned);
   const SP = 0.16;                           // peak grip lives at ~16% slip
   const mu = sRatio <= SP ? 1
            : Math.max(0.56, (2 * SP * sRatio) / (SP * SP + sRatio * sRatio));
   const tracMax = gripMax * mu;
 
   if (spun) {
-    if (!aidsOff) {
+    if (tcOn) {
       /* Traction control is a torque cut, not a grip bonus — but the cut it
          makes is a SERVO, not a fixed penalty. Its job is to hold the tire at
          the peak of its own grip curve, which is the most force the road will
@@ -8457,7 +9361,7 @@ function stepPhysics(dt) {
 
          The tenth of a second it takes to see the slip, decide and pull the
          torque is left in on purpose. That delay is the chirp. */
-      const over = clamp((sRatio - SP) / (SP * 1.1), 0, 1);   // how far past the peak
+      const over = clamp((sSigned - SP) / (SP * 1.1), 0, 1);   // how far past the peak
       // …and how fast it can answer, which is not a tuning number: an
       // e-motor's torque is a current, and the inverter can take it away in
       // about ten milliseconds. An engine has to close a throttle plate and
@@ -8479,16 +9383,26 @@ function stepPhysics(dt) {
       // more than the road can take — the surplus goes into spinning rubber
       S.spinV = Math.min(18, S.spinV + ((driveF - tracMax) / spinMass) * dt);
       driveF = tracMax;
-    } else if (S.spinV > 0) {
-      // …and grip left over drags it back down. This is the hook-up, and it
-      // is the same equation, which is why it feels like one event.
-      S.spinV = Math.max(0, S.spinV - ((tracMax - driveF) / spinMass + 1.5) * dt);
+    } else if (driveF < -tracMax) {
+      /* …and the same sum backwards. The engine is dragging the driven wheels
+         down harder than the road will allow, so they fall BEHIND it and the
+         axle skates. This is the money-shift feeling: the clunk, then the
+         back of the car going light for half a second. */
+      S.spinV = Math.max(-14, S.spinV + ((driveF + tracMax) / spinMass) * dt);
+      driveF = -tracMax;
+    } else if (S.spinV !== 0) {
+      // …and grip left over drags it back to zero. This is the hook-up, and
+      // it is the same equation, which is why it feels like one event.
+      const pull = ((tracMax - Math.abs(driveF)) / spinMass + 1.5) * dt;
+      S.spinV = Math.sign(S.spinV) * Math.max(0, Math.abs(S.spinV) - pull);
     }
   } else {
-    S.spinV = Math.max(0, S.spinV - 12 * dt);
+    S.spinV = Math.sign(S.spinV) * Math.max(0, Math.abs(S.spinV) - 12 * dt);
     S.tcCut = 0;                             // nothing slipping, nothing to cut
   }
   S.slipR = sRatio;
+  S.slipSigned = sSigned;
+  driveF = slideTick(dt, driveF, sSigned, SP, rwd, gripLock, tcOn);
   S.tracF = Math.max(0, driveF);             // what pitches the car next frame
 
   // the factory governor. The big saloons and SUVs are limited to a number
@@ -9754,7 +10668,18 @@ function buildGauges() {
 }
 
 /* ================================================================
-   SHIFTER GATE (mouse / touch drag)
+   THE LEVER
+
+   One model, two hands on it. A pointer dragging the knob and the keyboard
+   asking for the next gear both do the same thing: they set a COMMANDED
+   position, and then every frame gateTick() works out where the lever is
+   actually allowed to be, given the gate it is in, the clutch, and whether
+   the synchroniser has finished its work yet. See SYNCHRO.
+
+   That indirection is the whole point. Before, the drag was the truth and the
+   keyboard faked the same motion with timers, so the two paths could disagree
+   and neither of them could be stopped by the gearbox. Now the gearbox is
+   between your hand and the gear, which is where it is in the car.
    ================================================================ */
 
 const GATE = {
@@ -9762,8 +10687,10 @@ const GATE = {
   chanY: 150, chanHalf: 26,
   topY: 62, botY: 238,
   restX: 130,
-  x: 130, y: 150,
+  x: 130, y: 150,               // where the lever IS
+  cmdX: 130, cmdY: 150,         // where the driver is pushing it
   dragging: false,
+  kbTarget: null,               // the keyboard's chosen gear, until it lands
   gearMap: [[1, 2], [3, 4], [5, 6], [null, "R"]],
 };
 
@@ -9832,67 +10759,270 @@ function setGear(g, silentClunk) {
     el.classList.toggle("on", String(g) === el.dataset.g));
 }
 
-/* ---- keyboard control of the H-gate (clutch mode) ---- */
-
-function kbColIndex() {
-  let ci = 0, best = 1e9;
-  GATE.cols.forEach((cx, i) => {
-    const d = Math.abs(GATE.x - cx);
-    if (d < best) { best = d; ci = i; }
-  });
-  return ci;
+/* which column a gear lives in, and whether it is the near or far slot */
+function slotOf(g) {
+  for (let i = 0; i < GATE.gearMap.length; i++) {
+    const p = GATE.gearMap[i];
+    if (p[0] === g) return { col: i, dir: 0 };
+    if (p[1] === g) return { col: i, dir: 1 };
+  }
+  return null;
 }
 
+/* the y a lever sits at for a given slot and how far into it it has gone.
+   0 = at the mouth, 1 = home. */
+function slotY(dir, depth) {
+  const mouth = GATE.chanY + (dir ? 1 : -1) * GATE.chanHalf;
+  const home = dir ? GATE.botY : GATE.topY;
+  return mouth + (home - mouth) * depth;
+}
+
+/* ---- REVERSE ----
+   Every six-speed built has something in the way of reverse, because putting
+   it next to fifth without a guard is how you destroy a gearbox at 70mph. A
+   collar you lift, a ring you pull, a plate you shove down through. Whatever
+   it is, it takes a deliberate second action, and it will not do anything at
+   all while the car is moving. */
+function reverseOK() {
+  return Math.abs(S.v) < 1.2 && (S.mode !== "clutch" || S.clutchPedal > 0.7 || !S.engineOn);
+}
+
+/* ================================================================
+   gateTick — the gearbox, once per frame
+   ================================================================ */
+function gateTick(dt) {
+  if (S.mode !== "clutch") { S.syncTo = null; S.syncGrind = 0; gateGrind(false); return; }
+
+  S.lastShift = Math.min(9, (S.lastShift || 0) + dt);
+  S.baulk = Math.max(0, (S.baulk || 0) - dt);
+  const wasX = GATE.x, wasY = GATE.y;
+
+  /* ---- 1. where is the driver pushing? ---- */
+  let cx = GATE.cmdX, cy = GATE.cmdY;
+  if (!GATE.dragging) {
+    if (GATE.kbTarget !== null && GATE.kbTarget !== undefined) {
+      if (GATE.kbTarget === 0) { cx = GATE.restX; cy = GATE.chanY; }
+      else {
+        const sl = slotOf(GATE.kbTarget);
+        if (sl) { cx = GATE.cols[sl.col]; cy = slotY(sl.dir, 1); }
+        else GATE.kbTarget = null;
+      }
+    } else if (S.gear !== 0) {
+      const sl = slotOf(S.gear);
+      if (sl) { cx = GATE.cols[sl.col]; cy = slotY(sl.dir, 1); }
+    } else { cx = GATE.restX; cy = GATE.chanY; }
+  }
+
+  /* ---- 2. lever travel. A gear lever has mass and a linkage on it; it does
+       not teleport. The hand can move it about a gate-width in a fifth of a
+       second, and that throw is a real part of how long a shift takes. ---- */
+  const rate = GATE.dragging ? 3400 : 900;         // px/s — your hand vs the model's
+  const stepMax = rate * dt;
+
+  let x = GATE.x, y = GATE.y;
+
+  /* ---- 3. resolve against the gate ----
+     An H-pattern is not a set of destinations, it is a PATH: out of the slot,
+     along the channel, and only then into the new one. You cannot move
+     sideways with a gear engaged because the collar is in the teeth, and you
+     cannot leave the channel anywhere except lined up with a column because
+     the gate plate is in the way. Both of those are enforced here rather than
+     assumed, which is why the lever takes a route instead of teleporting. */
+  const inChannel = Math.abs(y - GATE.chanY) <= GATE.chanHalf + 0.5;
+  let grinding = false;
+
+  if (!inChannel && Math.abs(cx - x) > 2) {
+    // asked to move sideways while still in a slot: come out first
+    cy = GATE.chanY; cx = x;
+  }
+  /* …and the other half of the same rule: you are not over the slot you asked
+     for yet, so you are still in the channel, however hard you are pushing. */
+  if (Math.abs(cx - x) > 3 && Math.abs(cy - GATE.chanY) > GATE.chanHalf) cy = GATE.chanY;
+
+  if (Math.abs(cy - GATE.chanY) <= GATE.chanHalf) {
+    /* --- moving within the channel, or coming back out of a slot --- */
+    if (S.gear !== 0 && Math.abs(cy - GATE.chanY) < Math.abs(y - GATE.chanY)) {
+      // leaving a gear — it comes out the moment the collar clears
+      if (Math.abs(y - GATE.chanY) < GATE.chanHalf + 22) {
+        setGear(0, true);
+        S.syncTo = null; S.syncT = 0;
+        sfxGateOut(0.8);                 // the collar, back there
+        leverHit("out", 0.9);            // the detent ball, under your hand
+      }
+    }
+    y += clamp(cy - y, -stepMax, stepMax);
+    if (S.gear === 0) x += clamp(cx - x, -stepMax, stepMax);
+    S.syncTo = null; S.syncGrind = 0;
+  } else {
+    /* --- pushing into a slot --- */
+    const dir = cy > GATE.chanY ? 1 : 0;
+    let col = 0, best = 1e9;
+    GATE.cols.forEach((c, i) => { const d = Math.abs(x - c); if (d < best) { best = d; col = i; } });
+    // between two columns is a piece of gate plate, and the lever rides along
+    // the top of it. That stop is the reason you can't accidentally find a
+    // gear on the way past one.
+    const target = best > 20 ? undefined : GATE.gearMap[col][dir];
+
+    if (target === undefined) {
+      y += clamp(GATE.chanY + (dir ? 1 : -1) * GATE.chanHalf - y, -stepMax, stepMax);
+      x += clamp(cx - x, -stepMax, stepMax);
+      S.syncTo = null; S.syncGrind = 0;
+    } else if (target === null || (target === "R" && !reverseOK())) {
+      /* no gear there, or the reverse guard is holding it out. A gate that
+         refuses is not a gate that is broken — you feel the stop. */
+      y += clamp(slotY(dir, 0) - y, -stepMax, stepMax);
+      if (S.gear !== "R" && S.lastShift > 0.3 && Math.abs(cy - y) > 6) {
+        S.lastShift = 0; sfxGateBlock(); leverHit("block", 0.85);
+      }
+      S.syncTo = null; S.syncGrind = 0;
+    } else if (S.gear === target) {
+      // already in it — just seat the lever
+      x = GATE.cols[col];
+      y += clamp(slotY(dir, 1) - y, -stepMax, stepMax);
+      S.syncTo = null; S.syncGrind = 0;
+    } else {
+      x = GATE.cols[col];
+      // a straight-through change (1→2, 3→4) crosses the channel without ever
+      // stopping in it, and the old gear comes out on the way past
+      if (S.gear !== 0 && Math.abs(y - GATE.chanY) < GATE.chanHalf + 22) {
+        setGear(0, true); sfxGateOut(0.8); leverHit("out", 0.9);
+      }
+      if (S.gear !== 0) {
+        y += clamp(GATE.chanY - y, -stepMax, stepMax);
+        S.syncTo = null; S.syncGrind = 0;
+        gateGrind(false);
+        if (Math.abs(x - GATE.x) > 0.05 || Math.abs(y - GATE.y) > 0.05) setStick(x, y, false);
+        leverMotion(Math.hypot((x - wasX) / Math.max(dt, 1e-4), (y - wasY) / Math.max(dt, 1e-4)));
+        return;
+      }
+
+      if (S.syncTo !== target) {
+        S.syncTo = target; S.syncT = 0; S.syncMiss = 0;
+        leverHit("mouth", 0.85);         // the ball dropping into the slot
+      }
+      const st = synchroState(target, dt);
+      S.syncMiss = st.mismatch;
+
+      /* THE SYNCHRO PULLING. This is the part you feel in your hand: the ring
+         is rubbing, and while it rubs it is genuinely dragging the input
+         shaft toward the speed the new gear wants. It only gets to do that
+         while the collar is pressed against it — let go and it stops. */
+      const want = shaftRpmFor(target);
+      const engageNow = clamp(((1 - S.clutchPedal) - biteWindow().start) / biteWindow().width, 0, 1);
+      const pull = synchroRate(engageNow) * dt;
+      if (want !== null) S.inShaft += clamp(want - S.inShaft, -pull, pull);
+
+      if (st.baulked) {
+        /* LOCKED OUT. The ring will not let the collar past, and no amount of
+           shoving changes that. Let the clutch out further, or match the
+           revs, or wait — those are the only three answers, and they are the
+           only three answers in the real car too. */
+        S.syncT = 0;
+        S.baulk = 0.25;
+        grinding = true;
+        y += clamp(slotY(dir, 0.18) - y, -stepMax, stepMax);
+      } else {
+        S.syncT += dt;
+        const p = clamp(S.syncT / Math.max(st.need, 1e-4), 0, 1);
+        grinding = st.grind > 0.12 && p < 1;
+        // the collar rests against the ring at a fifth of the way in and
+        // covers the rest in one movement once the ring releases
+        const depth = p >= 1 ? 1 : 0.2 + 0.05 * p;
+        y += clamp(slotY(dir, depth) - y, -stepMax, stepMax);
+        if (p >= 1 && Math.abs(y - slotY(dir, 1)) < 26) {
+          engageGear(target, st);
+          y = slotY(dir, 1);
+        }
+      }
+      S.syncGrind = grinding ? clamp(st.grind, 0, 1) : 0;
+    }
+  }
+
+  gateGrind(grinding);
+  if (Math.abs(x - GATE.x) > 0.05 || Math.abs(y - GATE.y) > 0.05) setStick(x, y, false);
+
+  /* ---- 4. everything the lever says while it is moving ---- */
+  const vx = (x - wasX) / Math.max(dt, 1e-4), vy = (y - wasY) / Math.max(dt, 1e-4);
+  leverMotion(Math.hypot(vx, vy));
+
+  /* THE CENTRE DETENT. Every H-pattern is sprung toward one plane — the 3-4
+     plane on a six-speed — and crossing it is a distinct bump you feel and
+     hear on the way past. It is the thing that stops you finding first when
+     you wanted third, and it is why you can change gear without looking. */
+  if (S.gear === 0 && Math.abs(y - GATE.chanY) < GATE.chanHalf) {
+    const wasSide = Math.sign(wasX - GATE.restX), nowSide = Math.sign(x - GATE.restX);
+    if (wasSide !== nowSide && Math.abs(x - wasX) > 0.4)
+      leverHit("detent", clamp(Math.abs(vx) / 700, 0.25, 1));
+  }
+  /* THE END WALL. The gate stops, and a stop that makes no sound is a gate
+     you cannot feel the end of. */
+  const lastCol = GATE.cols[GATE.cols.length - 1];
+  const atWall = x <= GATE.cols[0] + 0.4 || x >= lastCol - 0.4;
+  if (atWall && !S._atWall && Math.abs(vx) > 120) leverHit("wall", clamp(Math.abs(vx) / 900, 0.3, 1));
+  S._atWall = atWall;
+
+  /* THE RETURN SPRING. Let go in neutral and it does not stay where you put
+     it — it is thrown back to the middle and arrives with a knock. */
+  if (S.gear === 0 && !GATE.dragging && Math.abs(x - GATE.restX) < 1.2 && S._offCentre) {
+    leverHit("spring", 0.7);
+    S._offCentre = false;
+  } else if (Math.abs(x - GATE.restX) > 14) S._offCentre = true;
+
+  leverRattle(dt);
+
+  // the keyboard's command is finished the moment the gear is in
+  if (GATE.kbTarget !== null && GATE.kbTarget !== undefined && S.gear === GATE.kbTarget &&
+      Math.abs(y - cy) < 2) GATE.kbTarget = null;
+}
+
+/* the moment the collar goes home. How it SOUNDS is the report card on the
+   shift you just made, and there is nothing arbitrary about the grading:
+   a matched shift is a small oily snick because almost no energy changed
+   hands, and an unmatched one is a clack and a shunt because a great deal
+   of it did. */
+function engageGear(target, st) {
+  const span = Math.max(400, ENG.max * 0.22);
+  const match = clamp(1 - st.mismatch / span, 0, 1);
+  S.revMatch = match;
+  S.lastShift = 0;
+  S.syncTo = null; S.syncT = 0;
+
+  setGear(target, true);
+  if (match > 0.93) sfxGateSnick(0.9);
+  else { sfxGateIn(0.7 + (1 - match) * 0.8); }
+
+  /* A CLUTCHLESS SHIFT. If the pedal is up, the engine is bolted to what you
+     just did, and it takes the whole speed change on the spot: the revs jump
+     to the new gear and the driveline rings with it. Get the match right and
+     nobody would know. Get it wrong and everyone in the car does. */
+  const engaged = computeEngage();
+  if (engaged > 0.5 && st.mismatch > 250) {
+    setTimeout(() => sfxDrivelineShunt(clamp(0.5 + (1 - match) * 1.1, 0.4, 1.5)), 26);
+  }
+}
+
+/* ---- keyboard control of the H-gate (clutch mode) ---- */
+
 /* arrows shift sequentially with the clutch held: ← one gear down, → one gear
-   up (…R ← N ← 1 ⇄ 2 ⇄ 3…). The stick animates the real throw — release,
-   cross the channel, engage — and grinds off the slot without the clutch. */
-let kbSeqToken = 0;
+   up (…R ← N ← 1 ⇄ 2 ⇄ 3…). This does not move the lever itself — it just
+   tells the model which slot to aim for, and gateTick() does the driving.
+   Which means the keyboard gets every consequence the drag does: the throw
+   takes time, the synchro takes time, an unclutched stab baulks and grinds,
+   and a properly matched one snicks straight in. */
 function kbSeqGate(d) {
   if (S.mode !== "clutch" || GATE.dragging) return;
   const order = seqOrder();
-  const i = order.indexOf(S.gear);
+  const from = GATE.kbTarget !== null && GATE.kbTarget !== undefined ? GATE.kbTarget : S.gear;
+  const i = order.indexOf(from);
   const j = clamp(i + d, 0, order.length - 1);
   if (i === j) return;
-  const target = order[j];
-
-  if (target === 0) {                        // back to neutral — no clutch needed
-    setGear(0, true);
-    setStick(GATE.cols[kbColIndex()], GATE.chanY, true);
-    sfxShift(0.3);
-    return;
-  }
-
-  const ci = GATE.gearMap.findIndex(p => p.includes(target));
-  const slot = GATE.gearMap[ci][0] === target ? 0 : 1;
-  const clutchOK = !S.engineOn || S.clutchPedal > 0.55;
-  const reverseOK = target !== "R" || Math.abs(S.v) < 1.6;
-
-  if (!clutchOK || !reverseOK) {             // bounce off the slot — grind
-    if (S.gear !== 0) setGear(0, true);
-    gateGrind(true);
-    setStick(GATE.cols[ci], GATE.chanY + (slot ? 1 : -1) * (GATE.chanHalf + 8), true);
-    const seq = ++kbSeqToken;
-    setTimeout(() => {
-      gateGrind(false);
-      if (kbSeqToken === seq && S.gear === 0 && !GATE.dragging)
-        setStick(GATE.cols[kbColIndex()], GATE.chanY, true);
-    }, 260);
-    return;
-  }
-
-  if (S.gear !== 0) setGear(0, true);
-  setStick(GATE.cols[ci], GATE.chanY, true); // stage 1: through the channel
-  const seq = ++kbSeqToken;
-  setTimeout(() => {                         // stage 2: into the slot
-    if (kbSeqToken !== seq || S.mode !== "clutch" || GATE.dragging) return;
-    setGear(target);
-    setStick(GATE.cols[ci], slot === 0 ? GATE.topY : GATE.botY, true);
-  }, 140);
+  GATE.kbTarget = order[j];
 }
 
 function initShifter() {
   buildGateSvg();
   setStick(GATE.restX, GATE.chanY, false);
+  GATE.cmdX = GATE.restX; GATE.cmdY = GATE.chanY;
 
   const gate = $("gate"), stick = $("stick");
   let pid = null, offX = 0, offY = 0;
@@ -9908,68 +11038,34 @@ function initShifter() {
     stick.setPointerCapture(pid);
     stick.classList.add("grabbing");
     GATE.dragging = true;
+    GATE.kbTarget = null;
     const [lx, ly] = toLocal(e);
     offX = lx - GATE.x; offY = ly - GATE.y;
+    GATE.cmdX = GATE.x; GATE.cmdY = GATE.y;
     e.preventDefault();
   });
 
+  /* the pointer only ever says WHERE YOU ARE PUSHING. Whether the lever can
+     get there is the gearbox's business, once a frame, in gateTick(). */
   stick.addEventListener("pointermove", (e) => {
     if (!GATE.dragging || e.pointerId !== pid) return;
     const [lx, ly] = toLocal(e);
-    let x = clamp(lx - offX, GATE.cols[0], GATE.cols[3]);
-    let y = clamp(ly - offY, GATE.topY, GATE.botY);
-
-    const inChannel = Math.abs(y - GATE.chanY) <= GATE.chanHalf;
-    let grind = false;
-
-    if (inChannel) {
-      y = clamp(y, GATE.chanY - GATE.chanHalf, GATE.chanY + GATE.chanHalf);
-      if (S.gear !== 0) setGear(0, true);
-    } else {
-      // must be lined up with a column to leave the channel
-      let ci = 0, best = 1e9;
-      GATE.cols.forEach((cx, i) => { const d = Math.abs(x - cx); if (d < best) { best = d; ci = i; } });
-      if (best > 20) {
-        y = GATE.chanY + Math.sign(y - GATE.chanY) * GATE.chanHalf;
-      } else {
-        x = GATE.cols[ci];
-        const dir = y < GATE.chanY ? 0 : 1;
-        const target = GATE.gearMap[ci][dir];
-
-        if (target === null) {
-          y = GATE.chanY - GATE.chanHalf;                      // no 7th gear
-        } else {
-          const clutchOK = !S.engineOn || S.clutchPedal > 0.55;
-          const reverseOK = target !== "R" || Math.abs(S.v) < 1.6;
-          if (!clutchOK || !reverseOK) {
-            // blocked at the mouth of the slot — grind
-            y = GATE.chanY + Math.sign(y - GATE.chanY) * (GATE.chanHalf + 7 + Math.random() * 3);
-            grind = true;
-          } else {
-            const engagedAt = dir === 0 ? GATE.topY + 26 : GATE.botY - 26;
-            const inSlot = dir === 0 ? y < engagedAt : y > engagedAt;
-            if (inSlot && S.gear !== target) setGear(target);
-            else if (!inSlot && S.gear !== 0) setGear(0, true);
-          }
-        }
-      }
-    }
-    gateGrind(grind);
-    setStick(x, y, false);
+    GATE.cmdX = clamp(lx - offX, GATE.cols[0], GATE.cols[GATE.cols.length - 1]);
+    GATE.cmdY = clamp(ly - offY, GATE.topY, GATE.botY);
   });
 
   const release = (e) => {
     if (!GATE.dragging || (pid !== null && e.pointerId !== pid)) return;
     GATE.dragging = false; pid = null;
     stick.classList.remove("grabbing");
-    gateGrind(false);
-    if (S.gear === 0) {
-      setStick(GATE.restX, GATE.chanY, true);       // spring home
+    /* let go halfway into a slot and the lever does what a real one does: the
+       detent springs it the rest of the way in if it was nearly there, and
+       back out to the channel if it wasn't. It does not hang in mid-gate. */
+    if (S.gear !== 0) {
+      const sl = slotOf(S.gear);
+      if (sl) { GATE.cmdX = GATE.cols[sl.col]; GATE.cmdY = slotY(sl.dir, 1); }
     } else {
-      // snap crisply into the engaged slot
-      let ci = 0; GATE.cols.forEach((cx, i) => { if (Math.abs(GATE.x - cx) < 12) ci = i; });
-      const dir = GATE.y < GATE.chanY ? 0 : 1;
-      setStick(GATE.cols[ci], dir === 0 ? GATE.topY : GATE.botY, true);
+      GATE.cmdX = GATE.restX; GATE.cmdY = GATE.chanY;
     }
   };
   stick.addEventListener("pointerup", release);
@@ -10394,9 +11490,16 @@ function setMode(mode) {
   $("bayModeNote").innerHTML =
     { auto: "Two pedals. Select <b>D</b> and go.",
       manual: "Shift with <kbd>Q</kbd>/<kbd>E</kbd> — no clutch needed.",
-      clutch: "Clutch in (<kbd>SPACE</kbd>), <kbd>←</kbd>/<kbd>→</kbd> to shift (or drag the stick), then let the clutch out — it feathers the bite for you." }[mode];
+      clutch: "Clutch in (<kbd>SPACE</kbd>), <kbd>←</kbd>/<kbd>→</kbd> to shift (or drag the stick), then let it out. "
+            + "The gear does not go in because you asked — it goes in when the synchro has matched the shafts, "
+            + "so a big downshift hangs at the gate and a rev-matched one snicks straight through." }[mode];
 
-  if (mode === "clutch") setStick(GATE.restX, GATE.chanY, false);
+  if (mode === "clutch") {
+    setStick(GATE.restX, GATE.chanY, false);
+    GATE.cmdX = GATE.restX; GATE.cmdY = GATE.chanY;
+    GATE.kbTarget = null; GATE.dragging = false;
+    S.syncTo = null; S.syncT = 0; S.inShaft = S.rpm;
+  }
   if (mode === "manual") seqHighlight();
   document.querySelectorAll(".prnd button").forEach(b =>
     b.classList.toggle("on", b.dataset.sel === S.autoSel));
@@ -10471,7 +11574,9 @@ function selectCar(id) {
   S.gear = 0; S.autoSel = "P"; S.autoGear = 1;
   S.shiftCut = 0; S.shiftCool = 0; S.cutTimer = 0; S.blip = 0; S.catchT = 0; S.sweep = -1;
   S.pendShift = false;
-  S.spinV = 0; S.slipR = 0; S.tracF = 0; S.tcCut = 0; S.lockup = false;
+  resetTraction();
+  S.inShaft = 0; S.syncTo = null; S.syncT = 0; S.syncGrind = 0; S.baulk = 0; S.judder = 0;
+  GATE.kbTarget = null; GATE.cmdX = GATE.restX; GATE.cmdY = GATE.chanY;
   S.evBoost = 0; S.evCool = 0;
   IND.side = 0; IND.on = false; IND.t = 0;   // the stalk springs back
   resetRaceSwitches();
@@ -11015,12 +12120,12 @@ function buildWorkshop() {
     }));
   document.querySelectorAll("#wsShift .ws-card").forEach(b =>
     b.addEventListener("click", () => {
-      curMod().shift = b.dataset.shift;
+      curMod().shift = b.dataset.shift === "factory" ? "" : b.dataset.shift;
       refreshWorkshop();
-      const s = b.dataset.shift;           // audition the new feel right away
-      if (s === "click") sfxShiftClick(0.9);
-      else if (s === "metal") sfxShiftMetal(0.9);
-      else sfxClunk(0.9);
+      /* audition the WHOLE change, not one thunk: out of the notch, over the
+         centre detent, into the slot, home. Hearing the four events in a row
+         is the only way to tell two materials apart. */
+      leverAudition();
       save();
     }));
   document.querySelectorAll("#wsPaddle .ws-card").forEach(b =>
@@ -11112,15 +12217,35 @@ function buildWorkshop() {
     save();
   });
   $("wsAids").addEventListener("click", () => {
-    curMod().abs = curMod().abs === false;
-    S.spinV = 0; S.slipR = 0; S.tracF = 0; S.tcCut = 0; S.lockup = false;
+    const m = curMod();
+    // an older save had one switch for both; the first touch of either card
+    // resolves that into the two it should always have been
+    if (m.tc === undefined) m.tc = m.abs !== false;
+    m.abs = m.abs === false;
+    resetTraction();
+    refreshWorkshop();
+    sfxClunk(0.4);
+    save();
+  });
+  $("wsTc").addEventListener("click", () => {
+    if (CC.noTC) { sfxGateBlock(); return; }      // not fitted. Nothing to press.
+    const m = curMod();
+    if (m.tc === undefined) m.tc = m.abs !== false;
+    m.tc = m.tc === false;
+    resetTraction();
+    refreshWorkshop();
+    sfxClunk(0.4);
+    save();
+  });
+  $("wsClutchAid").addEventListener("click", () => {
+    curMod().clutchAid = curMod().clutchAid === false;
     refreshWorkshop();
     sfxClunk(0.4);
     save();
   });
   $("wsGrip").addEventListener("click", () => {
     curMod().grip = !curMod().grip;
-    S.spinV = 0; S.slipR = 0; S.tcCut = 0; S.lockup = false;
+    resetTraction();
     refreshWorkshop();
     sfxClunk(0.4);
     save();
@@ -11193,8 +12318,15 @@ function refreshWorkshop() {
   updateJobCard();
   document.querySelectorAll("#wsExhausts .ws-card").forEach(b =>
     b.classList.toggle("on", b.dataset.ex === curMod().ex));
-  document.querySelectorAll("#wsShift .ws-card").forEach(b =>
-    b.classList.toggle("on", b.dataset.shift === curMod().shift));
+  document.querySelectorAll("#wsShift .ws-card").forEach(b => {
+    const want = curMod().shift || "factory";
+    b.classList.toggle("on", b.dataset.shift === want);
+    // say what "as delivered" actually means on THIS car
+    if (b.dataset.shift === "factory")
+      b.querySelector(".ws-card-desc").textContent =
+        "Whatever this car came with — here, " +
+        (LEVER_MATS[CC.lever] || LEVER_MATS.rubber).label + ".";
+  });
   document.querySelectorAll("#wsPaddle .ws-card").forEach(b =>
     b.classList.toggle("on", b.dataset.paddle === curMod().paddle));
   $("cabinBtn").classList.toggle("on", S.cabin);
@@ -11244,7 +12376,7 @@ function refreshWorkshop() {
   lt.value = S.ltTgt[S.units];
   $("wsLtVal").textContent = ltLabel();
   $("wsTune").classList.toggle("on", curMod().tune);
-  const aidsOn = curMod().abs !== false;
+  const absOn = curMod().abs !== false;
   $("wsSoft").classList.toggle("on", S.softLim);
   $("wsSoft").querySelector(".ws-card-name").textContent =
     "SOFT LIMITER — " + (S.softLim ? "ON" : "OFF");
@@ -11252,9 +12384,32 @@ function refreshWorkshop() {
   $("wsDmg").querySelector(".ws-card-name").textContent =
     "CONSEQUENCES — " + (S.dmgOn ? "ON" : "OFF");
   refreshFuelCard();
-  $("wsAids").classList.toggle("on", aidsOn);
-  $("wsAids").querySelector(".ws-card-name").textContent =
-    "DRIVER AIDS — " + (aidsOn ? "ON" : "OFF");
+  $("wsAids").classList.toggle("on", absOn);
+  $("wsAids").querySelector(".ws-card-name").textContent = "ABS — " + (absOn ? "ON" : "OFF");
+
+  /* TRACTION CONTROL. Three states, not two, because "not fitted" is a real
+     answer and the honest thing is to say so rather than to show a switch
+     that quietly does nothing. */
+  const tcOn = hasTC();
+  const tcCard = $("wsTc");
+  tcCard.classList.toggle("on", tcOn);
+  tcCard.classList.toggle("ws-off", !!CC.noTC);
+  tcCard.querySelector(".ws-card-name").textContent =
+    CC.noTC ? "TRACTION CONTROL — NOT FITTED" : "TRACTION CONTROL — " + (tcOn ? "ON" : "OFF");
+  $("wsTcDesc").innerHTML = CC.noTC
+    ? "This car was never built with it. Not switchable, not disabled — absent. "
+      + "It has anti-lock brakes and it has you, and that is the whole electronic "
+      + "safety net. Every story ever told about this car starts here."
+    : "A different box doing a different job. It holds the driven tyres at the peak "
+      + "of their grip curve &mdash; which is the side of the peak where a car is stable. "
+      + "Switch it off on a rear-drive car and it isn&rsquo;t: past the peak the tyre pushes "
+      + "back <em>less</em> the further the back end goes, and the only thing left holding "
+      + "the car straight is you and the throttle.";
+
+  const aidOn = clutchAssist();
+  $("wsClutchAid").classList.toggle("on", aidOn);
+  $("wsClutchAid").querySelector(".ws-card-name").textContent =
+    "CLUTCH ASSIST — " + (aidOn ? "ON" : "OFF");
   const gripOn = curMod().grip === true;
   $("wsGrip").classList.toggle("on", gripOn);
   $("wsGrip").querySelector(".ws-card-name").textContent =
@@ -11263,8 +12418,8 @@ function refreshWorkshop() {
     curMod().ex !== "stock" || curMod().pitch !== 1 || curMod().gear !== 1 ||
     curMod().vol !== 1 || curMod().tone !== 0 || curMod().pop !== 1 ||
     curMod().flame !== "auto" || curMod().flameSize !== 1 || curMod().swap ||
-    curMod().rev !== 1 || curMod().tune || !aidsOn || gripOn ||
-    curMod().shift !== "stock" || curMod().paddle !== "stock");
+    curMod().rev !== 1 || curMod().tune || !absOn || !tcOn || !aidOn || gripOn ||
+    curMod().shift || curMod().paddle !== "stock");
 }
 
 /* the engine-swap dropdown: every engine in the garage, grouped so the stock
@@ -12785,15 +13940,56 @@ function frame(now) {
   if (slipping && S.engineOn)
     sayEvent("grip", S.lockup ? "Wheels locked" : "Traction loss", { cool: 9 });
 
-  /* --- redline / over-rev cockpit vibration --- */
+  /* --- the traction-control lamp ---
+     Not a warning. A statement of what is switched off, which is why it sits
+     lit and steady rather than flashing: nothing is wrong, you asked for
+     this. On a car that never had the hardware it stays on permanently, and
+     that is the honest thing for it to do. */
+  const tcOff = !hasTC() && !isEv() && curMod().grip !== true;
+  $("lampTc").classList.toggle("lit", tcOff);
+
+  slideUi();
+
+  /* --- redline / over-rev / slide cockpit vibration ---
+     Three things move the cluster and they compose rather than compete: the
+     limiter shakes it, the slide ROTATES it (the car is pointing somewhere
+     other than where it is going, and you are strapped to the car), and a
+     spin does both at once. */
   const cluster = $("cluster");
-  if (over) {
-    cluster.style.transform = `translate(${(Math.random() - 0.5) * 3}px, ${(Math.random() - 0.5) * 2.5}px)`;
-  } else if (S.engineOn && S.rpm > ENG.max * 0.945) {
-    cluster.style.transform = `translate(${(Math.random() - 0.5) * 1.2}px, 0)`;
+  const yaw = S.yaw || 0;
+  const rot = clamp(yaw * 0.10, -7, 7);
+  let jx = 0, jy = 0;
+  if (over) { jx = (Math.random() - 0.5) * 3; jy = (Math.random() - 0.5) * 2.5; }
+  else if (S.engineOn && S.rpm > ENG.max * 0.945) { jx = (Math.random() - 0.5) * 1.2; }
+  if (S.judder > 0.05) {
+    const a = S.judder * 2.6;
+    jx += (Math.random() - 0.5) * a; jy += (Math.random() - 0.5) * a * 1.4;
+  }
+  if (S.spinOut) { jx += (Math.random() - 0.5) * 4; jy += (Math.random() - 0.5) * 3; }
+  if (jx || jy || rot) {
+    cluster.style.transform = `translate(${jx.toFixed(2)}px, ${jy.toFixed(2)}px) rotate(${rot.toFixed(2)}deg)`;
   } else if (cluster.style.transform) {
     cluster.style.transform = "";
   }
+}
+
+/* the slide strip. It appears when the car starts to rotate and goes away
+   again when it stops, because an indicator that is always on the dash stops
+   being read after ten minutes. */
+function slideUi() {
+  const strip = $("slideStrip");
+  const yaw = S.yaw || 0;
+  const live = Math.abs(yaw) > 0.8 || S.spinOut;
+  strip.classList.toggle("show", live);
+  if (!live) { strip.classList.remove("gone"); return; }
+  strip.classList.toggle("gone", !!S.spinOut || Math.abs(yaw) > 38);
+  // the glyph is the car; the line under it is where the car is going. The
+  // angle between them is the entire readout.
+  $("slideCar").style.transform = `rotate(${(-yaw).toFixed(1)}deg)`;
+  $("slideDeg").textContent = Math.round(Math.abs(yaw)) + "\u00b0";
+  $("slideLbl").textContent = S.spinOut ? "GONE"
+    : Math.abs(yaw) > 38 ? "OUT OF LOCK"
+    : Math.abs(yaw) > 14 ? "OPPOSITE LOCK" : "SLIP ANGLE";
 }
 
 /* ================================================================

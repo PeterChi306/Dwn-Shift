@@ -318,6 +318,55 @@ kbd {
 .lamp.lamp-ev.lit { color: #34e2c4; }
 .lamp.lamp-ev.lit i { background: #34e2c4; box-shadow: 0 0 8px #34e2c4; }
 
+/* ---- SLIDE STRIP ----
+   Hidden entirely until a rear-drive car with the traction control off has
+   actually started to rotate. A gauge that reads zero forever is furniture,
+   and the whole point of this one is that it is not normally there. */
+.slide-strip {
+  display: none;
+  align-items: center; gap: 14px;
+  padding: 7px 12px; margin-top: 2px;
+  border: 1px solid var(--edge); border-radius: 10px;
+  background: var(--panel-lo);
+  color: var(--lamp-warn);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.slide-strip.show { display: flex; }
+.slide-strip.gone {
+  border-color: var(--lamp-warn);
+  background: color-mix(in srgb, var(--lamp-warn) 12%, var(--panel-lo));
+  animation: lampblink 0.42s steps(2, start) infinite;
+}
+.slide-track {
+  position: relative; flex: 1; height: 26px;
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(90deg,
+      var(--edge) 0 1px, transparent 1px 22px);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+/* the direction the car is actually travelling — which is the point: the
+   glyph rotates, this does not */
+.slide-mid {
+  position: absolute; left: 0; right: 0; top: 50%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--tick-dim) 18%, var(--tick-dim) 82%, transparent);
+  opacity: 0.55;
+}
+.slide-car {
+  position: relative; z-index: 1;
+  color: var(--accent);
+  transform-origin: 50% 50%;
+  will-change: transform;
+  transition: color 0.2s ease;
+}
+.slide-strip.gone .slide-car { color: var(--lamp-warn); }
+.slide-read { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
+.slide-read span { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.slide-read small {
+  font-size: 8.5px; letter-spacing: 0.14em; color: var(--muted); font-weight: 600;
+}
+
 /* gauges */
 .gauges {
   display: flex; align-items: flex-end; justify-content: center;

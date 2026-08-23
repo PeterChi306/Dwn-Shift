@@ -94,6 +94,7 @@
         <div class="lamp" id="lampStall"><i></i>STALL</div>
         <div class="lamp" id="lampRev"><i></i>OVER-REV</div>
         <div class="lamp" id="lampGrip"><i></i>GRIP</div>
+        <div class="lamp" id="lampTc"><i></i>TC OFF</div>
         <div class="lamp" id="lampShift"><i></i>SHIFT</div>
         <div class="lamp" id="lampCel"><i></i>CHECK ENG</div>
         <div class="lamp lamp-ev" id="lampEv"><i></i>eDRIVE</div>
@@ -107,6 +108,21 @@
         <div class="dmg-bar" id="dmgBrakes"><span>BRAKES</span><i></i></div>
         <div class="dmg-bar dmg-level" id="dmgFuel"><span>FUEL</span><i></i></div>
         <div class="dmg-bar dmg-level" id="dmgCharge"><span>CHARGE</span><i></i></div>
+      </div>
+
+      <!-- SLIDE — only ever visible on a rear-drive car with nothing watching -->
+      <div class="slide-strip" id="slideStrip" aria-hidden="true">
+        <div class="slide-track" id="slideTrack">
+          <i class="slide-mid"></i>
+          <svg class="slide-car" id="slideCar" viewBox="0 0 40 22" width="40" height="22">
+            <path d="M6 11 L13 5 L30 5 L36 9 L36 13 L30 17 L13 17 Z" fill="currentColor" opacity="0.9"/>
+            <path d="M36 11 L46 11" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+          </svg>
+        </div>
+        <div class="slide-read">
+          <span class="mono" id="slideDeg">0°</span>
+          <small class="mono" id="slideLbl">SLIP ANGLE</small>
+        </div>
       </div>
 
       <div class="gauges">
@@ -582,17 +598,29 @@
       <section class="bay-stn">
         <h3 class="stn-head"><i class="stn-no">06</i>SHIFTER<em>The sound of every gear change.</em></h3>
         <div class="ws-amb" id="wsShift">
-          <button class="ws-card" data-shift="stock">
-            <span class="ws-card-name">STOCK LEVER</span>
-            <span class="ws-card-desc">The factory shifter — a soft, rubber-bushed thunk.</span>
+          <button class="ws-card" data-shift="factory">
+            <span class="ws-card-name">AS DELIVERED</span>
+            <span class="ws-card-desc">Whatever this car came with. A Zonda came with an open gate and a Carrera GT came with a beech ball, and neither of those is a matter of taste.</span>
           </button>
-          <button class="ws-card" data-shift="click">
+          <button class="ws-card" data-shift="rubber">
+            <span class="ws-card-name">RUBBER BUSHED</span>
+            <span class="ws-card-desc">The factory lever on every ordinary car: a steel rod in rubber, under a leather boot. Rubber is a damper — it eats the transient and kills the ring, and all that reaches you is the low thud. The reason a normal car goes &ldquo;thunk&rdquo; and nothing else.</span>
+          </button>
+          <button class="ws-card" data-shift="short">
             <span class="ws-card-name">SHORT SHIFTER</span>
-            <span class="ws-card-desc">Tight mechanical detent — a crisp, tactile k-chk into every gear.</span>
+            <span class="ws-card-desc">The same lever with the rubber replaced by solid alloy. Same impact, nothing absorbing it — the transient survives, the pitch climbs, and you get the notchy k-chk people fit them for.</span>
           </button>
-          <button class="ws-card" data-shift="metal">
+          <button class="ws-card" data-shift="wood">
+            <span class="ws-card-name">WOODEN BALL</span>
+            <span class="ws-card-desc">Beech laminate, mahogany, walnut. Not what it looks like: wood across the grain is a superb damper, so it is a dense, dry, woody knock with real body and almost no ring at all. Unmistakable once you have heard it.</span>
+          </button>
+          <button class="ws-card" data-shift="gate">
             <span class="ws-card-name">OPEN GATE</span>
-            <span class="ws-card-desc">Exposed metal gate — the ball knob snicks home and the plate rings.</span>
+            <span class="ws-card-desc">A polished steel ball through a milled alloy plate with nothing over it. The plate is a bell: every finger it crosses is a click, and every gear rings and hangs in the cabin.</span>
+          </button>
+          <button class="ws-card" data-shift="carbon">
+            <span class="ws-card-name">CARBON &amp; TITANIUM</span>
+            <span class="ws-card-desc">It weighs nothing, so there is no body to it — just a fast bright tick and a short glassy ring over silence. Fastest thing here to move and the least satisfying to hold.</span>
           </button>
         </div>
       </section>
@@ -626,8 +654,16 @@
           <span class="ws-card-desc">ECU flash: +25% power, +400 rpm redline, needle buried past the paint.</span>
         </button>
         <button class="ws-card ws-tune" id="wsAids">
-          <span class="ws-card-name">DRIVER AIDS — ON</span>
-          <span class="ws-card-desc">ABS + traction control. Switch off for wheelspin, flaring revs and brake lockups.</span>
+          <span class="ws-card-name">ABS — ON</span>
+          <span class="ws-card-desc">Anti-lock brakes, and only that. Switch it off and a hard stop locks the wheels: the car stops worse, not better, and the tyres tell you so.</span>
+        </button>
+        <button class="ws-card ws-tune" id="wsTc">
+          <span class="ws-card-name">TRACTION CONTROL — ON</span>
+          <span class="ws-card-desc" id="wsTcDesc">A different box doing a different job. It holds the driven tyres at the peak of their grip curve — which is the side of the peak where a car is stable. Switch it off on a rear-drive car and it isn&rsquo;t: past the peak the tyre pushes back <em>less</em> the further the back end goes, and the only thing left holding the car straight is you and the throttle.</span>
+        </button>
+        <button class="ws-card ws-tune" id="wsClutchAid">
+          <span class="ws-card-name">CLUTCH ASSIST — ON</span>
+          <span class="ws-card-desc">A keyboard has one clutch position and a left foot has a hundred, so by default there is a driver&rsquo;s foot in here doing the difference: fast through the dead travel, then holding the bite the engine can actually support until the wheels catch up. Switch it off and that foot is yours — which on a car with a centimetre of pedal to work in is the whole game.</span>
         </button>
         <button class="ws-card ws-tune" id="wsGrip">
           <span class="ws-card-name">GRIP — OFF</span>

@@ -218,3 +218,142 @@ forecourt. Drive off mid-fill and the nozzle comes out.
 With consequences **off**, nothing consumes anything — including the electric
 car, which simply has no battery gauge at all until you switch consequences
 on. A meter that reads 100% forever isn't a meter.
+
+## The gearbox
+
+A manual gearbox in a driving game is normally a switch with a permission on
+it: hold the clutch, press the key, you are in the gear. That is not a
+gearbox, that is a menu with a foot pedal.
+
+Here is the machine instead. Between the engine and the road there is an
+input shaft carrying the gears. The clutch decides whether that shaft is
+bolted to the engine or free. The lever decides which gear is locked to the
+output. And the one thing that has to be true before any gear will go in is
+that **both sides are turning at the same speed** — which is the
+synchroniser's entire job, and it takes time to do it.
+
+Three things fall out of that, and all three are things drivers know in their
+hands:
+
+- **A shift takes as long as the shift is big.** 3rd to 4th at a steady speed
+  drops straight in. 6th to 2nd is an enormous speed change, and the lever
+  *hangs at the gate* for a beat while the cone does its work. That hesitation
+  is not lag. It is the gearbox, and it is most of what a manual feels like.
+- **The clutch is not a permission, it is a disconnection.** Fully in, the
+  shaft is free and light and there is almost nothing to move. Half in, the
+  shaft is still dragging on a spinning engine — so a brass cone the size of a
+  bottle cap is now being asked to change the speed of a V10. It can't. It
+  locks out, and you get the noise.
+- **…which is why you can shift without the clutch at all.** Match the engine
+  to the gear with your right foot and there is no speed difference left to
+  kill. The lever slides through like there is nothing in the box.
+
+So rev-matching earns something real. Blip on the way down and the mismatch
+collapses, the hang disappears, and the change is instant and silent. Don't,
+and it is slow, and the car shunts when the clutch comes up. **Double-declutch
+and it works for the reason it works in a lorry** — blip in neutral with your
+foot *off* the clutch and you spin the input shaft up yourself, so the synchro
+has nothing left to do.
+
+Reverse has a guard on it, because every six-speed ever built does.
+
+### What a shift sounds like
+
+The lever has a voice and the gearbox has a voice and they are not the same
+object. The gearbox tells you how the shift went, and the grading is not
+arbitrary — a matched change is a small oily **snick** because almost no
+energy changed hands, and an unmatched one is a **clack** and a driveline
+shunt because a great deal of it did.
+
+The lever, meanwhile, is talking the whole time it moves: the detent ball
+popping out of its notch, the boot dragging, the bump as you cross the sprung
+centre plane, the stop at the end of the gate, the ball dropping into the
+slot, the seat home, the spring throwing it back to the middle — and the
+linkage chattering under your palm at idle, which stops the instant you press
+the clutch.
+
+And what it is **made of** changes all eight more than what it is *doing*
+does, because every one of them is an impact and an impact is a spectrum.
+Rubber bushings are a damper: they eat the transient, kill the ring, and pass
+only the low thud, which is why a normal car goes "thunk" and nothing else. A
+short shifter swaps that rubber for solid alloy — same impact, nothing
+absorbing it, so the pitch climbs and you get the notchy k-chk people fit them
+for. An open gate is a steel ball in a milled alloy plate, and the plate is a
+bell. A **wooden ball** is the interesting one and the opposite of what a
+posh-looking knob suggests: wood across the grain is a superb damper, so it is
+a dense, dry knock with real body and no ring at all. Carbon and titanium
+weigh nothing, so there is no body — a bright tick over silence.
+
+Workshop → **SHIFTER FEEL**, and the default is whatever the car actually came
+with, because a Zonda's open gate and a Carrera GT's beech ball are facts
+about those cars rather than matters of taste.
+
+## Traction control is its own switch now
+
+ABS is a brake system, traction control is an engine system, and they were
+sharing one toggle. They don't any more — and a car is allowed to say it never
+had one at all.
+
+**Rear-wheel drive with the traction control off does not fail by spinning its
+wheels. It fails by rotating.** And that falls out of the tyre curve that was
+already in here rather than being bolted on beside it:
+
+> A tyre's grip rises with slip to a peak and falls away past it. *Below* the
+> peak the slope is positive, so any disturbance is self-correcting — push the
+> back end sideways and the tyre pushes back harder. *Past* the peak the slope
+> is **negative**. Push the back end sideways now and the tyre pushes back
+> **less**. The car has stopped being a spring and become an amplifier, and
+> the only thing left holding it straight is a person.
+
+Which explains the rest of it:
+
+- **It needs speed.** Past the peak at walking pace you get a burnout. At a
+  hundred you get an incident, at the same slip ratio.
+- **The throttle is the steering.** How far past the peak you are is your
+  right foot. Lifting is not giving up, it is the correction.
+- **But not all at once.** Lift hard at a big angle and the rear finds grip
+  while the car is still rotating, and all that stored yaw has to go
+  somewhere. It goes the other way, faster, with the opposite lock still wound
+  in. The second slide is always worse than the first.
+- **Opposite lock runs out.** The hands are quick but not instant, and there
+  is a physical stop past about forty degrees.
+- **And it costs you.** A car pointing five degrees off its direction of
+  travel is scrubbing, not accelerating — the speedo stops climbing while the
+  tacho screams, which is the difference between a fast lap and a loud one.
+
+A slip-angle strip appears in the cluster when the back starts to move and
+goes away again when it stops, because a gauge that reads zero forever stops
+being read. The cluster rotates with the car, because you are strapped to it.
+
+## The one with no traction control at all
+
+The **Zuffenhausen GT**. A 5.7-litre 68° V10 designed for a Le Mans prototype,
+a six-speed manual, rear-wheel drive, and — not switchable, not disabled —
+**absent**: the car has anti-lock brakes and it has you, and that is the whole
+electronic safety net. Every story ever told about it starts there, so it is
+the one car in the garage that arrives with the workshop's infinite-grip cheat
+switched *off*. It is still a switch, and it is still yours.
+
+The clutch is the other half of the reputation. A 169mm ceramic twin-plate
+weighs almost nothing, which is why the engine revs like a switch — and it
+takes up over about a centimetre of pedal travel. Same event as any other
+clutch, compressed into a tenth of the window. It is not that the clutch is
+vicious; it is that the band you have to work in is the width of your
+shoelace, and a ceramic disc cannot smear its way through a bad launch the way
+an organic one does. It grabs and lets go and grabs, fifteen times a second,
+and the whole car shakes.
+
+Which is why **CLUTCH ASSIST** (workshop → ECU & SETUP) exists and can be
+switched off. A keyboard has one clutch position and a left foot has a
+hundred, so by default there is a driver's foot in here doing the difference:
+fast through the dead travel, then holding the bite the engine can actually
+support until the wheels catch up. Switch it off and that foot is yours. On an
+ordinary car that is fine. On this one it is the whole game.
+
+The voice is a Formula One engine that had to be widened to fit a car with
+luggage in it, and it sounds like that compromise: dry, hard and hollow rather
+than brassy or round, with an enormous amount of induction in it and almost no
+bass. The odd orders carry it — third and fifth are loud all the way up while
+the evens stay back, and that gap is the hollow. The 68° vee with split pins
+is *nearly* even-firing, and the beat that is left over is why the idle wobbles
+and why the midrange rips instead of humming.
