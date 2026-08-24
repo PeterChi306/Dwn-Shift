@@ -2057,7 +2057,14 @@ function applyCar(c) {
   // internal friction scales with engine size — a 49cc single doesn't fight
   // the same 16Nm of pumping losses a 6.5L V12 does
   ENG.fric = clamp(Math.max(...c.curve.map(p => p[1])) / 150, 0.12, 1);
-  ENG.stall = Math.round(c.idle * 0.6);
+  /* Where an engine actually dies, which is not a fraction of its idle speed.
+     A big lazy V12 idling at 800 and a 49cc single idling at 1700 both give
+     up somewhere around three to four hundred rpm, because what kills an
+     engine is the crank no longer carrying enough energy through the next
+     compression stroke — and that is a property of the engine turning, not of
+     where its idle happens to be set. Scaling off idle made the high-idling
+     cars die at speeds they should have pulled through easily. */
+  ENG.stall = Math.round(clamp(c.idle * 0.42, 240, 520));
   // rev speed: lighter effective flywheel = the revs climb faster. Combines the
   // car's built-in rev character with the workshop's rev-speed slider.
   const revScale = (c.revRate || 1) * (m.rev || 1);
@@ -2298,7 +2305,7 @@ const S = {
   lastShift: 0,        // seconds since the last gear went in
   /* --- the rear axle letting go. See THE SLIDE. --- */
   yaw: 0, yawV: 0, lock: 0, spinOut: 0, loose: 0, looseV: 0, scrub: 0,
-  slipSigned: 0, syncMiss: 0, tcSettle: 1,
+  slipSigned: 0, syncMiss: 0, tcSettle: 1, lugT: 0,
   limCut: false, limT: 0, limDip: 0,
   traffic: false, rain: false, passT: 2, splashT: 2, wiperT: 0.7, wiperDir: 1,
   night: false, cricketT: 2, lampT: 1.5,
@@ -4916,15 +4923,35 @@ const LEVER_MATS = {
        So: the sharpest transient in here, a second one right behind it
        (`echo`), a bright spring ring off the exposed rods, and a solid knock
        so it lands in the car rather than on top of it. */
+    /* The character to aim at is MECHANICAL, not metallic, and those are not
+       the same thing — which is what the first pass at this got wrong. A
+       bright high transient with long ringing partials is a bell, or a
+       spanner dropped on a floor. This is neither. It is a heavy short lever
+       working a heavy shift rod through rose joints, and the thing your hand
+       and ear both report is MASS: the sound is low, it is dense, it is over
+       almost immediately, and there is far more of it below 400Hz than above
+       2kHz.
+
+       So the transient sits down in the mid-hundreds and is broad rather than
+       tight (a big blunt impact excites everything, a small hard one excites
+       a narrow band), the ring partials are low, quiet and short — present
+       enough to say "metal", nowhere near long enough to say "bell" — and the
+       body underneath is the loudest thing in the whole event, because the
+       body IS the event. What you keep from the first version is the only
+       part that was right: two impacts, twenty milliseconds apart. */
     label: "exposed machined linkage",
-    tick: { hz: 3400, q: 2.8, rate: 2.3, amp: 0.52, dec: 0.026 },
-    // the detent arriving under the linkage — the half nobody models
-    echo: { at: 0.022, hz: 1500, q: 1.5, rate: 1.35, amp: 0.46, dec: 0.05 },
-    rings: [[2650, 0.085, 0.13], [4150, 0.05, 0.09], [5900, 0.022, 0.05]],
-    body: { hz: 165, to: 62, amp: 0.42, dec: 0.095 },
-    // rose joints and bare rods: a dry precise tick as it moves, no boot
-    scrape: { hz: 1900, q: 2.2, amp: 0.7, rate: 1.6 },
-    bright: 1.2,
+    tick: { hz: 620, q: 0.85, rate: 0.95, amp: 0.62, dec: 0.032 },
+    // the detent arriving under the linkage — the half nobody models, and it
+    // lands LOWER than the take-up, because it is the heavier of the two
+    echo: { at: 0.021, hz: 380, q: 0.9, rate: 0.75, amp: 0.58, dec: 0.055 },
+    // just enough metal to know what it is made of, and no more
+    rings: [[1180, 0.05, 0.045], [1870, 0.022, 0.03]],
+    // the mass of the mechanism arriving through the tunnel — the loudest
+    // component, and deliberately so
+    body: { hz: 118, to: 44, amp: 0.9, dec: 0.15 },
+    // rose joints and bare rods: a dry low-mid working sound, no boot over it
+    scrape: { hz: 780, q: 1.3, amp: 0.75, rate: 0.85 },
+    bright: 0.8,
   },
   short: {
     label: "solid-bushed short shifter",
@@ -4971,7 +4998,7 @@ const LEVER_MATS = {
    tilts the transient up or down — a detent ball popping is a small bright
    event, a lever hitting the end of its travel is a big dull one. */
 const LEVER_EVENTS = {
-  out:    { amp: 0.5,  hi: 0.9,  ring: 0.35, body: 0.7 },   // out of the notch
+  out:    { amp: 0.5,  hi: 0.95, ring: 0.35, body: 0.7 },   // out of the notch
   detent: { amp: 0.42, hi: 1.25, ring: 0.5,  body: 0.35 },  // over the centre plane
   wall:   { amp: 0.8,  hi: 0.6,  ring: 0.15, body: 1.15 },  // the end of the gate
   mouth:  { amp: 0.34, hi: 1.1,  ring: 0.3,  body: 0.3 },   // into the slot
@@ -8631,6 +8658,11 @@ function clutchJudder(dt, biteSlip, eNow) {
     const load = clamp(Math.abs(S.v) < 8 ? 1 : 8 / Math.abs(S.v), 0, 1);
     want = clamp(low * load * j * (1 - Math.abs(eNow - 0.5) * 1.2), 0, 1);
   }
+  /* …and an engine on the point of dying shakes the car the same way, for the
+     same reason: the firing has gone uneven and the driveline is picking up
+     every one of them. It is the warning you get before the stall, and it is
+     the reason a real driver never actually stalls twice in a row. */
+  if (S.lugT > 0.02) want = Math.max(want, clamp(S.lugT * 2.2, 0, 1) * 0.85);
   S.judder += (want - S.judder) * Math.min(1, dt * (want > S.judder ? 14 : 6));
   if (S.judder < 0.05) { S._judT = 0; return; }
   // one thump per cycle, and the cycle tightens as the plates close up
@@ -8992,25 +9024,40 @@ function stepPhysics(dt) {
        the mounts load and release, and the needle wobbles against the stop
        while the whole car surges. That is `limDip`: the same cycle, with the
        driveline's compliance deciding how much of it reaches the tacho. */
-    const band = Math.max(120, (ENG.cut - ENG.idle) * 0.028);
+    /* How wide the hysteresis band is decides both how far the needle falls
+       and how fast the cycle runs, and it is the one number that makes this
+       read as a limiter rather than as a rough patch. Too narrow and the
+       engine chatters at a frequency nothing can follow — not the needle, not
+       your ear, not the car; you get a buzz. Real ECUs use a couple of
+       hundred rpm and cycle somewhere around five to ten times a second,
+       which is slow enough that you see every one of them. */
+    const band = Math.max(220, (ENG.cut - ENG.idle) * 0.05);
     const lim = S.parkLimit || ENG.cut;
     if (!S.limCut) {
-      /* Cut on where the revs are ABOUT to be, not where they are. A real ECU
-         sees crank position every few degrees; this sees it every 16ms, and
-         on a light flywheel — 0.095 for the Carrera GT, less than half of
-         anything else here — the revs can move several hundred between one
-         frame and the next. Waiting for the number to be crossed means always
-         cutting several hundred rpm late, which reads as a limiter that
-         overshoots wildly rather than one that is sharp. One frame of
-         look-ahead costs nothing and puts the cut where the hardware would. */
-      const rise = Math.max(0, S._rpmRate || 0);
-      if (S.rpm + rise * 1.6 > lim) { S.limCut = true; S.limT = 0; }
+      /* Cut on the number, and only on the number.
+
+         There was a frame of look-ahead here, added when a single Euler step
+         on a light flywheel could jump the ceiling by most of a thousand rpm.
+         Substepping the free-revving branch fixed that properly, and once it
+         did, the look-ahead became actively harmful: it scales with how fast
+         the crank is climbing, so on the way up to the limiter it was pulling
+         the fuel eight hundred rpm early and the engine bounced against a
+         ceiling well below its own redline. The car never reached the number
+         painted on its tacho. A limiter that triggers early is not a safer
+         limiter, it is a smaller engine. */
+      if (S.rpm > lim) { S.limCut = true; S.limT = 0; }
     } else {
       S.limT += dt;
       // it lights again once the revs have fallen through the hysteresis
       // band — or, in gear where they physically cannot, once the ECU's
       // minimum cut has elapsed and it tries again
-      if (S.rpm < lim - band || S.limT > 0.085) { S.limCut = false; S.limT = 0; }
+      /* It relights when the revs have fallen through the band — but never
+         sooner than the ECU's own minimum cut, because a limiter that could
+         re-fuel on the next frame would chatter instead of bounce. That floor
+         is what sets the bottom of the cycle rate. */
+      if ((S.rpm < lim - band && S.limT > 0.045) || S.limT > 0.1) {
+        S.limCut = false; S.limT = 0;
+      }
     }
     if (S.limCut) S.cutTimer = Math.max(S.cutTimer, 0.02);
 
@@ -9025,10 +9072,10 @@ function stepPhysics(dt) {
        mounts load and release, and the needle wobbles against the stop while
        the car surges. That compliance is the only thing this adds, and it is
        only added where the rigid-driveline assumption is what removed it. */
-    const wantDip = S.limCut && S.locked ? band * 0.3 : 0;
+    const wantDip = S.limCut && S.locked ? band * 0.62 : 0;
     S.limDip += (wantDip - S.limDip) * Math.min(1, dt * (S.limCut ? 34 : 22));
   }
-  if (S.rpm <= (S.parkLimit || ENG.cut) - Math.max(120, (ENG.cut - ENG.idle) * 0.028) * 1.6) {
+  if (S.rpm <= (S.parkLimit || ENG.cut) - Math.max(220, (ENG.cut - ENG.idle) * 0.05) * 1.8) {
     S.limCut = false; S.limDip += (0 - S.limDip) * Math.min(1, dt * 22);
   }
 
@@ -9040,11 +9087,30 @@ function stepPhysics(dt) {
   if (S.engineOn && !CC.ev)
     gov = clamp((ENG.idle + 60 - S.rpm) / 380, 0,
                 0.4 + 0.5 * clamp((ENG.idle * 0.9 - S.rpm) / (ENG.idle * 0.4), 0, 1));
-  // launch assist: while the clutch is biting, feather in throttle the way a
-  // real driver holds the revs against the load — gentle launches don't stall
+  /* ---- ANTI-STALL ----
+     This used to bail out the moment the clutch locked (`!S.locked`), which
+     is exactly backwards: while the plates are still slipping the engine can
+     always run away from the load, and the one situation where it genuinely
+     cannot is when the clutch has locked and the road is holding the crank
+     down. That is crawling in first at walking pace — 5km/h in this car's
+     first gear is about five hundred rpm at the crank — and it was the case
+     with no help at all, so the engine sat below its stall speed and died
+     unless you were flat on the throttle. Which is the opposite of how a car
+     behaves: pulling away gently is the EASY way to do it.
+
+     So the assist covers the lugging case too, and covers it hardest, because
+     that is where a real driver's foot is doing the most work.
+
+     It is bounded tightly, though, and that bound matters as much as the
+     help does: it only has anything to say BELOW about a quarter over idle.
+     An anti-stall that reaches up to half again over idle would be quietly
+     feeding in a third of a throttle every time you coasted down a gear at
+     low revs, and the car would creep away from you on a trailing throttle —
+     which is a worse bug than the one being fixed. Near stall it has almost
+     full authority; a few hundred rpm up it has none. */
   if (S.mode === "clutch" && S.engineOn && !S.cranking && !CC.ev &&
-      S.gear !== 0 && S.engage > 0.03 && !S.locked)
-    gov = Math.max(gov, clamp((ENG.idle * 1.45 - S.rpm) / (ENG.idle * 0.6), 0, 0.85));
+      S.gear !== 0 && S.engage > 0.03 && S.rpm < ENG.idle * 1.25)
+    gov = Math.max(gov, clamp((ENG.idle * 1.25 - S.rpm) / (ENG.idle * 0.5), 0, 0.9));
   let eff = Math.max(S.throttle, gov);
   // downshift rev-match: blip just hard enough to catch the new gear's synced
   // rpm, easing off as it arrives — a real heel-toe stab, not a pinned throttle
@@ -9337,8 +9403,16 @@ function stepPhysics(dt) {
       const ceilNow = S.parkLimit || ENG.cut;
       // the drag that is left when the fuelling goes away mid-substep
       const coast = -(20 + S.rpm * 0.02) * (ENG.fric || 1);
+      // the substeps have to honour the SAME hysteresis the frame-level
+      // limiter does. Cutting on the bare ceiling in here re-fuels the
+      // instant the crank dips a single rpm below it, and the bounce the
+      // hysteresis was there to create collapses back into a buzz.
+      const subBand = Math.max(220, (ENG.cut - ENG.idle) * 0.05);
+      let subCut = S.limCut;
       for (let i = 0; i < n; i++) {
-        const cut = S.engineOn && !S.softLim && !CC.ev && S.rpm > ceilNow;
+        if (subCut) { if (S.rpm < ceilNow - subBand) subCut = false; }
+        else if (S.rpm > ceilNow) subCut = true;
+        const cut = S.engineOn && !S.softLim && !CC.ev && subCut;
         const T = cut ? coast : Te;
         S.rpm += (T / ENG.inertia) * omegaToRpm * sdt;
         if (S.rpm < 0) { S.rpm = 0; break; }
@@ -9655,10 +9729,27 @@ function stepPhysics(dt) {
   S.catchGuard = Math.max(0, (S.catchGuard || 0) - dt);
   if (S.catchGuard > 0 && S.catchPeak) S.rpm = Math.min(S.rpm, S.catchPeak);
 
-  // stalling — only the full-clutch mode can stall
-  if (S.engineOn && !S.cranking && S.mode === "clutch" && !CC.ev &&
-      S.gear !== 0 && engage > 0.45 && S.rpm < ENG.stall) {
-    stallEngine();
+  /* ---- STALLING ----
+     Only the full-clutch mode can stall, and even there an engine does not
+     die the instant the needle dips. It LUGS: the firing gets uneven, the
+     whole car shudders in time with it, and you get most of a second to do
+     something about it — lift the clutch, give it some throttle, or not. That
+     window is the difference between a car that is demanding and a car that
+     is a trap, and it is also just what happens. A crank with a flywheel on
+     it does not stop because it went below a number once.
+
+     The heavier the flywheel the longer it hangs on, which is why an old
+     iron-blocked V12 is almost impossible to stall and a race engine with
+     nothing to store energy in dies if you look at it wrongly. */
+  const lugging = S.engineOn && !S.cranking && S.mode === "clutch" && !CC.ev &&
+                  S.gear !== 0 && engage > 0.45 && S.rpm < ENG.stall;
+  if (lugging) {
+    // flywheel inertia buys time: 0.09 (a race V10) ≈ 0.3s, 0.42 (7.3 V12) ≈ 0.9s
+    const hangOn = clamp(0.26 + ENG.inertia * 1.6, 0.26, 0.95);
+    S.lugT = (S.lugT || 0) + dt;
+    if (S.lugT > hangOn) stallEngine();
+  } else if (S.lugT) {
+    S.lugT = Math.max(0, S.lugT - dt * 2.2);   // recovered — but not instantly forgiven
   }
   // …and if the revs collapse entirely (a lost cause even with the clutch
   // caught), it dies too — no zombie idle at zero rpm
@@ -11774,7 +11865,7 @@ function selectCar(id) {
   armCel();
   S.gear = 0; S.autoSel = "P"; S.autoGear = 1;
   S.shiftCut = 0; S.shiftCool = 0; S.cutTimer = 0; S.blip = 0; S.catchT = 0; S.sweep = -1;
-  S.limCut = false; S.limT = 0; S.limDip = 0;
+  S.limCut = false; S.limT = 0; S.limDip = 0; S.lugT = 0;
   S.pendShift = false;
   resetTraction();
   S.inShaft = 0; S.syncTo = null; S.syncT = 0; S.syncGrind = 0; S.baulk = 0; S.judder = 0;
@@ -14060,7 +14151,20 @@ function frame(now) {
       spdTarget = Math.max(spdTarget, s * (S.units === "kmh" ? CC.kmhMax : CC.mphMax));
     }
   }
-  const N = S.needle, stiff = 180, damp = 15;
+  /* A needle spring tuned for a car accelerating is a 2Hz lowpass, and a
+     limiter cycling at eight is fifteen times faster than that — so all of it
+     was being filtered away and the needle sat on the redline looking painted
+     on. A real tacho does not do that. It hammers, visibly, and the blur is
+     one of the things that tells you where you are without reading anything.
+
+     So while the limiter is actually working the needle is stiffened up to
+     where it can track the cycle. It is not a cheat: this is the same needle
+     being driven by the same rpm, with the mechanism's bandwidth set to
+     something a real instrument has. Everywhere else it keeps the softer
+     spring and the slight overshoot that makes it feel like an object. */
+  const N = S.needle;
+  const hammering = (S.limCut || S.limDip > 0.5) && !S.softLim;
+  const stiff = hammering ? 1500 : 180, damp = hammering ? 42 : 15;
   N.rpmV += (rpmTarget - N.rpm) * stiff * dt; N.rpmV *= Math.exp(-damp * dt); N.rpm += N.rpmV * dt;
   N.spdV += (spdTarget - N.spd) * stiff * dt; N.spdV *= Math.exp(-damp * dt); N.spd += N.spdV * dt;
 

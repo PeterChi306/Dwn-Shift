@@ -286,11 +286,20 @@ And what it is **made of** changes all eight more than what it is *doing*
 does, because every one of them is an impact and an impact is a spectrum.
 An **exposed machined linkage** — billet rods and rose joints with no boot over
 them, every pivot visible from the seat — is the one people know by ear, and
-what makes it that sound is that it is **two impacts, not one**. The linkage
-takes up first, a hard bright snap with nothing damping it, and twenty-odd
-milliseconds later the detent slams into its notch underneath. Close enough
-that the ear hears one event with a texture, far enough that collapsing them
-into a single click leaves you with a mouse button. A short shifter is solid
+two things make it that sound. It is **two impacts, not one**: the linkage
+takes up first and twenty-odd milliseconds later the detent slams into its
+notch underneath, close enough that the ear hears one event with a texture,
+far enough that collapsing them into a single click leaves you with a mouse
+button. And it is **mechanical rather than metallic**, which are not the same
+thing. A bright high transient with long ringing partials is a bell, or a
+spanner dropped on a floor. This is a heavy short lever working a heavy shift
+rod, and what your hand and your ear both report is *mass*: low, dense, over
+almost immediately, with far more of it below 400Hz than above 2kHz. So the
+transient sits down in the mid-hundreds and is broad rather than tight — a big
+blunt impact excites everything, a small hard one excites a narrow band — the
+ring partials are quiet and short, present enough to say metal and nowhere
+near long enough to say bell, and the body underneath is the loudest component
+in the event, because the body *is* the event. A short shifter is solid
 alloy bushings — same impact, nothing absorbing it, so the pitch climbs and
 you get the notchy k-chk people fit them for. An open gate is a steel ball in
 a milled alloy plate, and the plate is a bell. A **wooden ball** is the
@@ -358,6 +367,41 @@ to work in, and the corrections stop overshooting. So it is not a timer
 running out — it is the car arriving somewhere the box can cope with, and it
 comes straight back the moment it doesn't.
 
+## Lugging, and dying
+
+An engine does not stall the instant the needle dips below a number. It
+**lugs**: the firing goes uneven, the whole car shudders in time with it, and
+you get most of a second to do something about it. That window is the
+difference between a car that is demanding and a car that is a trap. How long
+it lasts is the flywheel — an iron-blocked 7.3 V12 hangs on for the better
+part of a second, a race V10 with nothing to store energy in gives you a third
+of that.
+
+Two things were making a gentle pull-away impossible before, and neither of
+them was the driver:
+
+- **The stall speed was a fraction of idle.** But what kills an engine is the
+  crank no longer carrying enough energy through the next compression stroke,
+  and that is a property of the engine turning, not of where its idle happens
+  to be set. A V12 idling at 800 and a 49cc single idling at 1700 both give up
+  somewhere around three or four hundred rpm.
+- **The anti-stall assist switched itself off exactly when it was needed.** It
+  bailed out the moment the clutch locked — which is backwards, because while
+  the plates are still slipping the engine can always run away from the load,
+  and the one case where it genuinely cannot is when the clutch has locked and
+  the road is holding the crank down. That is crawling in first at walking
+  pace, and it was the one case with no help at all.
+
+It is bounded tightly, though. The assist only has anything to say below about
+a quarter over idle — near stall it has almost full authority, a few hundred
+rpm up it has none. An anti-stall that reached higher would quietly feed in a
+third of a throttle every time you coasted down a gear, and the car would
+creep away from you on a trailing throttle, which is a worse bug than the one
+it fixes.
+
+You can still stall it. Try to pull away with your foot off the pedal and it
+will die, as it should.
+
 ## The limiter bounces
 
 A rev limiter is a relaxation oscillator, and it is one because of
@@ -373,6 +417,18 @@ It happens in gear too. There the crank is bolted to the road and cannot
 actually lose two hundred rpm in a twentieth of a second — but nothing between
 it and the road is rigid, so the shafts wind and unwind, the mounts load and
 release, and the needle wobbles against the stop while the car surges.
+
+Two things had to be true before any of that was visible. The free-revving
+case needed **substepping** — a 0.095 flywheel moves nearly a thousand rpm
+between one frame and the next at 60Hz, and a single step that size cannot
+resolve a limiter cycle at all; it jumps from under the ceiling to over it and
+whatever the limiter decided in between never happened. And the **needle** had
+to be allowed to follow: a spring tuned for a car accelerating is a 2Hz
+lowpass, and a limiter cycling at eight is fifteen times faster than that, so
+all of it was being filtered away and the needle sat on the redline looking
+painted on. A real tacho hammers, visibly, and the blur is one of the things
+that tells you where you are without reading anything. So while the limiter is
+working, the needle's bandwidth is what a real instrument has.
 
 Holding a car against the limiter is survivable, incidentally, even with
 consequences on. That is what the limiter is *for*. What is still fatal is the
