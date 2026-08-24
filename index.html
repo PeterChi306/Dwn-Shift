@@ -298,17 +298,29 @@
       <div class="seq-panel" id="seqPanel">
         <!-- the physical lever: only the cars that actually have one get it -->
         <div class="seq-stage" id="seqStage">
-          <div class="seq-gate" id="seqGate">
-            <div class="seq-slot"></div>
-            <span class="seq-mark seq-mark-dn">&minus;</span>
-            <span class="seq-mark seq-mark-up">+</span>
-            <span class="seq-throw seq-throw-dn">push<br>down</span>
-            <span class="seq-throw seq-throw-up">pull<br>up</span>
-            <div class="seq-boot"></div>
-            <div class="seq-lever" id="seqLever">
-              <div class="seq-rod"></div>
-              <div class="seq-collar"></div>
-              <div class="seq-knob"><span id="seqKnobGear">N</span></div>
+          <!-- The whole assembly is one 3D scene: the plate is laid down flat
+               in Z, and the lever stands UP out of it and pivots about its
+               base. That is the difference between a drawing of a lever and
+               a lever — you are looking down at a tunnel, not at a diagram. -->
+          <div class="seq-scene" id="seqScene">
+            <div class="seq-tunnel">
+              <div class="seq-plate">
+                <div class="seq-slot"></div>
+                <span class="seq-mark seq-mark-dn">&minus;</span>
+                <span class="seq-mark seq-mark-up">+</span>
+              </div>
+              <span class="seq-throw seq-throw-dn">push · down</span>
+              <span class="seq-throw seq-throw-up">pull · up</span>
+              <div class="seq-boot"><i></i><i></i><i></i></div>
+              <div class="seq-lever" id="seqLever">
+                <div class="seq-rod"><i class="seq-rod-hi"></i></div>
+                <div class="seq-collar"></div>
+                <div class="seq-knob">
+                  <div class="seq-knob-face"><span id="seqKnobGear">N</span></div>
+                  <div class="seq-knob-shade"></div>
+                </div>
+              </div>
+              <div class="seq-lever-shadow" id="seqLeverShadow"></div>
             </div>
           </div>
         </div>
@@ -747,7 +759,7 @@
           </button>
           <button class="ws-card" data-space="alley">
             <span class="ws-card-name">BACK ALLEY</span>
-            <span class="ws-card-desc">Four metres of brick either side, six storeys up. The repeats are too fast to hear as echo, so the whole alley rings — and above that ring the shaft answers, which is what makes it sound tall as well as narrow.</span>
+            <span class="ws-card-desc">Four metres of brick either side and no lid at all. The repeats are too fast to hear as echo so the whole alley rings — hard, bright, and gone in a third of a second, because whatever goes up never comes back.</span>
           </button>
           <button class="ws-card" data-space="city">
             <span class="ws-card-name">CITY STREET</span>

@@ -1103,35 +1103,55 @@ const CARS = [
     crackle: "hard",               // no catalyst, no silencer, and fuel going in on the overrun
     cyl: 5, idle: 1150, max: 7800, cut: 8000, inertia: 0.19,
     /* 2,110cc, 20 valves, one enormous KKK K27 and about 2.2 bar of it.
-       Audi quoted 470hp at 7,500 and nobody has ever quite believed them.
+       Audi quoted 470hp at 7,500 and 480Nm at 5,500, and nobody has ever
+       quite believed the first number.
 
-       The first cut of this car made about 450 and got to 100km/h in a shade
-       over two seconds, which is quicker than the real one has ever been and
-       quicker than anything else in the garage. The number to build to is
-       3.1s, and the reason the real car takes 3.1 rather than 2.1 is not that
-       it lacks power — it is that there is NOTHING under three and a half
-       thousand rpm, and 1985 rubber will not put 470hp down anyway.
+       THESE ARE BASE NUMBERS, and getting that wrong is what made this car
+       absurd twice. The curve in every turbo car here is the engine OFF
+       boost; `boostMax` is what multiplies it up to the published figures
+       (see the Ängelholm, where 895 × 1.68 lands on its quoted 1500Nm). The
+       first two cuts of this car had the real torque written straight into
+       the curve and then let boostMax nearly double it — 990Nm and 876hp in
+       a 1,090kg car, which is most of a Group C car, and it is exactly why it
+       tore through every ratio and was in sixth before you had finished
+       looking at the tacho.
 
-       So the shape is the point, and the shape is a cliff. 195Nm at 3,000 and
-       465 at 4,200: that step is not a curve, it is the turbo arriving, and
-       everything anyone remembers about this car happens in the second and a
-       half either side of it. */
-    curve: [[0, 40], [1150, 125], [2000, 155], [3000, 195], [3500, 345], [4200, 465],
-            [5000, 498], [5500, 505], [6200, 490], [7000, 455], [7800, 380], [8400, 235]],
-    /* A six with a real spread, and geared for a road rather than a hairpin.
+       So these are worked backwards from the real ones through the boost
+       model instead. 245Nm of base at 5,500 × 1.96 = 480Nm; 228 at 7,500 ×
+       1.96 = 446Nm = 469hp. The delivered curve comes out where Audi says it
+       does, and the shape of it is now the TURBO's shape rather than one
+       drawn by hand on top of the turbo's — which is the other half of the
+       fix, because the old curve had a cliff at 3,500 and the boost model
+       was putting a second cliff on top of it. */
+    curve: [[0, 40], [1150, 120], [2000, 162], [3000, 188], [3500, 224], [4000, 254],
+            [4500, 260], [5000, 248], [5500, 245], [6500, 237], [7500, 228],
+            [7800, 219], [8400, 163]],
+    /* FIVE speeds, because the Sport quattro S1 had five and because six was
+       the other half of what made this car feel wrong.
 
-       The old set was a close-ratio box on a 4.30 final: sixth arrived at
-       196km/h and the whole thing was over at 232, so you spent the entire
-       car changing gear. Rally cars are geared short for STAGES, and the
-       quoted 250km/h top speed is the long gearing, not the stage gearing —
-       this is that. Sixth now starts at 191 and runs to 249, which makes it
-       what a sixth gear is supposed to be: somewhere you arrive, not
-       somewhere you pass through.
+       A geometric six across this spread put second gear on screen for
+       SIX TENTHS OF A SECOND. That is the "it just keeps shifting" problem
+       and it is arithmetic, not feel: constant ratio steps mean constant rpm
+       drops, but the SPEED span of each gear grows with the gear, so the
+       early ones are narrow — and this car has its whole torque curve sitting
+       right where second lives, so it crosses that narrow band faster than
+       you can move your hand. Five gears across the same spread makes every
+       step wider, and there is no sixth to arrive in ten seconds because
+       there is no sixth.
 
-       Geometric, as everything here is, so the rpm drop is the same on every
-       change and the engine always lands back on the good side of the cliff. */
-    ratios: { R: -3.60, 1: 3.35, 2: 2.576, 3: 1.980, 4: 1.523, 5: 1.171, 6: 0.900 },
-    mass: 1090, finalDrive: 4.10, clutchCap: 620, cdA: 0.95, brakeMax: 13500,
+       Measured through the sim's own physics rather than by hand:
+
+         1st  0 → 57 km/h    1.8s
+         2nd    → 91         1.1s
+         3rd    → 135        2.0s
+         4th    → 186        3.5s
+         5th    → 253 flat out
+
+       0-100 in 3.30s against the real car's 3.1, and a top speed of 253
+       against a quoted 250. First is deliberately short — this is a rally
+       car, and a stage start matters more than anything sixth was doing. */
+    ratios: { R: -3.50, 1: 3.90, 2: 2.42, 3: 1.64, 4: 1.19, 5: 0.895 },
+    mass: 1090, finalDrive: 4.15, clutchCap: 620, cdA: 0.95, brakeMax: 13500,
     /* 1.30, down from 1.62. That was a modern-slick number on a car running
        1985 Michelins, and it was letting the thing launch at 1.6g. Four driven
        wheels is what makes a Group B car quick off the line; it is not what
@@ -3950,19 +3970,40 @@ const SPACES = {
      you see it" effect. */
   alley: {
     name: "BACK ALLEY", desc: "Four metres of brick either side, six storeys up. Everything rings and nothing gets away.",
-    widthM: 4.2, heightM: 19, endM: 34, walls: 90, absorb: 0.965, tailS: 1.6, dark: 0.14,
+    /* OPEN TOP, and that is the whole correction.
+
+       The first build of this decayed about 9dB over a second and a half,
+       which is a cathedral, and it sounded like one — a smooth tail with no
+       structure, which is the sound of having a ceiling. An alley does not
+       have a ceiling. Whatever goes up is gone.
+
+       Three numbers do the work now. `openTop` collapses the diffuse bed,
+       because the wash between the reflections is exactly the indoor cue.
+       `spread` adds the geometric loss every return takes just from having
+       travelled another 8.4 metres — much the bigger of the two losses, and
+       it was missing entirely. And `walls` comes down from 90 to 26: in a
+       real alley you can count maybe twenty flutter repeats before it is
+       gone, not ninety.
+
+       What survives is what an alley actually is: a hard, fast, bright
+       FLUTTER that rings for a third of a second and then stops dead. The
+       ring is still there — it is the reason to drive one — it just no
+       longer has a room around it. */
+    openTop: true,
+    widthM: 4.2, heightM: 19, endM: 34, walls: 26, absorb: 0.955, spread: 0.075,
+    tailS: 0.85, dark: 0.14, bed: 0.012,
     // brick keeps its top end, so the vertical comb stays bright and gritty
-    vertAbsorb: 0.86, vertLevel: 0.34, vertScatter: 2.6,
-    far: [[0.198, 0.30, 2600], [0.412, 0.15, 3600]],
-    /* 0.78 rather than the 0.62 it was, and the extra is not a taste change.
-       A ConvolverNode normalizes its impulse by total energy, so ADDING late
-       reflections quietly turns the early ones DOWN — the shaft and the far
-       returns below would otherwise have been paid for out of the wall
-       strikes, which are the part of an alley you actually recognise. The
-       ratio here is measured (the new impulse carries ~1.3× the energy of the
-       old one), so the strikes land exactly where they used to and the new
-       material sits on top rather than instead. Same reasoning for the city. */
-    wet: 0.78, slap: 0.028, fb: 0.44, lp: 7200, lo: 4,
+    vertAbsorb: 0.62, vertLevel: 0.2, vertScatter: 2.6,
+    far: [[0.198, 0.22, 2600], [0.412, 0.09, 3600]],
+    /* Measured, not chosen. A ConvolverNode normalizes its impulse by total
+       energy, so every change to the SHAPE of the impulse silently changes
+       how loud the early reflections come back — cutting the long tail out of
+       this space turns the strikes up, exactly as adding it turned them down.
+       So this is solved rather than tuned: the audible level of the early
+       reflections goes as wet × sqrt(earlyE/totalE), and 0.72 is the number
+       that puts the wall strikes back precisely where they were before any of
+       this started. Same method for the other two. */
+    wet: 0.72, slap: 0.028, fb: 0.44, lp: 7200, lo: 4,
   },
   /* THE CITY STREET, second pass — and this is the one the whole rebuild is
      for, because a street canyon is the space where distance sounds best.
@@ -3984,8 +4025,16 @@ const SPACES = {
      the distance handling in audioTick(). */
   city: {
     name: "CITY STREET", desc: "A canyon of glass and render, twenty metres wide and broken up by every window in it.",
-    widthM: 21, heightM: 26, walls: 26, absorb: 0.9, tailS: 3.2, dark: 0.3, scatter: 3.2,
-    vertAbsorb: 0.7, vertLevel: 0.16, vertScatter: 4,
+    /* A street canyon is open-topped too, and twenty metres wide rather than
+       four — so it loses energy upward far faster than the alley does and its
+       near reflections are gone almost immediately. What it has instead is
+       everything down the road (see `far`), and that is the point of it: the
+       near field dies, the far field answers, and the gap between them is the
+       distance. Fewer wall bounces than the alley, not more. */
+    openTop: true,
+    widthM: 21, heightM: 26, walls: 12, absorb: 0.88, spread: 0.16,
+    tailS: 2.6, dark: 0.3, scatter: 3.2, bed: 0.02,
+    vertAbsorb: 0.55, vertLevel: 0.1, vertScatter: 4,
     /* [when, how loud, how smeared] — the blocks down the street, in order of
        how far away they are. Each one is quieter, later and more smeared than
        the last, and the smear is what stops them reading as slap-back echoes:
@@ -3993,12 +4042,16 @@ const SPACES = {
        balconies and a parked van, and what comes back off it is a cloud. */
     far: [[0.235, 0.34, 3200], [0.405, 0.26, 5200], [0.62, 0.19, 7000],
           [0.88, 0.13, 9000], [1.24, 0.075, 12000]],
-    wet: 0.49, slap: 0.122, fb: 0.3, lp: 3800, lo: 2.5,
+    wet: 0.42, slap: 0.122, fb: 0.3, lp: 3800, lo: 2.5,
   },
   hill: {
     name: "HILLCLIMB", desc: "A flint wall down one side, hay bales and trees down the other. Tight, dark and lopsided.",
-    widthM: 11, walls: 9, absorb: 0.72, tailS: 0.85, dark: 0.5, scatter: 2.2, oneSided: true,
-    wet: 0.34, slap: 0.064, fb: 0.2, lp: 2500, lo: 1,
+    // trees and hay absorb enormously, so this was already the one space that
+    // decayed like an outdoor space. It only needs the spreading term.
+    openTop: true,
+    widthM: 11, walls: 9, absorb: 0.72, spread: 0.11, tailS: 0.7,
+    dark: 0.5, scatter: 2.2, oneSided: true, bed: 0.022,
+    wet: 0.36, slap: 0.064, fb: 0.2, lp: 2500, lo: 1,
   },
 };
 
@@ -4017,12 +4070,31 @@ function makeSpaceIR(ctx, sp) {
   for (let ch = 0; ch < 2; ch++) {
     const d = buf.getChannelData(ch);
     const wob = ch ? 1.037 : 1;
-    // the thin diffuse bed. Far quieter than the tunnel's, because most of
-    // the energy went straight up and never came back.
+    /* --- the diffuse bed, and the single thing that decides whether this
+       sounds like a street or like a room.
+
+       A ROOM HAS A LID. Sound bounces off the ceiling and comes back, over
+       and over, from every direction at once, and the result is a smooth
+       reverberant tail with no structure in it. That tail is the sound of
+       being indoors — it is the only cue that matters, and adding one to an
+       outdoor space is what makes the outdoor space sound indoor.
+
+       An alley has no lid. Energy that goes up is gone: there is nothing
+       above it for a hundred metres, so it never comes back. What is left is
+       the sound bouncing between two walls near-horizontally, and that is a
+       train of DISCRETE reflections, not a wash. Which means the correct
+       amount of diffuse bed out here is *almost none* — enough that it is not
+       uncomfortably dry between the strikes, and no more.
+
+       So `bed` defaults to a third of what it was, and an open-top space sets
+       it lower still. The structure below carries the space; this is only the
+       air between it. */
+    const bedLvl = sp.bed == null ? 0.026 : sp.bed;
+    const bedDec = 3.2 + 4 * (sp.dark || 0) + (sp.openTop ? 6.5 : 0);
     let lp = 0;
     for (let i = 0; i < len; i++) {
       lp += ((Math.random() * 2 - 1) - lp) * (0.4 - 0.3 * (i / len));
-      d[i] = lp * Math.exp(-(i / sr) * (3.2 + 4 * (sp.dark || 0))) * 0.075;
+      d[i] = lp * Math.exp(-(i / sr) * bedDec) * bedLvl;
     }
     // the wall strikes
     let g = 0.85;
@@ -4046,7 +4118,23 @@ function makeSpaceIR(ctx, sp) {
         s += ((Math.random() * 2 - 1) - s) * (0.4 - 0.25 * (sp.dark || 0));
         d[at + j] += sgn * strike * 0.5 * (sp.scatter || 0.5) * s * (1 - j / w);
       }
+      /* Two losses per bounce, not one, and leaving the second one out is
+         what gave the alley a cathedral's decay.
+
+         ABSORPTION is the wall: brick keeps about 96% of what hits it, which
+         is why `absorb` is so close to 1 and why it is right that it is.
+
+         SPREADING is geometry, and it is much the bigger term. The sound has
+         travelled another 8.4 metres by the time it comes back, so it is
+         spread over a bigger wavefront and it is quieter for that reason
+         alone — nothing absorbed it. Over 90 bounces that is the difference
+         between a decay you can hear end and one that just goes on.
+
+         Modelled as 1/(1+n·k) rather than a second exponential, because
+         spreading is a power law and stacking two exponentials would only
+         give a steeper version of the same wrong shape. */
       g *= sp.absorb || 0.9;
+      g /= 1 + n * (sp.spread == null ? 0.055 : sp.spread);
     }
     /* --- the shaft. An alley is a box with no lid, and the missing lid is
        the reason the WIDTH flutter alone reads as a corridor rather than as
@@ -4154,7 +4242,7 @@ function setSpace(id) {
    don't instead: what the space is doing to the sound. */
 const SPACE_NOTES = {
   open: "Only the car, and a hint of room tone so it isn't uncomfortably dry. Everything below is a surface to bounce off.",
-  alley: "The round trip is 25ms — too fast to hear as an echo, so it fuses into a ring instead. Above it the six-storey shaft answers about a tenth of a second later, which is the part that sounds tall. Lift off and the bangs come back at you.",
+  alley: "The round trip is 25ms — too fast to hear as an echo, so it fuses into a ring instead. But there is no lid on it: what goes up is gone, so the ring is over in a third of a second rather than hanging around like a room. Lift off and the bangs come back at you.",
   city: "The slap arrives separately and scattered, and then the rest of the street answers for a second and a half after it. The further away the car is, the more of what you hear is that answer rather than the car — which is exactly why a big engine sounds best from three streets away.",
   hill: "Hard reflection on one ear, soft scatter on the other. Wear headphones for this one — the lopsidedness is the whole effect.",
 };
@@ -12063,18 +12151,28 @@ function seqHighlight() {
    Only the clutched sequentials have something you can put your hand on. */
 function hasSeqLever() { return !!CC.seqClutch; }
 
-/* the lever being thrown, and springing straight back. Up is BACK, which is
-   down the plate — see the note above .seq-gate in the stylesheet. */
+/* The lever being thrown, and springing back past centre before it settles.
+   Up is BACK, which tips the top of the lever toward you — see the note above
+   .seq-scene in the stylesheet for why that is the right way round.
+
+   The class goes on the SCENE as well as the lever, because a throw is not
+   only the lever moving: the marking at that end lights up and the shadow on
+   the plate shortens or lengthens with it. Those two are what stop it reading
+   as a sprite sliding over a background. */
 function seqLeverThrow(dir) {
-  const lv = $("seqLever"), gt = $("seqGate");
-  if (!lv || !hasSeqLever()) return;
+  const lv = $("seqLever"), sc = $("seqScene");
+  if (!lv || !sc || !hasSeqLever()) return;
   const cls = dir > 0 ? "thr-up" : "thr-dn";
-  lv.classList.remove("thr-up", "thr-dn");
-  gt.classList.remove("thr-up", "thr-dn");
+  lv.classList.remove("thr-up", "thr-dn", "balk");
+  sc.classList.remove("thr-up", "thr-dn");
   void lv.offsetWidth;                       // restart the animation
   lv.classList.add(cls);
-  gt.classList.add(cls);
-  setTimeout(() => { lv.classList.remove(cls); gt.classList.remove(cls); }, 270);
+  sc.classList.add(cls);
+  clearTimeout(S._leverT);
+  S._leverT = setTimeout(() => {
+    lv.classList.remove(cls);
+    sc.classList.remove(cls);
+  }, 430);
 }
 
 function seqShift(dir) {
@@ -12119,10 +12217,11 @@ function seqShift(dir) {
     // ring and stops. That short dead movement IS the refusal.
     const lv = $("seqLever");
     if (lv && hasSeqLever()) {
-      lv.classList.remove("balk");
+      lv.classList.remove("balk", "thr-up", "thr-dn");
       void lv.offsetWidth;
       lv.classList.add("balk");
-      setTimeout(() => lv.classList.remove("balk"), 200);
+      clearTimeout(S._leverT);
+      S._leverT = setTimeout(() => lv.classList.remove("balk"), 250);
     }
     return;
   }

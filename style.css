@@ -866,139 +866,250 @@ kbd {
 }
 .seq-cell.on .bar { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
 /* ============ THE SEQUENTIAL LEVER ============
-   The cars that have a physical sequential get a physical sequential, and it
-   is a completely different object from the H-pattern gate next door. A gate
-   is a plate with a maze milled into it and a stick you steer around it. A
-   sequential is ONE SLOT, a very short throw, and a lever that is
+   A gate is a plate with a maze milled into it and a stick you steer around
+   it. A sequential is ONE SLOT, a very short throw, and a lever that is
    spring-centred — it does not stay where you put it. You move it, the drum
    indexes one notch, and the spring puts it back in the middle before your
    hand has left the knob.
 
-   Which way is which matters and is not arbitrary. Racing convention is PULL
-   BACK to go UP and PUSH FORWARD to go DOWN, because under acceleration your
-   body is already going backwards and pulling is the movement you can still
-   make accurately at 1g. The plate is drawn from above, so "back toward the
-   driver" is the BOTTOM of the slot — which is why + is at the bottom here
-   and − is at the top, and why that looks wrong until you think about where
-   the driver is sitting. */
-.seq-stage { display: flex; justify-content: center; }
+   This is built as an actual 3D scene rather than a drawing of one, because
+   the two read completely differently. The transmission tunnel is laid DOWN
+   in Z (rotateX) so you are looking along it the way you would from a seat,
+   and the lever stands UP out of it and pivots about its BASE — which is
+   what a lever does. Nothing here translates; everything rotates around the
+   point the linkage actually turns about.
+
+   Which way is which is not arbitrary. Racing convention is PULL BACK to go
+   UP and PUSH FORWARD to go DOWN, because under acceleration your body is
+   already going backwards and pulling is the movement you can still make
+   accurately at 1g. Back toward the driver is the near end of the tunnel,
+   which is the BOTTOM of the plate — so + sits at the bottom, and that looks
+   wrong until you think about where the driver is sitting. */
+.seq-stage { display: flex; justify-content: center; padding: 2px 0 6px; }
 .seq-stage.hide { display: none; }
 
-.seq-gate {
+.seq-scene {
   position: relative;
-  width: 176px; height: 232px;
-  border-radius: 18px;
-  background:
-    radial-gradient(140% 110% at 50% 0%, rgba(255,255,255,0.045), transparent 55%),
-    linear-gradient(180deg, var(--leather), var(--panel-lo));
-  border: 1px solid var(--edge);
-  box-shadow: inset 0 2px 10px rgba(0,0,0,0.5), inset 0 -1px 0 var(--edge-hi);
+  width: 186px; height: 216px;
+  perspective: 620px;                 /* a seat's distance from the tunnel */
+  perspective-origin: 50% 34%;
   user-select: none; -webkit-user-select: none;
 }
 
-/* the slot itself — milled, not drawn: a dark channel with a lit top edge */
-.seq-slot {
-  position: absolute; left: 50%; top: 26px; bottom: 26px;
-  width: 15px; transform: translateX(-50%);
-  border-radius: 8px;
-  background: linear-gradient(180deg, rgba(0,0,0,0.62), rgba(0,0,0,0.42));
-  box-shadow:
-    inset 0 2px 4px rgba(0,0,0,0.8),
-    inset 0 -1px 0 rgba(255,255,255,0.07),
-    0 1px 0 var(--edge-hi);
+/* the transmission tunnel, laid down in Z */
+.seq-tunnel {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(58deg);
 }
 
-/* + and − engraved either end of the throw */
+/* the alloy plate on top of it */
+.seq-plate {
+  position: absolute; inset: 0;
+  border-radius: 16px;
+  background:
+    linear-gradient(112deg, rgba(255,255,255,0.05) 0%, transparent 32%, rgba(255,255,255,0.03) 66%, transparent 100%),
+    linear-gradient(180deg, #35322f, #1b1a19 72%, #131211);
+  border: 1px solid var(--edge);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    inset 0 -18px 34px rgba(0,0,0,0.55),
+    0 22px 40px rgba(0,0,0,0.5);
+  transform-style: preserve-3d;
+}
+
+/* the slot: a channel milled THROUGH the plate, so it is dark at the bottom
+   and catches light on its near lip */
+.seq-slot {
+  position: absolute; left: 50%; top: 30px; bottom: 30px;
+  width: 17px; transform: translateX(-50%);
+  border-radius: 9px;
+  background: linear-gradient(180deg, #000 0%, #0a0908 42%, #000 100%);
+  box-shadow:
+    inset 0 3px 6px rgba(0,0,0,0.95),
+    inset 0 -2px 0 rgba(255,255,255,0.11),
+    0 1px 0 rgba(255,255,255,0.07);
+}
+
+/* + and − engraved either end of the throw, cut INTO the plate */
 .seq-mark {
   position: absolute; left: 50%; transform: translateX(-50%);
-  font-family: var(--font-mono); font-size: 15px; font-weight: 700;
-  color: var(--muted); opacity: 0.75; pointer-events: none;
-  transition: color 0.18s ease, text-shadow 0.18s ease, opacity 0.18s ease;
+  font-family: var(--font-mono); font-size: 16px; font-weight: 700;
+  color: #6d6862;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.12), 0 -1px 1px rgba(0,0,0,0.9);
+  pointer-events: none;
+  transition: color 0.16s ease, text-shadow 0.16s ease;
 }
-.seq-mark-dn { top: 7px; }
-.seq-mark-up { bottom: 6px; }
-.seq-gate.thr-dn .seq-mark-dn,
-.seq-gate.thr-up .seq-mark-up { color: var(--accent); opacity: 1; text-shadow: 0 0 10px var(--accent-glow); }
+.seq-mark-dn { top: 8px; }
+.seq-mark-up { bottom: 7px; }
+.seq-scene.thr-dn .seq-mark-dn,
+.seq-scene.thr-up .seq-mark-up {
+  color: var(--accent);
+  text-shadow: 0 0 12px var(--accent-glow), 0 0 22px var(--accent-glow);
+}
 
 .seq-throw {
-  position: absolute; font-family: var(--font-mono); font-size: 8px;
-  line-height: 1.25; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--muted); opacity: 0.4; text-align: center; pointer-events: none;
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font-family: var(--font-mono); font-size: 7.5px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--muted); opacity: 0.34; white-space: nowrap; pointer-events: none;
 }
-.seq-throw-dn { top: 6px; right: 12px; }
-.seq-throw-up { bottom: 6px; right: 12px; }
+.seq-throw-dn { top: -13px; }
+.seq-throw-up { bottom: -13px; }
 
-/* the rubber boot at the base of the lever */
+/* the rubber boot — three concertina rings, standing up out of the plate */
 .seq-boot {
   position: absolute; left: 50%; top: 50%;
-  width: 66px; height: 34px; transform: translate(-50%, -30%);
-  border-radius: 50% 50% 46% 46%;
-  background:
-    radial-gradient(120% 150% at 50% 0%, rgba(255,255,255,0.06), transparent 60%),
-    linear-gradient(180deg, #201f1e, #131211);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+  width: 62px; height: 30px;
+  transform: translate(-50%, -50%) rotateX(-58deg);
+  transform-origin: 50% 100%;
   pointer-events: none;
 }
-
-/* THE LEVER. Sits dead centre at rest; a shift throws it a few millimetres
-   and the spring snaps it straight back. The whole animation is 260ms because
-   that is about how long the real movement takes, and anything slower reads
-   as a joystick rather than as a spring. */
-.seq-lever {
-  position: absolute; left: 50%; top: 50%;
-  width: 0; height: 0;
-  transform: translate(-50%, -50%);
-  z-index: 2;
+.seq-boot i {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  border-radius: 50% / 40%;
+  background: linear-gradient(180deg, #2a2827, #121110);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 2px 5px rgba(0,0,0,0.6);
 }
-.seq-lever.thr-up  { animation: seqThrowUp 0.26s var(--ease-snap); }
-.seq-lever.thr-dn  { animation: seqThrowDn 0.26s var(--ease-snap); }
-/* + is BACK, which is down the plate. See the note at the top of this block. */
+.seq-boot i:nth-child(1) { width: 62px; height: 15px; bottom: 0; }
+.seq-boot i:nth-child(2) { width: 48px; height: 13px; bottom: 8px; }
+.seq-boot i:nth-child(3) { width: 35px; height: 11px; bottom: 16px; }
+
+/* THE LEVER. Stands up out of the tunnel and pivots about its BASE — the
+   transform origin is the bottom of the rod, which is where the real linkage
+   turns. A throw is a rotation, never a slide. */
+.seq-lever {
+  position: absolute; left: 50%; bottom: 50%;
+  width: 0; height: 0;
+  transform-origin: 50% 100%;
+  transform: translateX(-50%) rotateX(-58deg);
+  transform-style: preserve-3d;
+  z-index: 3;
+}
+
+/* The throw, and it is not a single ease. A real sequential shift has four
+   distinct phases and you can feel all of them:
+     1  a fast hard movement to the stop            (~70ms)
+     2  it HITS the stop and stops dead             — the detent
+     3  the spring throws it back past centre       (~110ms)
+     4  and it overshoots, wobbles once and settles — this is the "lively"
+        part, and it is the thing that makes a lever feel sprung rather than
+        animated. Without the overshoot it reads as a UI element. */
+.seq-lever.thr-up { animation: seqThrowUp 0.42s cubic-bezier(0.2, 0.9, 0.25, 1); }
+.seq-lever.thr-dn { animation: seqThrowDn 0.42s cubic-bezier(0.2, 0.9, 0.25, 1); }
+/* + is BACK, which tips the top of the lever toward the viewer. */
 @keyframes seqThrowUp {
-  0%   { transform: translate(-50%, -50%); }
-  34%  { transform: translate(-50%, -50%) translateY(30px); }
-  100% { transform: translate(-50%, -50%); }
+  0%   { transform: translateX(-50%) rotateX(-58deg); }
+  17%  { transform: translateX(-50%) rotateX(-34deg); }   /* into the stop */
+  24%  { transform: translateX(-50%) rotateX(-34deg); }   /* the detent */
+  62%  { transform: translateX(-50%) rotateX(-66deg); }   /* spring, overshoot */
+  80%  { transform: translateX(-50%) rotateX(-55deg); }   /* wobble */
+  100% { transform: translateX(-50%) rotateX(-58deg); }
 }
 @keyframes seqThrowDn {
-  0%   { transform: translate(-50%, -50%); }
-  34%  { transform: translate(-50%, -50%) translateY(-30px); }
-  100% { transform: translate(-50%, -50%); }
+  0%   { transform: translateX(-50%) rotateX(-58deg); }
+  17%  { transform: translateX(-50%) rotateX(-82deg); }
+  24%  { transform: translateX(-50%) rotateX(-82deg); }
+  62%  { transform: translateX(-50%) rotateX(-50deg); }
+  80%  { transform: translateX(-50%) rotateX(-61deg); }
+  100% { transform: translateX(-50%) rotateX(-58deg); }
+}
+/* a pull the gearbox refused: it takes up its free play, finds a loaded dog
+   ring and stops. A few degrees and nothing more — the SHORTNESS is the
+   information, and there is no spring-back overshoot because the spring
+   never got loaded. */
+.seq-lever.balk { animation: seqBalk 0.24s cubic-bezier(0.3, 0, 0.4, 1); }
+@keyframes seqBalk {
+  0%   { transform: translateX(-50%) rotateX(-58deg); }
+  38%  { transform: translateX(-50%) rotateX(-51deg); }
+  55%  { transform: translateX(-50%) rotateX(-51deg); }
+  100% { transform: translateX(-50%) rotateX(-58deg); }
 }
 
+/* the rod: a machined steel bar, lit from the left */
 .seq-rod {
   position: absolute; left: 50%; bottom: 0;
-  width: 9px; height: 66px; transform: translateX(-50%);
-  border-radius: 5px;
-  background: linear-gradient(90deg, #4a4744, #a8a29b 42%, #cfc9c1 52%, #6f6a65 74%, #3b3835);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  width: 11px; height: 74px; transform: translateX(-50%);
+  border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(90deg,
+    #2e2b29 0%, #6a655f 18%, #b9b2aa 42%, #e6e0d8 51%, #9a938c 64%, #4a4643 84%, #262423 100%);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.55);
 }
-/* the alloy collar every rally lever has where the rod meets the boot */
+/* the specular streak that makes it read as round metal rather than a bar */
+.seq-rod-hi {
+  position: absolute; left: 34%; top: 4px; bottom: 6px; width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.05));
+}
+/* the alloy collar where the rod meets the boot */
 .seq-collar {
-  position: absolute; left: 50%; bottom: 4px;
-  width: 19px; height: 9px; transform: translateX(-50%);
-  border-radius: 3px;
-  background: linear-gradient(180deg, #8d8781, #46423e);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 2px 5px rgba(0,0,0,0.5);
+  position: absolute; left: 50%; bottom: 5px;
+  width: 22px; height: 10px; transform: translateX(-50%);
+  border-radius: 4px;
+  background: linear-gradient(90deg, #3b3835, #9d968e 44%, #cdc6bd 52%, #5d5854 76%, #332f2d);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 3px 6px rgba(0,0,0,0.55);
 }
-/* …and the knob, which on these cars is a big plain ball you can find without
-   looking. The gear number lives on it, because on a sequential the lever
-   tells you nothing about which gear you are in — it is always in the middle. */
+
+/* THE KNOB. A big plain ball you can find without looking, which is what
+   these cars actually fit. Two layers: a lit face and a shading overlay, so
+   it has a terminator across it instead of a flat radial gradient. */
 .seq-knob {
-  position: absolute; left: 50%; bottom: 58px;
-  width: 52px; height: 52px; transform: translateX(-50%);
+  position: absolute; left: 50%; bottom: 64px;
+  width: 58px; height: 58px; transform: translateX(-50%);
   border-radius: 50%;
+  transform-style: preserve-3d;
+  box-shadow:
+    0 14px 26px rgba(0,0,0,0.62),
+    0 3px 8px rgba(0,0,0,0.5);
+}
+.seq-knob-face {
+  position: absolute; inset: 0; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   background:
-    radial-gradient(70% 70% at 34% 26%, rgba(255,255,255,0.30), transparent 60%),
-    linear-gradient(165deg, #35322f, #171514 70%);
-  border: 1px solid rgba(255,255,255,0.09);
-  box-shadow: 0 8px 18px rgba(0,0,0,0.6), inset 0 -3px 8px rgba(0,0,0,0.6);
+    radial-gradient(58% 54% at 33% 24%, rgba(255,255,255,0.34), rgba(255,255,255,0.06) 46%, transparent 62%),
+    radial-gradient(120% 120% at 30% 20%, #3d3936 0%, #232120 44%, #121110 78%, #0a0909 100%);
+  border: 1px solid rgba(255,255,255,0.10);
 }
-.seq-knob span {
-  font-family: var(--font-mono); font-size: 21px; font-weight: 700;
-  color: var(--accent); text-shadow: 0 0 12px var(--accent-glow);
-  transition: color 0.2s ease;
+/* the terminator: the underside of a sphere is not merely darker, it has an
+   edge where the light stops, and a faint bounce below it off the tunnel */
+.seq-knob-shade {
+  position: absolute; inset: 0; border-radius: 50%;
+  background:
+    radial-gradient(70% 60% at 62% 92%, rgba(255,255,255,0.07), transparent 55%),
+    linear-gradient(163deg, transparent 40%, rgba(0,0,0,0.42) 72%, rgba(0,0,0,0.6) 100%);
+  pointer-events: none;
 }
-.seq-knob span.neutral { color: var(--muted); text-shadow: none; }
+.seq-knob-face span {
+  position: relative; z-index: 1;
+  font-family: var(--font-mono); font-size: 23px; font-weight: 700;
+  color: var(--accent);
+  text-shadow: 0 0 14px var(--accent-glow), 0 1px 2px rgba(0,0,0,0.9);
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+.seq-knob-face span.neutral {
+  color: #7d766e; text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+}
+
+/* the lever's shadow on the plate. It stays flat in the plate's plane and
+   shortens as the lever tips away — the one cue that welds the lever to the
+   surface instead of leaving it floating above it. */
+.seq-lever-shadow {
+  position: absolute; left: 50%; top: 50%;
+  width: 34px; height: 92px;
+  transform: translate(-50%, -86%);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0,0,0,0.5), transparent 72%);
+  filter: blur(5px);
+  pointer-events: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.seq-scene.thr-up .seq-lever-shadow { transform: translate(-50%, -72%) scaleY(0.8); opacity: 0.8; }
+.seq-scene.thr-dn .seq-lever-shadow { transform: translate(-50%, -98%) scaleY(1.12); opacity: 0.9; }
+
+/* reduced motion: keep the lever, drop the springing */
+@media (prefers-reduced-motion: reduce) {
+  .seq-lever.thr-up, .seq-lever.thr-dn, .seq-lever.balk { animation-duration: 0.01s; }
+}
 
 .seq-keys { display: flex; gap: 10px; }
 .seq-key {
@@ -2866,14 +2977,4 @@ body.dash-dead .cluster .lamp i { box-shadow: none !important; }
   18%  { transform: translateY(2px);  filter: drop-shadow(0 0 10px rgba(216,31,38,0.85)); }
   55%  { transform: none;             filter: drop-shadow(0 0 6px rgba(216,31,38,0.5)); }
   100% { transform: none;             filter: none; }
-}
-
-/* a pull the gearbox refused: the lever takes up its free play, finds a
-   loaded dog ring and stops. A few millimetres and nothing more — the
-   shortness of the movement is the information. */
-.seq-lever.balk { animation: seqBalk 0.2s ease; }
-@keyframes seqBalk {
-  0%   { transform: translate(-50%, -50%); }
-  40%  { transform: translate(-50%, -50%) translateY(5px); }
-  100% { transform: translate(-50%, -50%); }
 }

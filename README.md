@@ -397,30 +397,49 @@ has one puts a display where the driver is already looking.
 Paddle cars don't get a lever. Drawing one for a twin-clutch supercar would be
 inventing hardware it hasn't got.
 
-### It is quick, and it is not fast
+### It was making 876 horsepower
 
-The first cut of this car reached 100km/h in a shade over two seconds, which
-is quicker than the real one has ever been and quicker than anything else in
-the garage. Three things were wrong and all three were mine:
+Two rounds of trying to slow this car down by adjusting grip and torque
+missed the actual bug, which was a units mistake and a big one.
 
-- **Grip at 1.62** — a modern-slick number on a car running 1985 Michelins. It
-  was launching at 1.6g. Now 1.30. Four driven wheels is what makes a Group B
-  car quick off the line; it is not what makes it grip like a GT3 car.
-- **Too much under the cliff.** Peak power was about right; the bottom end
-  wasn't. There is now 195Nm at 3,000 and 465 at 4,200, and that step is not
-  a curve, it is the turbo arriving. Everything anyone remembers about this
-  car happens in the second and a half either side of it.
-- **The gearing.** A close-ratio set on a 4.30 final put sixth at 196km/h and
-  ended the whole thing at 232, so you spent the entire car changing gear.
-  Rally cars are geared short for *stages*, and the quoted 250km/h is the long
-  gearing rather than the stage gearing — this is that. The six now run
-  **67 / 87 / 113 / 147 / 191 / 249 km/h**, which makes sixth what a sixth
-  gear is supposed to be: somewhere you arrive, not somewhere you pass
-  through.
+Every turbo car in here writes its **off-boost** torque into `curve`, and
+`boostMax` multiplies it up to the published figures. The Ängelholm's comment
+spells it out: 895 Nm of base × 1.68 lands on its quoted 1500. I had written
+the S1's *real* torque straight into the curve — and then let `boostMax: 0.96`
+nearly double it. 990 Nm and 876 hp in a 1,090 kg car. That is most of a Group
+C car, and it is the entire reason it tore through every ratio and was in top
+before you had finished looking at the tacho.
 
-The target was the real car's 3.1 seconds to 100km/h, and it lands near it
-now. The character to listen for is not speed everywhere — it is nothing, and
-then all of it at once.
+The curve is now worked *backwards* from Audi's numbers through the boost
+model: 245 Nm of base at 5,500 × 1.96 = 480 Nm, and 228 at 7,500 = 469 hp.
+Which is what they claim. The shape is the turbo's shape now rather than a
+cliff drawn by hand on top of the turbo's cliff — the old curve was
+double-counting that too.
+
+### And it had one gear too many
+
+With the power fixed, second gear was still on screen for **six tenths of a
+second**. That is the "it just keeps shifting" problem, and it is arithmetic
+rather than feel. Constant ratio steps give constant rpm drops, but the
+*speed* span of each gear grows with the gear — so the early ones are narrow,
+and this engine has its whole torque curve sitting exactly where second lives.
+
+So it is a **five-speed**, which is what the Sport quattro S1 actually had.
+Same spread, wider steps, one fewer shift, and no sixth to arrive in ten
+seconds because there is no sixth. Measured through the sim's own physics
+rather than by hand:
+
+| gear | to | time in it |
+|---|---|---|
+| 1st | 57 km/h | 1.8s |
+| 2nd | 91 | 1.1s |
+| 3rd | 135 | 2.0s |
+| 4th | 186 | 3.5s |
+| 5th | 253 flat out | |
+
+**0-100 in 3.30s** against the real car's 3.1, and 253 km/h against a quoted
+250. First is deliberately short — this is a rally car, and a stage start
+matters more than anything sixth was doing.
 
 The engine under all this is a 2.1-litre **five**, which fires every 144°.
 Five is odd, so no two cylinders ever balance and the exhaust pulses never
@@ -595,12 +614,44 @@ tunnel gives you volume, the street gives you **size**, and size is the thing
 you can hear the distance in. Put a V12 on the flyby, pick CITY STREET, and
 listen to the far end of the run.
 
-The back alley got the two dimensions it was missing, too. The 25ms flutter
-across four metres of brick was always right; what wasn't there is that an
-alley is **a box with no lid**. Six storeys of brick gives a second, much
-slower comb running up and down the shaft, broken up by every fire escape and
-drainpipe on the way, and it is the entire reason an alley sounds tall rather
-than merely narrow.
+### The alley had a ceiling, and that was the whole problem
+
+It decayed about 9 dB over a second and a half. That is a cathedral, and it
+sounded like one.
+
+**A room has a lid.** Sound bounces off the ceiling and comes back, over and
+over, from every direction at once, and what you get is a smooth reverberant
+tail with no structure in it. That tail *is* the sound of being indoors — it
+is the only cue that matters, and putting one on an outdoor space is exactly
+what makes the outdoor space sound indoor.
+
+An alley has no lid. Whatever goes up is gone: there is nothing above it for a
+hundred metres, so it never comes back. What is left is sound bouncing between
+two walls near-horizontally, which is a train of **discrete** reflections
+rather than a wash — so the correct amount of diffuse bed out here turns out
+to be almost none.
+
+Two fixes, and the second was the big one:
+
+- **The bed came down to a sixth** of what it was. It is now just enough that
+  it is not uncomfortably dry between the strikes.
+- **Geometric spreading was missing entirely.** There are two losses on every
+  bounce, not one. Absorption is the wall — brick keeps about 96% of what hits
+  it, which is why that number is so close to 1 and right to be. *Spreading*
+  is geometry: the sound has travelled another 8.4 metres by the time it comes
+  back, so it is quieter for that reason alone, with nothing having absorbed
+  it. Over ninety bounces that is the difference between a decay you can hear
+  end and one that simply doesn't.
+
+And ninety bounces was itself wrong — in a real alley you can count maybe
+twenty flutter repeats before it is gone. It is 26 now.
+
+The result decays to −60dB in **half a second** instead of never. The ring is
+still there, and it is still the reason to drive an alley; it just no longer
+has a room around it. The wet level was re-solved rather than re-tuned:
+because a convolver normalizes by total energy, cutting the tail turns the
+strikes *up*, so the mix was recomputed to put them back exactly where they
+were.
 
 ## The flyby, and the air in front of the car
 
