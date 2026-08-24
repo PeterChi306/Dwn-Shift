@@ -296,6 +296,22 @@
 
       <!-- Sequential hints (manual, no clutch) -->
       <div class="seq-panel" id="seqPanel">
+        <!-- the physical lever: only the cars that actually have one get it -->
+        <div class="seq-stage" id="seqStage">
+          <div class="seq-gate" id="seqGate">
+            <div class="seq-slot"></div>
+            <span class="seq-mark seq-mark-dn">&minus;</span>
+            <span class="seq-mark seq-mark-up">+</span>
+            <span class="seq-throw seq-throw-dn">push<br>down</span>
+            <span class="seq-throw seq-throw-up">pull<br>up</span>
+            <div class="seq-boot"></div>
+            <div class="seq-lever" id="seqLever">
+              <div class="seq-rod"></div>
+              <div class="seq-collar"></div>
+              <div class="seq-knob"><span id="seqKnobGear">N</span></div>
+            </div>
+          </div>
+        </div>
         <div class="seq-viz" id="seqViz"></div>
         <div class="seq-keys">
           <button type="button" class="seq-key" data-seq="-1"><kbd>Q</kbd><span>shift down</span></button>

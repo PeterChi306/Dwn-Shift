@@ -1103,15 +1103,40 @@ const CARS = [
     crackle: "hard",               // no catalyst, no silencer, and fuel going in on the overrun
     cyl: 5, idle: 1150, max: 7800, cut: 8000, inertia: 0.19,
     /* 2,110cc, 20 valves, one enormous KKK K27 and about 2.2 bar of it.
-       Somewhere between 480 and 550 hp depending on who was holding the
-       stopwatch. What matters here is the SHAPE, not the peak: there is
-       almost nothing below three thousand, and then the whole engine
-       arrives at once. That step at 3,400 is the car. */
-    curve: [[0, 60], [1150, 145], [2200, 185], [3000, 250], [3400, 430], [4200, 495],
-            [5200, 520], [6000, 512], [7000, 455], [7800, 380], [8400, 240]],
-    ratios: { R: -3.2, 1: 2.92, 2: 2.06, 3: 1.61, 4: 1.32, 5: 1.09, 6: 0.92 },
-    mass: 1090, finalDrive: 4.30, clutchCap: 620, cdA: 0.86, brakeMax: 13500,
-    grip: 1.62, awd: true,         // four driven wheels and a wing off the back of a lorry
+       Audi quoted 470hp at 7,500 and nobody has ever quite believed them.
+
+       The first cut of this car made about 450 and got to 100km/h in a shade
+       over two seconds, which is quicker than the real one has ever been and
+       quicker than anything else in the garage. The number to build to is
+       3.1s, and the reason the real car takes 3.1 rather than 2.1 is not that
+       it lacks power — it is that there is NOTHING under three and a half
+       thousand rpm, and 1985 rubber will not put 470hp down anyway.
+
+       So the shape is the point, and the shape is a cliff. 195Nm at 3,000 and
+       465 at 4,200: that step is not a curve, it is the turbo arriving, and
+       everything anyone remembers about this car happens in the second and a
+       half either side of it. */
+    curve: [[0, 40], [1150, 125], [2000, 155], [3000, 195], [3500, 345], [4200, 465],
+            [5000, 498], [5500, 505], [6200, 490], [7000, 455], [7800, 380], [8400, 235]],
+    /* A six with a real spread, and geared for a road rather than a hairpin.
+
+       The old set was a close-ratio box on a 4.30 final: sixth arrived at
+       196km/h and the whole thing was over at 232, so you spent the entire
+       car changing gear. Rally cars are geared short for STAGES, and the
+       quoted 250km/h top speed is the long gearing, not the stage gearing —
+       this is that. Sixth now starts at 191 and runs to 249, which makes it
+       what a sixth gear is supposed to be: somewhere you arrive, not
+       somewhere you pass through.
+
+       Geometric, as everything here is, so the rpm drop is the same on every
+       change and the engine always lands back on the good side of the cliff. */
+    ratios: { R: -3.60, 1: 3.35, 2: 2.576, 3: 1.980, 4: 1.523, 5: 1.171, 6: 0.900 },
+    mass: 1090, finalDrive: 4.10, clutchCap: 620, cdA: 0.95, brakeMax: 13500,
+    /* 1.30, down from 1.62. That was a modern-slick number on a car running
+       1985 Michelins, and it was letting the thing launch at 1.6g. Four driven
+       wheels is what makes a Group B car quick off the line; it is not what
+       makes it grip like a GT3 car. */
+    grip: 1.30, awd: true,
     tire: 1.15,
     /* THE GEARBOX — and the reason this car exists in the garage.
 
@@ -1143,7 +1168,7 @@ const CARS = [
        nothing in it. Then it lights, and it does not light gently. */
     twin: 1.25, flutter: 1.15,      // a period bypass valve, and it is not subtle
     whistleMul: 1.5, whistleFreqMul: 1.15, turboBreath: 1.5, breathHz: 900,
-    tachMax: 9, redK: 7.8, kmhMax: 250, mphMax: 155,
+    tachMax: 9, redK: 7.8, kmhMax: 260, mphMax: 165,
     shiftLights: true, dial: "gear",
     dash: { accent: "#d81f26", face: "dark" },
     /* THE FIVE.
@@ -12010,6 +12035,10 @@ function seqOrder() {
 }
 
 function buildSeqViz() {
+  // the lever is a property of the CAR, not of the mode, so it has to be
+  // re-decided every time the car changes and not only on a mode switch
+  const stage = $("seqStage");
+  if (stage) stage.classList.toggle("hide", !hasSeqLever());
   const viz = $("seqViz");
   viz.innerHTML = seqOrder().map(g =>
     `<div class="seq-cell" data-g="${g}"><span>${g === 0 ? "N" : g}</span><span class="bar"></span></div>`).join("");
@@ -12018,29 +12047,87 @@ function buildSeqViz() {
 function seqHighlight() {
   document.querySelectorAll(".seq-cell").forEach(el =>
     el.classList.toggle("on", el.dataset.g === String(S.gear)));
+  /* …and the number on the knob. A sequential lever is spring-centred, so it
+     is always in the middle and it tells you nothing at all about which gear
+     you are in — which is exactly why every car that has one puts a gear
+     display where the driver is already looking. */
+  const k = $("seqKnobGear");
+  if (k) {
+    const lbl = S.gear === 0 ? "N" : String(S.gear);
+    if (k.textContent !== lbl) k.textContent = lbl;
+    k.classList.toggle("neutral", S.gear === 0);
+  }
+}
+
+/* is there a physical lever in this car, or a pair of paddles on the column?
+   Only the clutched sequentials have something you can put your hand on. */
+function hasSeqLever() { return !!CC.seqClutch; }
+
+/* the lever being thrown, and springing straight back. Up is BACK, which is
+   down the plate — see the note above .seq-gate in the stylesheet. */
+function seqLeverThrow(dir) {
+  const lv = $("seqLever"), gt = $("seqGate");
+  if (!lv || !hasSeqLever()) return;
+  const cls = dir > 0 ? "thr-up" : "thr-dn";
+  lv.classList.remove("thr-up", "thr-dn");
+  gt.classList.remove("thr-up", "thr-dn");
+  void lv.offsetWidth;                       // restart the animation
+  lv.classList.add(cls);
+  gt.classList.add(cls);
+  setTimeout(() => { lv.classList.remove(cls); gt.classList.remove(cls); }, 270);
 }
 
 function seqShift(dir) {
   if (S.mode !== "manual") return;
 
-  /* THE LEFT FOOT.
+  /* THE LEFT FOOT — and this was wrong the first time.
 
-     On a clutch-sequential car the paddle is not a request to a computer, it
-     is a lever bolted to a selector drum, and the drum will not turn while
-     the dogs are loaded. Nothing in the car will unload them for you. So a
-     pull with your foot off the pedal is not a slow shift or a rough shift —
-     it is no shift, and what you get is the lever refusing to move.
+     A rally sequential does NOT need the clutch on every change. The clutch
+     is for two things and two things only: getting the car moving from a
+     standstill, and stopping it again. On the move you shift clutchless — you
+     pull the lever, the ECU cuts the ignition for fifty or eighty
+     milliseconds, the load comes off the dogs on its own and the next gear
+     goes in. That is a flat shift, it is what every rally car since the early
+     nineties has done, and it is why the onboards sound like the engine is
+     being interrupted rather than declutched.
 
-     0.3 rather than the gate's 0.55 on purpose: this is not a synchromesh
-     clutch that has to be fully out of the way before the shafts can be
-     dragged into line. It only has to take the drive off the dogs, which
-     happens in the first third of the travel, and that is why a rally shift
-     is a brush of the pedal rather than a press. */
-  if (CC.seqClutch && S.clutchPedal < 0.3 && S.gear !== 0) {
+     (For the record, the real Sport quattro S1 E2 had neither. It ran a
+     conventional H-pattern manual with a clutch on every shift, and its one
+     famous gearbox experiment was the opposite of a dog box — the Porsche
+     PDK twin-clutch it trialled at San Remo in 1985. The clutched sequential
+     modelled here is the rally gearbox that came after it.)
+
+     So the pedal is now required exactly where a real one is:
+
+       FROM A STANDSTILL   into first, into reverse, or out to neutral with
+                           the car stopped. There is no ignition cut that can
+                           unload a dog ring against a stationary output
+                           shaft — only the clutch can do that.
+       ON THE MOVE         not required. Pull and go.
+
+     And using it anyway is not pointless, which is the part that makes this
+     worth modelling rather than just gating: dip the clutch on the move and
+     the box does NOT have to cut the ignition, so the engine keeps pulling
+     straight through the change. Clutchless is faster to do and you hear the
+     cut; clutched is cleaner and you don't. Real drivers do both, and which
+     one you are doing is audible. See the cut in the lag branch below. */
+  const needsFoot = CC.seqClutch && Math.abs(S.v) < 2.2;
+  if (needsFoot && S.clutchPedal < 0.3) {
     sfxSeqBalk();
     flashClutchNeed();
+    // the lever still moves — it takes up its free play, finds a loaded dog
+    // ring and stops. That short dead movement IS the refusal.
+    const lv = $("seqLever");
+    if (lv && hasSeqLever()) {
+      lv.classList.remove("balk");
+      void lv.offsetWidth;
+      lv.classList.add("balk");
+      setTimeout(() => lv.classList.remove("balk"), 200);
+    }
     return;
   }
+  // clutchless on the move: the ignition has to do the unloading instead
+  S._flatShift = !!CC.seqClutch && S.clutchPedal < 0.3;
   const order = seqOrder();
   const i = order.indexOf(S.gear);
   const j = clamp(i + dir, 0, order.length - 1);
@@ -12052,6 +12139,7 @@ function seqShift(dir) {
     return;
   }
   flashSeqKey(dir);
+  seqLeverThrow(dir);
   const lag = CC.shiftLag || 0;
   if (lag > 0) {
     // The paddle registers the command; the GEARBOX answers a beat later.
@@ -12097,7 +12185,30 @@ function seqShift(dir) {
        laid over a note that never went away. That is what "seamless like a
        rally car" actually means, and it is the whole difference between this
        and the R's quarter-second of silence. */
-    S.shiftCut = CC.seqClutch ? 0.018 : ((CC.race || CC.gearWhine) ? 0.075 : CC.mechBox ? 0.085 : 0.10) + lag;
+    /* …and the exception, which is now two exceptions.
+
+       Every other box on this page breaks the drive with the IGNITION,
+       because there is nothing else available to break it with — a paddle car
+       with no clutch pedal has to cut fuel to unload the dogs, and that cut
+       is the hole you hear in the middle of the shift.
+
+       A clutched sequential can do it either way, and you choose with your
+       left foot:
+
+         CLUTCHLESS  the flat shift. The ECU cuts for ~70ms, the load comes
+                     off the dogs, the next one goes in and the ignition comes
+                     back. Quick, brutal, and there is an audible notch in the
+                     note every time. This is what a rally onboard sounds
+                     like.
+         CLUTCHED    you took the drive off mechanically, so nothing has to
+                     cut. The engine never stops firing and the change is a
+                     CLACK laid over a note that never went away.
+
+       Same gearbox, same lever, two different sounds, and the difference is
+       whether your foot moved. */
+    S.shiftCut = CC.seqClutch
+      ? (S._flatShift ? 0.07 : 0.018)
+      : ((CC.race || CC.gearWhine) ? 0.075 : CC.mechBox ? 0.085 : 0.10) + lag;
 
     /* THE BLIP GOES FIRST. This was backwards: the throttle blip fired from
        seqEngage(), which runs when the dogs have already landed — so the car
@@ -12309,7 +12420,7 @@ function applyEvChrome() {
     b.title = locked
       ? (ev ? "Single-speed — this car is automatic only"
          : only === "clutch" ? "Gated six-speed and three pedals. That is the car."
-         : only === "manual" ? "Dog sequential and a clutch pedal. There is no other gearbox in it."
+         : only === "manual" ? "A sequential with one slot and a clutch for the start line. That is the car."
          : "No manual mode — this car does not discuss its gearbox")
       : "";
   });
@@ -12436,6 +12547,9 @@ function setMode(mode) {
 
   $("gateWrap").style.display = mode === "clutch" ? "" : "none";
   $("seqPanel").style.display = mode === "manual" ? "" : "none";
+  // paddles on a column are not a lever, and drawing one for a twin-clutch
+  // supercar would be inventing hardware it hasn't got
+  $("seqStage").classList.toggle("hide", !hasSeqLever());
   $("autoPanel").style.display = mode === "auto" ? "" : "none";
   // the clutch pedal belongs to the GEARBOX, not to the mode: a dog
   // sequential has one too, and you use it on every single change.
@@ -12448,15 +12562,17 @@ function setMode(mode) {
   $("consoleHint").innerHTML =
     { auto: "P · R · N · D",
       manual: CC.seqClutch
-        ? "dip <kbd>SPACE</kbd> · <kbd>Q</kbd> down · <kbd>E</kbd> up"
+        ? "<kbd>SPACE</kbd> to pull away · <kbd>Q</kbd> down · <kbd>E</kbd> up"
         : "clutchless — revs are matched for you",
       clutch: "hold <kbd>SPACE</kbd> · <kbd>←</kbd> gear down · <kbd>→</kbd> gear up" }[mode];
   $("bayModeNote").innerHTML =
     { auto: "Two pedals. Select <b>D</b> and go.",
       manual: CC.seqClutch
-        ? "Brush the clutch (<kbd>SPACE</kbd>) and pull <kbd>Q</kbd>/<kbd>E</kbd>. "
-        + "The dogs don't need matching, they need unloading — that is all the pedal is for, "
-        + "and it only has to be down for the instant the paddle moves. Pull without it and nothing happens."
+        ? "One slot, one notch per pull: <kbd>Q</kbd> down, <kbd>E</kbd> up. "
+        + "The clutch (<kbd>SPACE</kbd>) is for pulling away and for stopping — from a standstill "
+        + "nothing else can unload the dogs, and the lever will refuse. "
+        + "<b>On the move you don't need it.</b> Pull and the ignition cuts for you, and you hear the cut. "
+        + "Brush the clutch anyway and it doesn't have to, so the engine pulls straight through the change."
         : "Shift with <kbd>Q</kbd>/<kbd>E</kbd> — no clutch needed.",
       clutch: "Clutch in (<kbd>SPACE</kbd>), <kbd>←</kbd>/<kbd>→</kbd> to shift (or drag the stick), then let it out. "
             + "The gear does not go in because you asked — it goes in when the synchro has matched the shafts, "

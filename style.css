@@ -865,6 +865,141 @@ kbd {
   transform: translateX(6px);
 }
 .seq-cell.on .bar { background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+/* ============ THE SEQUENTIAL LEVER ============
+   The cars that have a physical sequential get a physical sequential, and it
+   is a completely different object from the H-pattern gate next door. A gate
+   is a plate with a maze milled into it and a stick you steer around it. A
+   sequential is ONE SLOT, a very short throw, and a lever that is
+   spring-centred — it does not stay where you put it. You move it, the drum
+   indexes one notch, and the spring puts it back in the middle before your
+   hand has left the knob.
+
+   Which way is which matters and is not arbitrary. Racing convention is PULL
+   BACK to go UP and PUSH FORWARD to go DOWN, because under acceleration your
+   body is already going backwards and pulling is the movement you can still
+   make accurately at 1g. The plate is drawn from above, so "back toward the
+   driver" is the BOTTOM of the slot — which is why + is at the bottom here
+   and − is at the top, and why that looks wrong until you think about where
+   the driver is sitting. */
+.seq-stage { display: flex; justify-content: center; }
+.seq-stage.hide { display: none; }
+
+.seq-gate {
+  position: relative;
+  width: 176px; height: 232px;
+  border-radius: 18px;
+  background:
+    radial-gradient(140% 110% at 50% 0%, rgba(255,255,255,0.045), transparent 55%),
+    linear-gradient(180deg, var(--leather), var(--panel-lo));
+  border: 1px solid var(--edge);
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.5), inset 0 -1px 0 var(--edge-hi);
+  user-select: none; -webkit-user-select: none;
+}
+
+/* the slot itself — milled, not drawn: a dark channel with a lit top edge */
+.seq-slot {
+  position: absolute; left: 50%; top: 26px; bottom: 26px;
+  width: 15px; transform: translateX(-50%);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.62), rgba(0,0,0,0.42));
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,0.8),
+    inset 0 -1px 0 rgba(255,255,255,0.07),
+    0 1px 0 var(--edge-hi);
+}
+
+/* + and − engraved either end of the throw */
+.seq-mark {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+  color: var(--muted); opacity: 0.75; pointer-events: none;
+  transition: color 0.18s ease, text-shadow 0.18s ease, opacity 0.18s ease;
+}
+.seq-mark-dn { top: 7px; }
+.seq-mark-up { bottom: 6px; }
+.seq-gate.thr-dn .seq-mark-dn,
+.seq-gate.thr-up .seq-mark-up { color: var(--accent); opacity: 1; text-shadow: 0 0 10px var(--accent-glow); }
+
+.seq-throw {
+  position: absolute; font-family: var(--font-mono); font-size: 8px;
+  line-height: 1.25; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); opacity: 0.4; text-align: center; pointer-events: none;
+}
+.seq-throw-dn { top: 6px; right: 12px; }
+.seq-throw-up { bottom: 6px; right: 12px; }
+
+/* the rubber boot at the base of the lever */
+.seq-boot {
+  position: absolute; left: 50%; top: 50%;
+  width: 66px; height: 34px; transform: translate(-50%, -30%);
+  border-radius: 50% 50% 46% 46%;
+  background:
+    radial-gradient(120% 150% at 50% 0%, rgba(255,255,255,0.06), transparent 60%),
+    linear-gradient(180deg, #201f1e, #131211);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+  pointer-events: none;
+}
+
+/* THE LEVER. Sits dead centre at rest; a shift throws it a few millimetres
+   and the spring snaps it straight back. The whole animation is 260ms because
+   that is about how long the real movement takes, and anything slower reads
+   as a joystick rather than as a spring. */
+.seq-lever {
+  position: absolute; left: 50%; top: 50%;
+  width: 0; height: 0;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+.seq-lever.thr-up  { animation: seqThrowUp 0.26s var(--ease-snap); }
+.seq-lever.thr-dn  { animation: seqThrowDn 0.26s var(--ease-snap); }
+/* + is BACK, which is down the plate. See the note at the top of this block. */
+@keyframes seqThrowUp {
+  0%   { transform: translate(-50%, -50%); }
+  34%  { transform: translate(-50%, -50%) translateY(30px); }
+  100% { transform: translate(-50%, -50%); }
+}
+@keyframes seqThrowDn {
+  0%   { transform: translate(-50%, -50%); }
+  34%  { transform: translate(-50%, -50%) translateY(-30px); }
+  100% { transform: translate(-50%, -50%); }
+}
+
+.seq-rod {
+  position: absolute; left: 50%; bottom: 0;
+  width: 9px; height: 66px; transform: translateX(-50%);
+  border-radius: 5px;
+  background: linear-gradient(90deg, #4a4744, #a8a29b 42%, #cfc9c1 52%, #6f6a65 74%, #3b3835);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+/* the alloy collar every rally lever has where the rod meets the boot */
+.seq-collar {
+  position: absolute; left: 50%; bottom: 4px;
+  width: 19px; height: 9px; transform: translateX(-50%);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #8d8781, #46423e);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 2px 5px rgba(0,0,0,0.5);
+}
+/* …and the knob, which on these cars is a big plain ball you can find without
+   looking. The gear number lives on it, because on a sequential the lever
+   tells you nothing about which gear you are in — it is always in the middle. */
+.seq-knob {
+  position: absolute; left: 50%; bottom: 58px;
+  width: 52px; height: 52px; transform: translateX(-50%);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(70% 70% at 34% 26%, rgba(255,255,255,0.30), transparent 60%),
+    linear-gradient(165deg, #35322f, #171514 70%);
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.6), inset 0 -3px 8px rgba(0,0,0,0.6);
+}
+.seq-knob span {
+  font-family: var(--font-mono); font-size: 21px; font-weight: 700;
+  color: var(--accent); text-shadow: 0 0 12px var(--accent-glow);
+  transition: color 0.2s ease;
+}
+.seq-knob span.neutral { color: var(--muted); text-shadow: none; }
+
 .seq-keys { display: flex; gap: 10px; }
 .seq-key {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px;
@@ -2731,4 +2866,14 @@ body.dash-dead .cluster .lamp i { box-shadow: none !important; }
   18%  { transform: translateY(2px);  filter: drop-shadow(0 0 10px rgba(216,31,38,0.85)); }
   55%  { transform: none;             filter: drop-shadow(0 0 6px rgba(216,31,38,0.5)); }
   100% { transform: none;             filter: none; }
+}
+
+/* a pull the gearbox refused: the lever takes up its free play, finds a
+   loaded dog ring and stops. A few millimetres and nothing more — the
+   shortness of the movement is the information. */
+.seq-lever.balk { animation: seqBalk 0.2s ease; }
+@keyframes seqBalk {
+  0%   { transform: translate(-50%, -50%); }
+  40%  { transform: translate(-50%, -50%) translateY(5px); }
+  100% { transform: translate(-50%, -50%); }
 }

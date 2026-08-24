@@ -340,37 +340,91 @@ Until now there were two. A gate with three pedals, where the clutch is a
 disconnection and the synchroniser does the work. And paddles, where there is
 no clutch pedal at all and a computer does everything.
 
-The **Ingolstadt S1 Quattro** has the one in between, and it is the one that
-Group B actually used: a straight-cut **dog sequential** with a real clutch
-pedal.
+The **Ingolstadt S1 Quattro** has the one in between: a straight-cut **dog
+sequential** with a real lever and a real clutch pedal.
 
-It works nothing like either of the others. There is no gate — one direction,
-one notch per pull, `Q` down and `E` up. And there is no synchroniser, because
-the dogs do not need *matching*, they need **unloading**. That is the entire
-job of the pedal, and it is why a rally shift is a brush of the clutch rather
-than a press: the drive comes off the dogs in the first third of the travel,
-the drum turns, and it is over.
+### What the clutch is actually for
 
-Two consequences, and both of them are audible:
+Worth being straight about this, because the first cut of this car got it
+wrong. A rally sequential does **not** need the clutch on every change. The
+clutch is for two things: getting the car moving, and stopping it again. On
+the move you shift **clutchless** — you pull the lever, the ECU cuts the
+ignition for fifty or eighty milliseconds, the load comes off the dogs on its
+own, and the next gear goes in. That is a flat shift, it is what rally cars
+have done since the early nineties, and it is why the onboards sound like the
+engine is being *interrupted* rather than declutched.
 
-- **Pull a paddle with your foot off it and nothing happens.** Not a slow
-  shift — no shift. The lever takes up its free play, finds a loaded dog ring,
-  and stops dead. You get a tick and a flat thud with no ring on it, because
-  nothing rang: nothing moved. The clutch pedal flashes at you.
-- **There is no hole in the middle of the shift.** Every other paddle car in
-  here has to cut the ignition to unload the dogs, and that cut is the gap you
-  hear — a fifth of a second of nothing in the race car, forty milliseconds in
-  a twin-clutch. This car has your left foot instead, so it doesn't cut. The
-  engine never stops firing and the change is a **CLACK laid over a note that
-  never went away**. That is what "seamless like a rally car" means, and it is
-  the opposite of seamless in the twin-clutch sense: you hear far *more*
-  machinery, not less.
+(And for the record, the real Sport quattro S1 E2 had neither of those. It ran
+a conventional H-pattern manual with a clutch on every shift. Its one famous
+gearbox experiment was the *opposite* of a dog box — the Porsche-developed PDK
+twin-clutch it trialled at San Remo in 1985. The clutched sequential modelled
+here is the rally gearbox that came after it.)
 
-The engine under it is a 2.1-litre **five**, which fires every 144°. Five is
-odd, so no two cylinders ever balance and the exhaust pulses never settle into
-pairs — the note walks, and that walk is the warble. On top of it sits a KKK
-the size of a fist at around 2.2 bar, which means there is nothing at all
-below three thousand rpm and then the whole engine arrives at once.
+So the pedal is required exactly where a real one is:
+
+| | |
+|---|---|
+| **From a standstill** | Required. Into first, into reverse, or out to neutral with the car stopped. Nothing else can unload a dog ring against a stationary output shaft. Pull without it and the lever takes up its free play, finds a loaded ring and **stops dead** — a tick and a flat thud with no ring on it, because nothing rang: nothing moved. |
+| **On the move** | Not required. Pull and go. |
+
+And using it anyway is not pointless, which is the part worth modelling rather
+than just gating. Dip the clutch on the move and the box does **not** have to
+cut the ignition, so the engine pulls straight through the change. Clutchless
+is quicker to do and there is an audible notch in the note every time;
+clutched is cleaner and there isn't. Same gearbox, same lever, two different
+sounds, and the difference is whether your foot moved.
+
+### The lever
+
+The cars that have a physical sequential now get one drawn, and it is a
+completely different object from the gate next door. A gate is a plate with a
+maze milled into it. A sequential is **one slot**, a very short throw, and a
+lever that is spring-centred — it does not stay where you put it. You move it,
+the drum indexes one notch, and the spring puts it back in the middle before
+your hand has left the knob.
+
+Which way is which is not arbitrary: racing convention is **pull back to go
+up, push forward to go down**, because under acceleration your body is already
+going backwards and pulling is the movement you can still make accurately at
+1g. The plate is drawn from above, so "back toward the driver" is the *bottom*
+of the slot — which is why `+` sits at the bottom, and why that looks wrong
+until you think about where the driver is sitting.
+
+The gear number lives on the knob, because a spring-centred lever tells you
+nothing at all about which gear you are in. That is exactly why every car that
+has one puts a display where the driver is already looking.
+
+Paddle cars don't get a lever. Drawing one for a twin-clutch supercar would be
+inventing hardware it hasn't got.
+
+### It is quick, and it is not fast
+
+The first cut of this car reached 100km/h in a shade over two seconds, which
+is quicker than the real one has ever been and quicker than anything else in
+the garage. Three things were wrong and all three were mine:
+
+- **Grip at 1.62** — a modern-slick number on a car running 1985 Michelins. It
+  was launching at 1.6g. Now 1.30. Four driven wheels is what makes a Group B
+  car quick off the line; it is not what makes it grip like a GT3 car.
+- **Too much under the cliff.** Peak power was about right; the bottom end
+  wasn't. There is now 195Nm at 3,000 and 465 at 4,200, and that step is not
+  a curve, it is the turbo arriving. Everything anyone remembers about this
+  car happens in the second and a half either side of it.
+- **The gearing.** A close-ratio set on a 4.30 final put sixth at 196km/h and
+  ended the whole thing at 232, so you spent the entire car changing gear.
+  Rally cars are geared short for *stages*, and the quoted 250km/h is the long
+  gearing rather than the stage gearing — this is that. The six now run
+  **67 / 87 / 113 / 147 / 191 / 249 km/h**, which makes sixth what a sixth
+  gear is supposed to be: somewhere you arrive, not somewhere you pass
+  through.
+
+The target was the real car's 3.1 seconds to 100km/h, and it lands near it
+now. The character to listen for is not speed everywhere — it is nothing, and
+then all of it at once.
+
+The engine under all this is a 2.1-litre **five**, which fires every 144°.
+Five is odd, so no two cylinders ever balance and the exhaust pulses never
+settle into pairs — the note walks, and that walk is the warble.
 
 ## Traction control is its own switch now
 
