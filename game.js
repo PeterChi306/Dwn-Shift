@@ -1132,10 +1132,17 @@ const CARS = [
        way it is — for better and for worse — is the thing between the seats
        and the thing under your left foot. See forcedMode(). */
     gatedOnly: true,
-    /* AND NO TRACTION CONTROL. Not "switchable" — not fitted. The car has ABS
-       and it has you, and that is the entire electronic safety net. Every
-       story ever told about this car starts here. See hasTC(). */
-    noTC: true,
+    /* Traction control, and it is switchable — so the car has a safety net and
+       you get to decide whether to use it. Leave it on and the box holds the
+       rear at the peak of the curve, hunting and surging while it does it.
+       Switch it off and there is nothing between 612 horsepower and the road
+       except your right foot, which is the version this car is famous for.
+
+       What it does NOT get is the workshop's infinite-grip cheat. `raw` is
+       that: the tyres arrive real, because a car whose whole character is how
+       much it asks of you is not worth handing unobtainium rubber by
+       default. It is still a switch, and it is still yours. */
+    raw: true,
     /* The 169mm ceramic-composite twin-plate. It weighs almost nothing, which
        is why the engine revs the way it does — and it takes up over about a
        centimetre of pedal travel, which is why the car has a reputation for
@@ -2189,15 +2196,15 @@ function curMod() {
   // wants the fight can switch it off per car and that choice is remembered.
   /* …with one exception, and it is the whole reason that car is in the
      garage. A car that was sold WITHOUT traction control is a car whose
-     entire character is that nothing is helping, and handing it infinite
-     rubber by default deletes the thing you came to it for. So `noTC` cars
-     arrive with the cheat off. It is still a switch, and it is still yours. */
-  if (m.grip === undefined) m.grip = !CC.noTC;   // the workshop's infinite-grip cheat
+     entire character is how much it asks of the driver is not worth handing
+     unobtainium rubber by default — it deletes the thing you came to it for.
+     So `raw` cars arrive with the cheat off. It is still a switch. */
+  if (m.grip === undefined) m.grip = !CC.raw;   // the workshop's infinite-grip cheat
   /* "" = whatever the car came with, which is now the default: a Zonda's
      open gate and a Carrera GT's beech ball are facts about those cars, not
      preferences. The old saves that said "stock" mean rubber-bushed. */
   if (m.shift === undefined) m.shift = "";
-  if (m.shift === "stock") m.shift = "rubber";
+  if (m.shift === "stock" || m.shift === "rubber") m.shift = "mech";
   if (m.shift === "click") m.shift = "short";
   if (m.shift === "metal") m.shift = "gate";
   if (m.clutchAid === undefined) m.clutchAid = true;
@@ -2291,7 +2298,8 @@ const S = {
   lastShift: 0,        // seconds since the last gear went in
   /* --- the rear axle letting go. See THE SLIDE. --- */
   yaw: 0, yawV: 0, lock: 0, spinOut: 0, loose: 0, looseV: 0, scrub: 0,
-  slipSigned: 0, syncMiss: 0,
+  slipSigned: 0, syncMiss: 0, tcSettle: 1,
+  limCut: false, limT: 0, limDip: 0,
   traffic: false, rain: false, passT: 2, splashT: 2, wiperT: 0.7, wiperDir: 1,
   night: false, cricketT: 2, lampT: 1.5,
   dmgOn: false,                        // consequences mode — opt-in, see DMG
@@ -4892,17 +4900,31 @@ function sfxJudder(strength = 1) {
    All five are the same eight events with different numbers. */
 
 const LEVER_MATS = {
-  rubber: {
-    label: "rubber-bushed",
-    // the impact transient: where it sits, how tight, how long
-    tick: { hz: 780, q: 0.9, rate: 1.05, amp: 0.34, dec: 0.05 },
-    // ring partials [hz, amp, decay] — rubber has none, and that IS the sound
-    rings: [],
-    // the body: the mass of the thing, felt through the tunnel
-    body: { hz: 140, to: 52, amp: 0.62, dec: 0.13 },
-    // the boot and the bushings dragging while it moves
-    scrape: { hz: 430, q: 0.8, amp: 1.0, rate: 0.75 },
-    bright: 0.55,
+  mech: {
+    /* EXPOSED MACHINED LINKAGE. Billet titanium rods and rose joints, out in
+       the open with no boot over them, every pivot visible from the driver's
+       seat — the Zonda/Huayra arrangement, and the reason people who have
+       never driven one still know what its gearchange sounds like.
+
+       What makes it that sound is that it is TWO IMPACTS, not one. The
+       linkage takes up first — rod against rose joint, a hard bright snap
+       with nothing damping it — and then twenty-odd milliseconds later the
+       detent slams into its notch underneath. Your ear hears one event with a
+       texture rather than two events, and that texture is the whole thing.
+       Fire a single click instead and it collapses into a mouse button.
+
+       So: the sharpest transient in here, a second one right behind it
+       (`echo`), a bright spring ring off the exposed rods, and a solid knock
+       so it lands in the car rather than on top of it. */
+    label: "exposed machined linkage",
+    tick: { hz: 3400, q: 2.8, rate: 2.3, amp: 0.52, dec: 0.026 },
+    // the detent arriving under the linkage — the half nobody models
+    echo: { at: 0.022, hz: 1500, q: 1.5, rate: 1.35, amp: 0.46, dec: 0.05 },
+    rings: [[2650, 0.085, 0.13], [4150, 0.05, 0.09], [5900, 0.022, 0.05]],
+    body: { hz: 165, to: 62, amp: 0.42, dec: 0.095 },
+    // rose joints and bare rods: a dry precise tick as it moves, no boot
+    scrape: { hz: 1900, q: 2.2, amp: 0.7, rate: 1.6 },
+    bright: 1.2,
   },
   short: {
     label: "solid-bushed short shifter",
@@ -4968,8 +4990,8 @@ function leverMat() {
   // the old mod ids, kept working
   if (m === "click") return LEVER_MATS.short;
   if (m === "metal") return LEVER_MATS.gate;
-  if (m === "stock") return LEVER_MATS.rubber;
-  return LEVER_MATS[CC.lever] || LEVER_MATS.rubber;
+  if (m === "stock" || m === "rubber") return LEVER_MATS.mech;
+  return LEVER_MATS[CC.lever] || LEVER_MATS.mech;
 }
 
 /* One impact, built out of the material and the event. Everything in here is
@@ -4996,6 +5018,24 @@ function leverHit(kind, force = 1, out) {
   g.gain.setValueAtTime(M.tick.amp * a, t);
   g.gain.exponentialRampToValueAtTime(0.0008, t + M.tick.dec);
   n.connect(f); f.connect(g); g.connect(dest); n.start(t); n.stop(t + M.tick.dec + 0.02);
+
+  /* 1b. …and, on a mechanism that has two of them, the SECOND impact. A
+     linkage taking up and then a detent arriving under it are twenty
+     milliseconds apart, which is close enough that the ear hears one event
+     with a texture and far enough that collapsing them into a single click
+     is the difference between a gearchange and a mouse button. */
+  if (M.echo) {
+    const E2 = M.echo, at = t + E2.at * (0.9 + Math.random() * 0.2);
+    const n2 = ctx.createBufferSource(); n2.buffer = AU.noiseBuf;
+    n2.playbackRate.value = E2.rate * (0.94 + Math.random() * 0.12);
+    const f2 = ctx.createBiquadFilter(); f2.type = "bandpass";
+    f2.frequency.value = E2.hz * E.hi * (0.96 + Math.random() * 0.08);
+    f2.Q.value = E2.q;
+    const g2 = ctx.createGain();
+    g2.gain.setValueAtTime(E2.amp * a, at);
+    g2.gain.exponentialRampToValueAtTime(0.0008, at + E2.dec);
+    n2.connect(f2); f2.connect(g2); g2.connect(dest); n2.start(at); n2.stop(at + E2.dec + 0.02);
+  }
 
   // 2. the ring — what the material does AFTER the impact, which is most of
   //    what tells you what it is made of
@@ -8472,10 +8512,23 @@ function ratioOf(gear) {
    the engine's inertia is two orders of magnitude more than the shaft's, so
    the rate collapses toward nothing. That collapse IS the grind. */
 function synchroRate(engage) {
-  const base = (CC.synchro || 1) * 9000;              // rpm/s on a free shaft
+  /* A real synchro is slower than this. It is deliberately not modelled that
+     way, because the input you have is a key and not a foot: on a wheel and
+     pedals you can meter a clutch to the millimetre and blip to fifty rpm,
+     and a strict cone would be a skill worth learning. On a keyboard the
+     clutch is fully in or fully out and the throttle is on or off, so a
+     strict cone is just a door that will not open.
+
+     So the ring is quick, and everything the model is FOR survives it: the
+     hang on a big downshift is still there and still proportional, a
+     half-declutched shift still drags and grumbles, rev-matching still
+     collapses the wait to nothing, and a genuinely hopeless shift still
+     baulks. What is gone is the part that punished you for being ten
+     milliseconds late with a key. */
+  const base = (CC.synchro || 1) * 14000;             // rpm/s on a free shaft
   // a light flywheel makes even a badly-declutched shift possible; a 7.3-litre
   // V12 with an iron flywheel does not forgive it at all
-  const drag = 1 + engage * engage * 34 * clamp(ENG.inertia / 0.22, 0.5, 3);
+  const drag = 1 + engage * engage * 20 * clamp(ENG.inertia / 0.22, 0.5, 3);
   return base / drag;
 }
 
@@ -8505,7 +8558,7 @@ function synchroState(target, dt) {
      collar is locked out. Shoving harder does nothing — that is what the
      baulk ring is FOR, and it is the reason a missed shift makes a noise
      instead of destroying the gearbox. */
-  const baulked = need > 0.55;
+  const baulked = need > 0.85;
 
   S.syncNeed = need;
   return {
@@ -8513,7 +8566,7 @@ function synchroState(target, dt) {
     mismatch, need, baulked,
     // how loudly it is complaining: nothing at a matched shift, everything at
     // a full-speed clutchless stab into second
-    grind: clamp((need - 0.06) / 0.5, 0, 1),
+    grind: clamp((need - 0.13) / 0.6, 0, 1),
   };
 }
 
@@ -8657,6 +8710,7 @@ function resetTraction() {
   S.spinV = 0; S.slipR = 0; S.slipSigned = 0; S.tracF = 0; S.tcCut = 0; S.lockup = false;
   S.yaw = 0; S.yawV = 0; S.lock = 0; S.spinOut = 0;
   S.loose = 0; S.looseV = 0; S.scrub = 0; S._seed = 0; S._snapT = 0;
+  S.tcSettle = 1; S._tcPh = 0;
 }
 
 function slideTick(dt, driveF, sSigned, SP, rwd, gripLock, tcOn) {
@@ -8917,8 +8971,65 @@ function stepPhysics(dt) {
        and that is exactly the case the real ECU keeps a hard cut for. */
     if (S.rpm > ceiling + band * 0.5) S.cutTimer = Math.max(S.cutTimer, 0.05);
   } else {
-    if (S.rpm > ENG.cut) S.cutTimer = 0.07;
-    if (S.parkLimit && S.rpm > S.parkLimit) S.cutTimer = Math.max(S.cutTimer, 0.05);
+    /* ---- THE HARD LIMITER, AND WHY IT BOUNCES ----
+       This used to be "past the number, cut for 70ms", and the result was a
+       needle that arrived at the redline and STOPPED there, dead flat, which
+       is the one thing a limiter never does.
+
+       A real one is a relaxation oscillator, and it is one because of
+       HYSTERESIS. The ECU does not restore the fuel the instant the revs dip
+       below the number — if it did it would chatter at the sample rate and
+       tear the engine apart. It cuts at the ceiling and it does not light
+       again until the revs have fallen a couple of hundred rpm BELOW it. So
+       the engine falls through that gap, catches, climbs back through it,
+       hits the ceiling and cuts again: a sawtooth, five to twelve times a
+       second, and that sawtooth is the sound of a limiter. Every bark, every
+       bang out of the pipes and every bit of the shake is that cycle.
+
+       And it happens in gear too. In gear the crank is bolted to the road and
+       cannot actually lose two hundred rpm in a twentieth of a second — but
+       nothing between it and the road is rigid. The shafts wind and unwind,
+       the mounts load and release, and the needle wobbles against the stop
+       while the whole car surges. That is `limDip`: the same cycle, with the
+       driveline's compliance deciding how much of it reaches the tacho. */
+    const band = Math.max(120, (ENG.cut - ENG.idle) * 0.028);
+    const lim = S.parkLimit || ENG.cut;
+    if (!S.limCut) {
+      /* Cut on where the revs are ABOUT to be, not where they are. A real ECU
+         sees crank position every few degrees; this sees it every 16ms, and
+         on a light flywheel — 0.095 for the Carrera GT, less than half of
+         anything else here — the revs can move several hundred between one
+         frame and the next. Waiting for the number to be crossed means always
+         cutting several hundred rpm late, which reads as a limiter that
+         overshoots wildly rather than one that is sharp. One frame of
+         look-ahead costs nothing and puts the cut where the hardware would. */
+      const rise = Math.max(0, S._rpmRate || 0);
+      if (S.rpm + rise * 1.6 > lim) { S.limCut = true; S.limT = 0; }
+    } else {
+      S.limT += dt;
+      // it lights again once the revs have fallen through the hysteresis
+      // band — or, in gear where they physically cannot, once the ECU's
+      // minimum cut has elapsed and it tries again
+      if (S.rpm < lim - band || S.limT > 0.085) { S.limCut = false; S.limT = 0; }
+    }
+    if (S.limCut) S.cutTimer = Math.max(S.cutTimer, 0.02);
+
+    /* Free-revving, none of this is needed and adding it would be wrong: the
+       fuel is genuinely off, the crank is genuinely unloaded, and the physics
+       above is already dropping the revs through the band on its own. The
+       cycle is real there and it comes out for free.
+
+       In gear it does NOT come out for free, because the road is holding the
+       crank up and the honest sum says the revs cannot move. What actually
+       moves is everything between the two: the shafts wind and unwind, the
+       mounts load and release, and the needle wobbles against the stop while
+       the car surges. That compliance is the only thing this adds, and it is
+       only added where the rigid-driveline assumption is what removed it. */
+    const wantDip = S.limCut && S.locked ? band * 0.3 : 0;
+    S.limDip += (wantDip - S.limDip) * Math.min(1, dt * (S.limCut ? 34 : 22));
+  }
+  if (S.rpm <= (S.parkLimit || ENG.cut) - Math.max(120, (ENG.cut - ENG.idle) * 0.028) * 1.6) {
+    S.limCut = false; S.limDip += (0 - S.limDip) * Math.min(1, dt * 22);
   }
 
   // idle governor keeps the engine alive at no throttle (free or lightly
@@ -9204,11 +9315,34 @@ function stepPhysics(dt) {
     else if (fwd) driveF = S.throttle * (CC.evForce || 8000) * clamp((cap - S.v) / cap, 0, 1);
     else if (rev) driveF = -S.throttle * (CC.evForce || 8000) * 0.5 * clamp((cap * 0.4 + S.v) / (cap * 0.4), 0, 1);
   } else if (ratio === 0 || cap < 1) {
-    // engine free-revving
+    /* --- engine free-revving ---
+       Nothing is attached, so the only thing deciding how fast the crank
+       moves is the crank. On a 0.095 flywheel making 550Nm that is very
+       nearly a thousand rpm per sixteen-millisecond frame, and a single Euler
+       step of that size cannot resolve a rev limiter at all: it steps from
+       comfortably under the ceiling to comfortably over it and back, and
+       whatever the limiter decides in between never happens.
+
+       So this branch — and only this branch, because it is the only place the
+       crank is ever this free — substeps, with the fuel cut re-evaluated
+       inside the loop. That is what makes the bounce a bounce rather than a
+       frame-rate artefact, and it sharpens every blip and rev-match in the
+       car for the same reason. */
     S.locked = false;
     S.tcLock = 0;                            // …and the converter is out of it
     if (S.engineOn || S.rpm > 1) {
-      S.rpm += (Te / ENG.inertia) * omegaToRpm * dt;
+      const step = Math.abs(Te / ENG.inertia) * omegaToRpm * dt;
+      const n = clamp(Math.ceil(step / 90), 1, 16);
+      const sdt = dt / n;
+      const ceilNow = S.parkLimit || ENG.cut;
+      // the drag that is left when the fuelling goes away mid-substep
+      const coast = -(20 + S.rpm * 0.02) * (ENG.fric || 1);
+      for (let i = 0; i < n; i++) {
+        const cut = S.engineOn && !S.softLim && !CC.ev && S.rpm > ceilNow;
+        const T = cut ? coast : Te;
+        S.rpm += (T / ENG.inertia) * omegaToRpm * sdt;
+        if (S.rpm < 0) { S.rpm = 0; break; }
+      }
     }
   } else if (TC) {
     /* --- through the fluid. See TORQUE CONVERTER. ---------------------- */
@@ -9370,8 +9504,57 @@ function stepPhysics(dt) {
       // barely hear and a petrol one lights the tires for a moment first.
       const react = (isEv() || CC.edrive) ? 0.02 : 0.11;
       S.tcCut = clamp((S.tcCut || 0) + (over - (S.tcCut || 0)) * Math.min(1, dt / react), 0, 1);
+
+      /* ---- AND IT HUNTS ----
+         A traction control system is a feedback loop with a delay in it, and
+         a feedback loop with a delay in it does not sit still. It sees slip,
+         pulls the torque, and by the time the torque is gone the slip has
+         already gone with it — so it gives the torque back, and the slip
+         returns, and it takes it away again. Several times a second. That
+         cycling is the sound and feel everyone recognises: the engine surging
+         against the limiter, the car going in pulses, the light stuttering
+         on the dash. A smooth servo — which is what this was — is what a TC
+         system would do if it could see the future.
+
+         The important half is that it SETTLES. The hunt is loudest at the
+         moment the tyres let go and quietest once the car has enough speed
+         under it for the demand to sit inside the grip, so `tcSettle` is a
+         confidence that builds while nothing is slipping and collapses the
+         instant something does. Which is why a standing start on a wet road
+         is a car shuddering and surging for two seconds and then simply
+         driving — rather than shuddering and surging all the way to the
+         horizon, which is what a permanent oscillation would give you. */
+      /* What actually settles it is SPEED, and that is worth being precise
+         about because it is the difference between a system that calms down
+         and one that just gets tired. Off the line the car has far more
+         torque than the contact patch can take, the loop is working at its
+         limits and every correction overshoots — so it hunts, hard. As the
+         road speed comes up the same slip ratio is a much smaller fraction of
+         what the tyre can do, the loop gets margin to work in, and the
+         corrections stop overshooting. So the settling is not a timer running
+         out; it is the car arriving somewhere the box can cope with, and it
+         comes back the moment it doesn't. */
+      const spdEase = clamp(Math.abs(S.v) / 14, 0, 1);
+      /* The hunt is keyed off the INTERVENTION, not off the slip. That
+         distinction matters: a well-behaved servo drives the slip back to the
+         peak and holds it there, so by the time you measure the error it has
+         already been corrected and there is nothing left to see. What is
+         still there — what you feel through the seat and hear in the engine —
+         is the box repeatedly taking torque away and giving it back. So the
+         thing that cycles is the cut, whenever the cut is doing anything. */
+      const busy = Math.max(S.tcCut, over);
+      S.tcSettle = clamp((S.tcSettle || 0)
+        + (busy > 0.05 ? dt * (-1.6 + spdEase * 2.1) : dt * 0.7), 0, 1);
+      if (busy > 0.03) {
+        // the cycle tightens as the intervention gets more urgent, and
+        // flattens out as the road speed gives the loop room to work in
+        S._tcPh = ((S._tcPh || 0) + dt * (7.5 + busy * 7)) % 1;
+        const depth = (1 - S.tcSettle) * clamp(busy * 2.2, 0, 1) * 0.7
+                    * clamp(1 - Math.abs(S.v) / 30, 0.12, 1);
+        S.tcCut = clamp(S.tcCut * (1 + Math.sin(S._tcPh * Math.PI * 2) * depth), 0, 1);
+      }
       driveF *= 1 - 0.85 * S.tcCut;
-    } else S.tcCut = 0;
+    } else { S.tcCut = 0; S.tcSettle = 1; }
     // spinning the driven wheels means spinning everything bolted to them:
     // the engine, through the gearing, squared
     const geared = ratio ? Math.min(1200, ENG.inertia * ratio * ratio / (CAR.wheelR * CAR.wheelR)) : 0;
@@ -9399,6 +9582,7 @@ function stepPhysics(dt) {
   } else {
     S.spinV = Math.sign(S.spinV) * Math.max(0, Math.abs(S.spinV) - 12 * dt);
     S.tcCut = 0;                             // nothing slipping, nothing to cut
+    S.tcSettle = clamp((S.tcSettle || 0) + dt * 0.6, 0, 1);
   }
   S.slipR = sRatio;
   S.slipSigned = sSigned;
@@ -9459,7 +9643,13 @@ function stepPhysics(dt) {
   refuelTick(dt);
   dmgTick(dt, Te, engage, ratio, braking);
 
+  // how fast the crank moved this frame, for the limiter's look-ahead next one
+  S._rpmRate = S.rpm - (S._rpmWas === undefined ? S.rpm : S._rpmWas);
+  S._rpmWas = S.rpm;
   S.rpm = clamp(S.rpm, 0, S.parkLimit ? S.parkLimit : ENG.cut * 1.24);
+  // …and the limiter's sawtooth rides on top of it, so the needle hammers
+  // against the stop instead of resting on it. See THE HARD LIMITER.
+  if (S.limDip > 0.5) S.rpm = Math.max(ENG.idle * 0.5, S.rpm - S.limDip);
   // the start-up ceiling is absolute — momentum doesn't get to carry the
   // needle through it either, so the guard outlives the flare by a beat
   S.catchGuard = Math.max(0, (S.catchGuard || 0) - dt);
@@ -9933,8 +10123,16 @@ function dmgTick(dt, Te, engage, ratio, braking) {
   // --- engine: over-rev. Severity is how far past the cut, not just whether.
   if (S.engineOn && !DMG.blown && ENG.cut > 0) {
     const over = S.rpm / ENG.cut;
-    if (over > 1.02) {
-      DMG.engine = Math.min(1, DMG.engine + dt * (over - 1.02) * 9);
+    /* …but not for the limiter's own bounce. The whole point of a rev limiter
+       is that holding the car against it is survivable — the revs cross the
+       cut on every cycle by design, and an engine that ate itself for using
+       the thing protecting it would have the causality backwards. What is
+       still fatal is what the limiter cannot help with: a money shift, which
+       puts the crank somewhere the fuelling has no say in and does it in one
+       go. So the bounce is exempt and anything past it is not. */
+    const bounce = S.limCut || S.limDip > 0.5 ? 1.09 : 1.02;
+    if (over > bounce) {
+      DMG.engine = Math.min(1, DMG.engine + dt * (over - bounce) * 9);
       if (DMG.engine >= 1) blowEngine();
     }
   }
@@ -10981,14 +11179,17 @@ function gateTick(dt) {
    hands, and an unmatched one is a clack and a shunt because a great deal
    of it did. */
 function engageGear(target, st) {
-  const span = Math.max(400, ENG.max * 0.22);
+  /* How close is close enough to count as a matched change. Generous on
+     purpose: the reward for blipping has to be reachable with a key, or it is
+     not a reward, it is a taunt. */
+  const span = Math.max(700, ENG.max * 0.34);
   const match = clamp(1 - st.mismatch / span, 0, 1);
   S.revMatch = match;
   S.lastShift = 0;
   S.syncTo = null; S.syncT = 0;
 
   setGear(target, true);
-  if (match > 0.93) sfxGateSnick(0.9);
+  if (match > 0.82) sfxGateSnick(0.9);
   else { sfxGateIn(0.7 + (1 - match) * 0.8); }
 
   /* A CLUTCHLESS SHIFT. If the pedal is up, the engine is bolted to what you
@@ -11573,6 +11774,7 @@ function selectCar(id) {
   armCel();
   S.gear = 0; S.autoSel = "P"; S.autoGear = 1;
   S.shiftCut = 0; S.shiftCool = 0; S.cutTimer = 0; S.blip = 0; S.catchT = 0; S.sweep = -1;
+  S.limCut = false; S.limT = 0; S.limDip = 0;
   S.pendShift = false;
   resetTraction();
   S.inShaft = 0; S.syncTo = null; S.syncT = 0; S.syncGrind = 0; S.baulk = 0; S.judder = 0;
@@ -12325,7 +12527,7 @@ function refreshWorkshop() {
     if (b.dataset.shift === "factory")
       b.querySelector(".ws-card-desc").textContent =
         "Whatever this car came with — here, " +
-        (LEVER_MATS[CC.lever] || LEVER_MATS.rubber).label + ".";
+        (LEVER_MATS[CC.lever] || LEVER_MATS.mech).label + ".";
   });
   document.querySelectorAll("#wsPaddle .ws-card").forEach(b =>
     b.classList.toggle("on", b.dataset.paddle === curMod().paddle));

@@ -248,6 +248,16 @@ hands:
   to the gear with your right foot and there is no speed difference left to
   kill. The lever slides through like there is nothing in the box.
 
+The ring is deliberately quicker than a real one, and that is a decision
+rather than an oversight: on a wheel and pedals you can meter a clutch to the
+millimetre and blip to fifty rpm, and a strict cone would be a skill worth
+learning. On a keyboard the clutch is in or out and the throttle is on or off,
+so a strict cone is just a door that will not open. Everything the model is
+*for* survives being loosened — the hang is still there and still proportional
+to the shift, a half-declutched change still drags and grumbles, a hopeless
+one still baulks. What is gone is the part that punished you for being ten
+milliseconds late with a key.
+
 So rev-matching earns something real. Blip on the way down and the mismatch
 collapses, the hang disappears, and the change is instant and silent. Don't,
 and it is slow, and the car shunts when the clutch comes up. **Double-declutch
@@ -274,15 +284,20 @@ the clutch.
 
 And what it is **made of** changes all eight more than what it is *doing*
 does, because every one of them is an impact and an impact is a spectrum.
-Rubber bushings are a damper: they eat the transient, kill the ring, and pass
-only the low thud, which is why a normal car goes "thunk" and nothing else. A
-short shifter swaps that rubber for solid alloy — same impact, nothing
-absorbing it, so the pitch climbs and you get the notchy k-chk people fit them
-for. An open gate is a steel ball in a milled alloy plate, and the plate is a
-bell. A **wooden ball** is the interesting one and the opposite of what a
-posh-looking knob suggests: wood across the grain is a superb damper, so it is
-a dense, dry knock with real body and no ring at all. Carbon and titanium
-weigh nothing, so there is no body — a bright tick over silence.
+An **exposed machined linkage** — billet rods and rose joints with no boot over
+them, every pivot visible from the seat — is the one people know by ear, and
+what makes it that sound is that it is **two impacts, not one**. The linkage
+takes up first, a hard bright snap with nothing damping it, and twenty-odd
+milliseconds later the detent slams into its notch underneath. Close enough
+that the ear hears one event with a texture, far enough that collapsing them
+into a single click leaves you with a mouse button. A short shifter is solid
+alloy bushings — same impact, nothing absorbing it, so the pitch climbs and
+you get the notchy k-chk people fit them for. An open gate is a steel ball in
+a milled alloy plate, and the plate is a bell. A **wooden ball** is the
+opposite of what a posh-looking knob suggests: wood across the grain is a
+superb damper, so it is a dense, dry knock with real body and no ring at all.
+Carbon and titanium weigh nothing, so there is no body — a bright tick over
+silence.
 
 Workshop → **SHIFTER FEEL**, and the default is whatever the car actually came
 with, because a Zonda's open gate and a Carrera GT's beech ball are facts
@@ -325,14 +340,58 @@ A slip-angle strip appears in the cluster when the back starts to move and
 goes away again when it stops, because a gauge that reads zero forever stops
 being read. The cluster rotates with the car, because you are strapped to it.
 
-## The one with no traction control at all
+### …and with it switched on, it hunts
+
+A traction control system is a feedback loop with a delay in it, and a
+feedback loop with a delay in it does not sit still. It sees slip, pulls the
+torque, and by the time the torque is gone the slip has gone with it — so it
+gives it back, and the slip returns, and it takes it away again. Several times
+a second. That cycling is the thing everyone recognises: the engine surging,
+the car going in pulses, the light stuttering on the dash. A smooth servo is
+what a TC system would do if it could see the future.
+
+The important half is that it **settles**, and what settles it is speed. Off
+the line the car has far more torque than the contact patch can take and every
+correction overshoots, so it hunts hard. As road speed comes up the same slip
+ratio is a much smaller fraction of what the tyre can do, the loop gets margin
+to work in, and the corrections stop overshooting. So it is not a timer
+running out — it is the car arriving somewhere the box can cope with, and it
+comes straight back the moment it doesn't.
+
+## The limiter bounces
+
+A rev limiter is a relaxation oscillator, and it is one because of
+**hysteresis**. The ECU does not restore the fuel the instant the revs dip
+below the number — if it did it would chatter at the sample rate. It cuts at
+the ceiling and does not light again until the revs have fallen a couple of
+hundred rpm *below* it. The engine falls through that gap, catches, climbs
+back through it, and cuts again: a sawtooth, five to twelve times a second,
+and that sawtooth is the sound of a limiter. Every bark and every bang out of
+the pipes is one cycle of it.
+
+It happens in gear too. There the crank is bolted to the road and cannot
+actually lose two hundred rpm in a twentieth of a second — but nothing between
+it and the road is rigid, so the shafts wind and unwind, the mounts load and
+release, and the needle wobbles against the stop while the car surges.
+
+Holding a car against the limiter is survivable, incidentally, even with
+consequences on. That is what the limiter is *for*. What is still fatal is the
+money shift, which puts the crank somewhere the fuelling has no say in and
+does it in one go.
+
+## The one that asks the most
 
 The **Zuffenhausen GT**. A 5.7-litre 68° V10 designed for a Le Mans prototype,
-a six-speed manual, rear-wheel drive, and — not switchable, not disabled —
-**absent**: the car has anti-lock brakes and it has you, and that is the whole
-electronic safety net. Every story ever told about it starts there, so it is
-the one car in the garage that arrives with the workshop's infinite-grip cheat
-switched *off*. It is still a switch, and it is still yours.
+a six-speed manual, rear-wheel drive. It has traction control and it has ABS,
+and both of them are switches — leave the first one on and the box holds the
+rear at the peak of the curve, hunting and surging while it does it; switch it
+off and there is nothing between 612 horsepower and the road except your right
+foot, which is the version the car is famous for.
+
+What it does *not* get is the workshop's infinite-grip cheat. It is the one
+car in the garage that arrives with that switched **off**, because a car whose
+whole character is how much it asks of you is not worth handing unobtainium
+rubber by default. It is still a switch, and it is still yours.
 
 The clutch is the other half of the reputation. A 169mm ceramic twin-plate
 weighs almost nothing, which is why the engine revs like a switch — and it
