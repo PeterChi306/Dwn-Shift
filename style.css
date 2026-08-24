@@ -2721,3 +2721,14 @@ body.dash-dead .cluster .lamp i { box-shadow: none !important; }
 /* the clutch interlock shaking the pedal at you — same idea as the race
    panel: the car is not refusing, it is pointing at what you missed */
 .pedal-group.nudge { animation: rpNudge 0.3s ease; }
+
+/* the dog box balking: a paddle pulled with the clutch out. Same family as
+   .nudge above, but this one is a refusal rather than a reminder — the pedal
+   flashes red because the lever physically would not move. */
+.pedal-group.need { animation: pgNeed 0.42s ease; }
+@keyframes pgNeed {
+  0%   { transform: none;             filter: none; }
+  18%  { transform: translateY(2px);  filter: drop-shadow(0 0 10px rgba(216,31,38,0.85)); }
+  55%  { transform: none;             filter: drop-shadow(0 0 6px rgba(216,31,38,0.5)); }
+  100% { transform: none;             filter: none; }
+}

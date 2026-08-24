@@ -1097,6 +1097,93 @@ const CARS = [
     },
   },
   {
+    id: "ingolstadt", name: "Ingolstadt S1 Quattro", tag: "Group B · anti-lag · clutch sequential",
+    layout: "I5 · 2.1L turbo",
+    indicator: "relay",            // a rally car's dash is a switch panel, not a dashboard
+    crackle: "hard",               // no catalyst, no silencer, and fuel going in on the overrun
+    cyl: 5, idle: 1150, max: 7800, cut: 8000, inertia: 0.19,
+    /* 2,110cc, 20 valves, one enormous KKK K27 and about 2.2 bar of it.
+       Somewhere between 480 and 550 hp depending on who was holding the
+       stopwatch. What matters here is the SHAPE, not the peak: there is
+       almost nothing below three thousand, and then the whole engine
+       arrives at once. That step at 3,400 is the car. */
+    curve: [[0, 60], [1150, 145], [2200, 185], [3000, 250], [3400, 430], [4200, 495],
+            [5200, 520], [6000, 512], [7000, 455], [7800, 380], [8400, 240]],
+    ratios: { R: -3.2, 1: 2.92, 2: 2.06, 3: 1.61, 4: 1.32, 5: 1.09, 6: 0.92 },
+    mass: 1090, finalDrive: 4.30, clutchCap: 620, cdA: 0.86, brakeMax: 13500,
+    grip: 1.62, awd: true,         // four driven wheels and a wing off the back of a lorry
+    tire: 1.15,
+    /* THE GEARBOX — and the reason this car exists in the garage.
+
+       Everything else here with two paddles is clutchless: you pull, a
+       computer opens something, and your left foot has no job. This is the
+       older, cruder, better-sounding arrangement. A straight-cut dog
+       sequential on the back of the engine, a lever (here: paddles) that
+       moves the selector drum one notch per pull, and a real clutch pedal
+       that you dip for a fraction of a second on every single change.
+
+       It is not a synchromesh box and it is not slow. The dogs do not need
+       matching, they need UNLOADING, and the clutch is how you unload them.
+       Dip, pull, out — the whole thing is over in a tenth of a second and
+       the car never stops driving. That is the "seamless" part, and it is
+       the opposite of the gated six-speed's ceremony: there is no gate, no
+       H, no thinking about where the lever is. There is one direction, and
+       a clutch you brush.
+
+       seqClutch is what makes the pedal a requirement rather than a
+       decoration: pull a paddle with your foot off it and the dogs are
+       still loaded, so nothing happens except a refusal. See seqShift(). */
+    seqClutch: true, mechBox: true, gearWhine: 6.5, gearWhineMul: 1.25,
+    shiftLag: 0.062,
+    rawCabin: 0.8,                 // stripped shell, roll cage, one seat's worth of trim
+    asp: "turbo", pops: 2.8,
+    boostMax: 0.96, spool: 3200, spoolRate: 1.55, psiMax: 32,
+    /* the lag is the legend. A K27 the size of a fist on a 2.1 needs revs
+       before it needs throttle, and until it has them the car is a 2.1 with
+       nothing in it. Then it lights, and it does not light gently. */
+    twin: 1.25, flutter: 1.15,      // a period bypass valve, and it is not subtle
+    whistleMul: 1.5, whistleFreqMul: 1.15, turboBreath: 1.5, breathHz: 900,
+    tachMax: 9, redK: 7.8, kmhMax: 250, mphMax: 155,
+    shiftLights: true, dial: "gear",
+    dash: { accent: "#d81f26", face: "dark" },
+    /* THE FIVE.
+
+       A five-cylinder fires every 144°, which is the whole thing. Five is
+       odd, so no two cylinders ever balance each other and the exhaust
+       pulses never settle into the tidy pairs a four or a six gets — the
+       note walks. That walk is why an I5 warbles instead of droning, and
+       why it sounds like a V10 with half of it missing rather than like a
+       big four.
+
+       In the engine here f0 is rpm/60 × 2.5, so the orders that carry the
+       warble are the ones BETWEEN the harmonics: 0.4, 0.8, 1.2. Those are
+       what make it lope. On top of that sits a very short unsilenced
+       downpipe (hp: 118 — there is no box anywhere in it for a long wave to
+       live in) and the compressor screaming over everything above four
+       thousand. */
+    sound: {
+      // 144° apart, five times, forever
+      f0Mul: 0.86, air: 1, jitter: 1.45,
+      hp: 118,                     // one straight pipe, no silencer, no volume for bass
+      intakeLoad: 1.5,
+      layers: [
+        ["sine",     0.4,   0.30, 0.10],   // the off-beat under everything — THE five
+        ["square",   0.4,   0.22, 0.08],   // …and its gravel
+        ["sawtooth", 0.8,   0.20, 0.24],   // the second half of the walk
+        ["sawtooth", 0.995, 0.24, 0.30],   // unison low…
+        ["sawtooth", 1,     0.46, 0.52],   // …centre voice…
+        ["sawtooth", 1.006, 0.22, 0.30],   // …unison high — the warble is a chorus
+        ["sawtooth", 1.2,   0.14, 0.26],   // between-order density, five-specific
+        ["sawtooth", 2.01,  0.14, 0.44],   // downpipe bite, hardens on boost
+        ["sawtooth", 3.02,  0.04, 0.28],   // metallic top the turbine hasn't eaten
+        ["triangle", 4.03,  0.0,  0.14],   // sizzle at eight grand
+      ],
+      formants: [[135, 1.0, 5], [520, 1.5, 5.5], [1650, 2.0, 4], [3400, 2.4, 2.5]],
+      noiseMul: 1.25, drive: 0.66, pulseDepth: 0.34, pulseDiv: 2.5,
+      raspMul: 1.3, scream: 2600, volTrim: 1.15, loadDrive: 0.55, lpMul: 1.05,
+    },
+  },
+  {
     id: "zuffen", name: "Zuffenhausen 4.0 RS", tag: "9k flat-six howl", layout: "F6 · 4.0L NA",
     indicator: "crisp",   // the satisfying one — dry, tight, perfect
     crackle: "dry",   // thin race pipes, hot and metallic
@@ -2127,12 +2214,21 @@ function hexA(hex, a) {
 
 const RATES = { thrUp: 4.6, thrDn: 5.6, brkUp: 5.2, brkDn: 6.0, cltUp: 9.0, cltDn: 2.0 };
 
-/* flyby pass speed: below 300 km/h the trackside car sweeps by at its true
-   speed; above 300 the pass snaps past dramatically faster. Only the excess
-   over 300 is amplified, so nothing at or below 300 km/h changes. */
+/* Flyby pass speed. This used to multiply everything over 300km/h by 3.6,
+   which made a 400km/h car cross the frame at an indicated 660 and turned the
+   pass into a cartoon — the Doppler ratio went past anything the atmosphere
+   can actually produce, and the whole thing stopped sounding like a car and
+   started sounding like a sample being scrubbed.
+
+   1.4 instead, and only on the excess. The honest reason a very fast pass
+   feels underwhelming is not that it is too slow, it is that at 300km/h a car
+   crosses your ~80m window of usable directivity in under a second and there
+   is nothing left to hear. That is a real property of the event, not a bug,
+   and the fix for it is a longer approach (see the run length in the flyby
+   block) rather than a faster car. */
 function flybyV() {
   const raw = Math.abs(S.v), th = 300 / 3.6;      // 83.3 m/s
-  return raw <= th ? raw : th + (raw - th) * 3.6;
+  return raw <= th ? raw : th + (raw - th) * 1.4;
 }
 
 /* ---------------- workshop modifications ---------------- */
@@ -2287,7 +2383,7 @@ const S = {
   throttle: 0, brake: 0, clutchPedal: 0,
   effThrottle: 0, engage: 0, locked: false,
   shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, catchGuard: 0, parkLimit: 0, crankP: null, crankTimer: 0, settleT: 0, settleDur: 0, settleFrom: 0, fastIdle: 0, pendShift: false,
-  tunnel: false, flyby: false, flyX: -380, cabin: false, stock: false, mods: {},
+  tunnel: false, flyby: false, flyX: -620, cabin: false, stock: false, mods: {},
   space: "open",                     // where you're driving — see SPACES
   listen: "driver",                    // which microphone — see LISTEN
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
@@ -2400,8 +2496,16 @@ function isEv() { return !!CC.ev; }
 function forcedMode() {
   if (isEv() || CC.autoOnly) return "auto";
   if (CC.gatedOnly) return "clutch";
+  // a straight-cut dog sequential with a clutch pedal is not an H-pattern and
+  // it is not an automatic. It is its own thing, and it is the only thing this
+  // car has ever had — see seqClutch on the S1.
+  if (CC.seqClutch) return "manual";
   return null;
 }
+/* does the box in front of you want your left foot on every change? Only the
+   clutch-sequential cars do, and only in manual mode — the gated cars use the
+   pedal for something else entirely. */
+function seqClutchBox() { return !!CC.seqClutch && S.mode === "manual"; }
 function autoOnly() { return forcedMode() === "auto"; }
 /* …and whether its shifts are meant to be undetectable */
 function seamless() { return !!CC.seamless; }
@@ -2767,8 +2871,20 @@ function initAudio() {
   AU.flyHi = ctx.createBiquadFilter(); AU.flyHi.type = "highshelf";
   AU.flyHi.frequency.value = 1900; AU.flyHi.gain.value = 0;
   AU.flyPan = ctx.createStereoPanner(); AU.flyPan.pan.value = 0;
+  /* AIR. Distance is not only quieter, it is duller, and the two are not the
+     same cue — a quiet bright sound reads as a small sound close by, and a
+     quiet dull one reads as a big sound far away. Atmospheric absorption is
+     strongly frequency-dependent: at a couple of hundred metres the bottom
+     two octaves arrive essentially intact while everything above 3kHz has
+     been eaten, which is why a car you cannot see is all bark and no rasp.
+     This was being applied as a tone TERM inside the engine voice; it needs
+     to be a filter on the whole outgoing sound, because the tyres, the turbo
+     and the wind all travel through the same air. */
+  AU.flyAir = ctx.createBiquadFilter(); AU.flyAir.type = "lowpass";
+  AU.flyAir.frequency.value = 20000; AU.flyAir.Q.value = 0.5;
   AU.cabShelf.connect(AU.flyGain);
-  AU.flyGain.connect(AU.flyLo); AU.flyLo.connect(AU.flyHi); AU.flyHi.connect(AU.flyPan);
+  AU.flyGain.connect(AU.flyAir); AU.flyAir.connect(AU.flyLo);
+  AU.flyLo.connect(AU.flyHi); AU.flyHi.connect(AU.flyPan);
 
   // interior bus: the things that live INSIDE the car with you — the cluster
   // chimes, the warning beeps, the indicator, the seatbelt nag. These do not
@@ -2918,14 +3034,58 @@ function initAudio() {
   AU.spHp = ctx.createBiquadFilter(); AU.spHp.type = "highpass";
   AU.spHp.frequency.value = 90; AU.spHp.Q.value = 0.7;   // outdoors keeps no sub
   AU.spWet = ctx.createGain(); AU.spWet.gain.value = 0;
-  AU.wetSend.connect(AU.spConv);
+
+  /* ---- THE DISTANCE STAGE, and the reason a far-off car sounds far off ----
+
+     There is one acoustic fact this simulator was getting backwards, and it
+     is the single most important thing about listening to a car from a
+     distance.
+
+     The DIRECT sound obeys the inverse square law: double the distance, quarter
+     the power. The REVERBERANT field does not. Reflected energy fills the
+     whole space more or less evenly, so past a few metres it barely falls off
+     at all — which means the ratio between the two swings enormously with
+     distance. Standing at the exhaust you hear direct sound and almost no
+     room; standing three hundred metres down the street you hear almost
+     nothing BUT room.
+
+     The flyby stage used to scale the wet send by the same distance gain as
+     the dry path, which quietly enforced a constant wet/dry ratio and is
+     exactly what makes distance in games sound like a volume knob. A car half
+     a kilometre away came out as a small quiet car rather than a big distant
+     one.
+
+     spDist undoes that for the SPACE chain (the tunnel keeps the old law —
+     inside a tube you are always close to the surface). It runs at 1 when
+     you are in the car, and rises as the flyby car recedes so that what
+     reaches the reflections stays roughly level while the direct sound
+     collapses. See the flyby block in audioTick().
+
+     spPre is the other half: reflected sound has further to travel than
+     direct sound, and the gap between them is how the ear measures a room.
+     Close up it is a couple of milliseconds; from far away the first return
+     is tens of milliseconds behind the direct arrival, and that lag is heard
+     as depth rather than as delay.
+
+     spAir is the air itself. Two hundred metres of it is a lowpass filter,
+     and a fairly brutal one — this is why a distant engine is all bottom end
+     and no rasp, and why you can hear a V12 across a city and still not be
+     able to tell what it is doing. */
+  AU.spDist = ctx.createGain(); AU.spDist.gain.value = 1;
+  AU.spPre = ctx.createDelay(0.2); AU.spPre.delayTime.value = 0.004;
+  AU.spAir = ctx.createBiquadFilter(); AU.spAir.type = "lowpass";
+  AU.spAir.frequency.value = 20000; AU.spAir.Q.value = 0.5;
+  AU.wetSend.connect(AU.spDist);
+  AU.spDist.connect(AU.spAir); AU.spAir.connect(AU.spPre);
+
+  AU.spPre.connect(AU.spConv);
   AU.spConv.connect(AU.spHp); AU.spHp.connect(AU.spLo); AU.spLo.connect(AU.spLp);
   AU.spLp.connect(AU.spWet); AU.spWet.connect(AU.wetOut);
 
   AU.spEcho = ctx.createDelay(0.6); AU.spEcho.delayTime.value = 0.1;
   AU.spFb = ctx.createGain(); AU.spFb.gain.value = 0;
   AU.spEchoWet = ctx.createGain(); AU.spEchoWet.gain.value = 0;
-  AU.wetSend.connect(AU.spEcho);
+  AU.spPre.connect(AU.spEcho);
   AU.spEcho.connect(AU.spFb); AU.spFb.connect(AU.spEcho);
   AU.spEcho.connect(AU.spEchoWet); AU.spEchoWet.connect(AU.wetOut);
 
@@ -2941,7 +3101,10 @@ function initAudio() {
   // a bang off a brick wall four metres away is the loudest thing in this
   // whole simulator, and it is the reason to drive an alley at all
   AU.popSp = ctx.createGain(); AU.popSp.gain.value = 0.8;
-  AU.popBus.connect(AU.popSp); AU.popSp.connect(AU.spConv); AU.popSp.connect(AU.spEcho);
+  // …and they take the distance stage with everything else, so an overrun
+  // bang from three hundred metres away arrives as a roll off the buildings
+  // rather than as a close crack with the volume turned down
+  AU.popBus.connect(AU.popSp); AU.popSp.connect(AU.spDist);
 
   /* sfx bus: EVERY one-shot component sound — doors, indicators, wipers,
      starters, clunks, the shifter, the tyres, the rain spray. Dry, always.
@@ -3021,16 +3184,34 @@ function initAudio() {
   AU.engHp = ctx.createBiquadFilter(); AU.engHp.type = "highpass";
   AU.engHp.frequency.value = 20; AU.engHp.Q.value = 0.55;
 
-  AU.engGain.connect(AU.engHp); AU.engHp.connect(AU.posLo); AU.posLo.connect(AU.posHi);
+  /* the proximity peak. A shelf says "there is more low end here"; a resonant
+     peak says "you are close to something with a length". A tailpipe has a
+     length, the length has a note, and standing behind it that note is most
+     of what you are hearing. See LISTEN.exhaust. */
+  AU.earSub = ctx.createBiquadFilter(); AU.earSub.type = "peaking";
+  AU.earSub.frequency.value = 85; AU.earSub.Q.value = 1.1; AU.earSub.gain.value = 0;
+
+  AU.engGain.connect(AU.engHp); AU.engHp.connect(AU.posLo);
+  AU.posLo.connect(AU.earSub); AU.earSub.connect(AU.posHi);
   AU.posHi.connect(AU.engAir); AU.engAir.connect(AU.posLp);
 
-  // stereo width: dry left, 13ms Haas-delayed right — the car wraps around you
+  /* …and the level. The microphone positions differ enormously in how LOUD
+     they are and that was the one dimension the table didn't have — a
+     tailpipe is not a driver's seat with more bass, it is fifteen decibels
+     more of everything. This sits before the split so the reverb send hears
+     it too: move the mic to the pipe and the tunnel gets hit harder, which
+     is what actually happens. */
+  AU.earGain = ctx.createGain(); AU.earGain.gain.value = 1;
+  AU.posLp.connect(AU.earGain);
+
+  // stereo width: dry left, Haas-delayed right — the car wraps around you,
+  // and how far around depends on how close to it you are standing
   AU.panL = ctx.createStereoPanner(); AU.panL.pan.value = -0.22;
   AU.panR = ctx.createStereoPanner(); AU.panR.pan.value = 0.22;
   AU.wDelay = ctx.createDelay(0.05); AU.wDelay.delayTime.value = 0.013;
-  AU.posLp.connect(AU.panL); AU.panL.connect(AU.master);
-  AU.posLp.connect(AU.wDelay); AU.wDelay.connect(AU.panR); AU.panR.connect(AU.master);
-  AU.posLp.connect(AU.wetSend);          // …and this is the thing that echoes
+  AU.earGain.connect(AU.panL); AU.panL.connect(AU.master);
+  AU.earGain.connect(AU.wDelay); AU.wDelay.connect(AU.panR); AU.panR.connect(AU.master);
+  AU.earGain.connect(AU.wetSend);        // …and this is the thing that echoes
   AU.oscs = [];
 
   // --- the real thing: one blast per cylinder, at that engine's crank
@@ -3163,6 +3344,96 @@ function initAudio() {
   AU.rushG = ctx.createGain(); AU.rushG.gain.value = 0;
   wrushSrc.connect(AU.rushBp); AU.rushBp.connect(AU.rushG); AU.rushG.connect(AU.master); wrushSrc.start();
 
+  /* ---- THE GAS ----
+     An exhaust does two things and this simulator only modelled one of them.
+     It makes a note, and it vents gas — at full throttle a 6-litre engine at
+     6,000rpm is pushing something like 300 litres a second of it out of a
+     hole the size of a fist, at a few hundred degrees.
+
+     That rush is broadband roar, it has no pitch at all, and it is completely
+     inaudible from the driver's seat because the note is thirty decibels
+     louder by the time it reaches the cabin. Stand at the pipe and it is
+     half of what you hear — it is the reason a real tailpipe recording sounds
+     dirty and physical where a synthesized one sounds like a tone generator,
+     and it is what makes the position immersive rather than merely bassy.
+
+     It rides load rather than revs, because it is a mass-flow phenomenon: lift
+     off at seven thousand and the note stays and the rush disappears. Goes out
+     on the engine machinery bus so it reaches the room, the tunnel and the
+     street the same way the rest of the engine does. */
+  const gasSrc = ctx.createBufferSource();
+  gasSrc.buffer = nbuf; gasSrc.loop = true; gasSrc.playbackRate.value = 0.55;
+  AU.gasLp = ctx.createBiquadFilter(); AU.gasLp.type = "lowpass";
+  AU.gasLp.frequency.value = 700; AU.gasLp.Q.value = 0.6;
+  AU.gasHp = ctx.createBiquadFilter(); AU.gasHp.type = "highpass";
+  AU.gasHp.frequency.value = 110; AU.gasHp.Q.value = 0.5;
+  AU.gasG = ctx.createGain(); AU.gasG.gain.value = 0;
+  gasSrc.connect(AU.gasHp); AU.gasHp.connect(AU.gasLp); AU.gasLp.connect(AU.gasG);
+  AU.gasG.connect(AU.engMech); gasSrc.start();
+
+  /* ================================================================
+     THE FLYBY AIR RIG — what a fast car sounds like before it arrives
+     ================================================================
+     Standing at the side of a road, the engine is not the first thing you
+     hear and it is not the loudest thing at the moment of the pass. What you
+     hear is AIR, and the whole build of a trackside pass is air:
+
+       from far      a wide, low, wandering roar that has almost no engine
+                     in it yet — the car pushing a column of atmosphere down
+                     the road ahead of itself, arriving before it does
+       closing       the roar tightens and rises as the sound stops being
+                     something the whole valley is doing and starts being
+                     something happening in one direction
+       the pass      an enormous broadband SLAP as the pressure wave and the
+                     wake go past your face, and the band sweeps down through
+                     it because everything about the source is Dopplering
+       gone          a long, dirty, receding wake — the turbulence behind a
+                     car takes far longer to die away than the approach took
+                     to build, and this asymmetry is most of what makes a
+                     pass sound like a real one
+
+     Three layers, because those are three different noises and no filter
+     sweep on a single source will do all of them:
+
+       BLAST   the pressure front. Low, broad, huge, and the layer that
+               carries the "from far" part of the job.
+       SHEAR   the mid turbulence off the body, mirrors, wing and wheel
+               arches. This is the one that Dopplers most audibly, because
+               it is the one with enough top in it for a pitch shift to
+               show.
+       TYRES   four contact patches tearing at tarmac, which at 200km/h is
+               genuinely as loud as the exhaust and is the layer everyone
+               forgets. It is why a car passing on a coast-down still makes
+               a huge noise.
+
+     All three run permanently and sit at zero unless the flyby is on — see
+     the flyby block in audioTick(). They feed AU.master, so they go through
+     the flyby distance gain, the air filter and the panner with everything
+     else: the wind is at the car, not at your ears. */
+  const fbBlastSrc = ctx.createBufferSource();
+  fbBlastSrc.buffer = nbuf; fbBlastSrc.loop = true; fbBlastSrc.playbackRate.value = 0.32;
+  AU.fbBlastLp = ctx.createBiquadFilter(); AU.fbBlastLp.type = "lowpass";
+  AU.fbBlastLp.frequency.value = 180; AU.fbBlastLp.Q.value = 0.7;
+  AU.fbBlastG = ctx.createGain(); AU.fbBlastG.gain.value = 0;
+  fbBlastSrc.connect(AU.fbBlastLp); AU.fbBlastLp.connect(AU.fbBlastG);
+  AU.fbBlastG.connect(AU.master); fbBlastSrc.start();
+
+  const fbShearSrc = ctx.createBufferSource();
+  fbShearSrc.buffer = nbuf; fbShearSrc.loop = true; fbShearSrc.playbackRate.value = 1.0;
+  AU.fbShearBp = ctx.createBiquadFilter(); AU.fbShearBp.type = "bandpass";
+  AU.fbShearBp.frequency.value = 500; AU.fbShearBp.Q.value = 0.42;
+  AU.fbShearG = ctx.createGain(); AU.fbShearG.gain.value = 0;
+  fbShearSrc.connect(AU.fbShearBp); AU.fbShearBp.connect(AU.fbShearG);
+  AU.fbShearG.connect(AU.master); fbShearSrc.start();
+
+  const fbTyreSrc = ctx.createBufferSource();
+  fbTyreSrc.buffer = nbuf; fbTyreSrc.loop = true; fbTyreSrc.playbackRate.value = 0.72;
+  AU.fbTyreBp = ctx.createBiquadFilter(); AU.fbTyreBp.type = "bandpass";
+  AU.fbTyreBp.frequency.value = 900; AU.fbTyreBp.Q.value = 0.8;
+  AU.fbTyreG = ctx.createGain(); AU.fbTyreG.gain.value = 0;
+  fbTyreSrc.connect(AU.fbTyreBp); AU.fbTyreBp.connect(AU.fbTyreG);
+  AU.fbTyreG.connect(AU.master); fbTyreSrc.start();
+
   // --- tire screech (wheelspin / brake lockup) ---
   const ssrc = ctx.createBufferSource(); ssrc.buffer = nbuf; ssrc.loop = true; ssrc.playbackRate.value = 0.9;
   AU.scBp = ctx.createBiquadFilter(); AU.scBp.type = "bandpass"; AU.scBp.frequency.value = 950; AU.scBp.Q.value = 1.1;
@@ -3287,9 +3558,11 @@ function initAudio() {
 const LISTEN = {
   driver:  { name: "DRIVER'S SEAT", tag: "how the car is voiced. The default.",
              inside: true,  eng: 1.00, lo:  0, hi:  0, lp: 20000,
+             gain: 1, sub: 0, wide: 0.22, haas: 0.013, gas: 0.12,
              pop: 1.0, intake: 1.0, turbo: 1.0, wind: 1.0 },
   hood:    { name: "OVER THE BONNET", tag: "induction, valve gear and turbo. Almost no exhaust.",
              inside: false, eng: 1.20, lo: -6, hi: +5, lp: 20000,
+             gain: 1.1, sub: -3, wide: 0.3, haas: 0.009, gas: 0,
              pop: 0.45, intake: 2.1, turbo: 2.0, wind: 0.5 },
   // …with one correction: on a turbo car the turbos are IN the exhaust
   // stream, bolted to the manifolds, and everything they do goes out of the
@@ -3298,11 +3571,37 @@ const LISTEN = {
   // less, which is a different thing, and you hear the compressors bleed off
   // on every lift very clearly indeed. So intake stays buried and the turbo
   // itself sits close to where the driver has it.
+  /* THE TAILPIPE, rebuilt.
+
+     This position was correct in its EQ and wrong about what it is. It was
+     "the driver's seat with more bass", when standing a foot behind a running
+     exhaust is not a seating position, it is an assault, and four things make
+     it one:
+
+       LEVEL      it is simply the loudest place on the car, by a lot. `gain`
+                  is a straight trim on the whole voice and it is the single
+                  biggest thing that was missing — no amount of low shelf
+                  makes something feel loud if it isn't.
+       PROXIMITY  close-miking anything lifts the bottom out of all proportion
+                  to the room. `sub` is a resonant peak down at 85Hz — not a
+                  shelf, a PEAK, because a pipe has a length and that length
+                  has a note, and hearing that note is the difference between
+                  "bassy" and "standing behind a pipe".
+       WIDTH      at a metre away the two tips are further apart than your
+                  ears are, so the sound stops being in front of you and
+                  starts being around you. `wide` opens the stereo stage.
+       GAS        and the one nobody models: an exhaust is not only making a
+                  note, it is venting several hundred litres a second of hot
+                  gas out of a hole. That rush is broadband, it is loud, it
+                  is nothing like the note, and from anywhere else on the car
+                  you cannot hear it at all. `gas` is that. See AU.gasG. */
   exhaust: { name: "AT THE TAILPIPE", tag: "all bass and rasp, every pop in your face, no intake.",
-             inside: false, eng: 1.45, lo: +7, hi: +1, lp: 11000,
-             pop: 2.2, intake: 0.3, turbo: 0.85, wind: 0.55 },
+             inside: false, eng: 1.45, lo: +8, hi: +1.5, lp: 12000,
+             gain: 1.85, sub: 7.5, subHz: 85, wide: 0.52, haas: 0.024, gas: 1,
+             pop: 3.0, intake: 0.3, turbo: 0.95, wind: 0.55 },
   rear:    { name: "BACK SEAT", tag: "through the bulkhead. Boomy, distant, chauffeur-side.",
              inside: true,  eng: 0.82, lo: +4, hi: -8, lp: 2600,
+             gain: 0.9, sub: 2, subHz: 70, wide: 0.16, haas: 0.017, gas: 0.05,
              pop: 0.7, intake: 0.45, turbo: 0.55, wind: 0.85 },
 };
 
@@ -3339,6 +3638,18 @@ function applyListen() {
   AU.posLo.gain.setTargetAtTime(p.lo, t, 0.08);
   AU.posHi.gain.setTargetAtTime(p.hi, t, 0.08);
   AU.posLp.frequency.setTargetAtTime(p.lp, t, 0.08);
+  if (AU.earGain) {
+    AU.earGain.gain.setTargetAtTime(p.gain || 1, t, 0.12);
+    AU.earSub.gain.setTargetAtTime(p.sub || 0, t, 0.12);
+    AU.earSub.frequency.setTargetAtTime(p.subHz || 85, t, 0.12);
+    // move the mic closer and the stage opens: at a metre the two tips are
+    // wider apart than your ears are, and the sound stops being in front of
+    // you and starts being around you
+    const w = p.wide == null ? 0.22 : p.wide;
+    AU.panL.pan.setTargetAtTime(-w, t, 0.12);
+    AU.panR.pan.setTargetAtTime(w, t, 0.12);
+    AU.wDelay.delayTime.setTargetAtTime(p.haas == null ? 0.013 : p.haas, t, 0.12);
+  }
   // every bang goes off in the pipe, so a tailpipe ear gets all of it and a
   // bonnet ear gets the version that came round the side of the car
   AU.popBus.gain.setTargetAtTime(1.35 * p.pop, t, 0.08);
@@ -3594,15 +3905,70 @@ const SPACES = {
     name: "OPEN ROAD", desc: "Nothing to bounce off for a hundred metres. Just the car and the air.",
     wet: 0,
   },
+  /* THE ALLEY, second pass.
+
+     What the first version had right was the flutter: 4.2m of brick gives a
+     25ms round trip and the repeats fuse into a ring. What it was missing is
+     that an alley is a BOX WITH NO LID, and the two dimensions it wasn't
+     modelling are the two you actually notice standing in one.
+
+     `heightM` is the six storeys. Brick faces are not perfectly parallel and
+     an alley is full of fire escapes, drainpipes, sills and dead air-con
+     units, so a second, much slower comb runs up and down the shaft — around
+     110ms round trip on 19m. It is far quieter than the width flutter and it
+     is entirely why an alley sounds TALL rather than just narrow.
+
+     `endM` is the wall at the end of it. There is always one, it is usually
+     thirty or forty metres away, and it is the only thing in the space that
+     comes back as a recognisable separate event. A car three streets away
+     arrives through that one return, which is the whole "hearing it before
+     you see it" effect. */
   alley: {
     name: "BACK ALLEY", desc: "Four metres of brick either side, six storeys up. Everything rings and nothing gets away.",
-    widthM: 4.2, walls: 90, absorb: 0.965, tailS: 1.1, dark: 0.14,
-    wet: 0.62, slap: 0.028, fb: 0.44, lp: 7200, lo: 4,
+    widthM: 4.2, heightM: 19, endM: 34, walls: 90, absorb: 0.965, tailS: 1.6, dark: 0.14,
+    // brick keeps its top end, so the vertical comb stays bright and gritty
+    vertAbsorb: 0.86, vertLevel: 0.34, vertScatter: 2.6,
+    far: [[0.198, 0.30, 2600], [0.412, 0.15, 3600]],
+    /* 0.78 rather than the 0.62 it was, and the extra is not a taste change.
+       A ConvolverNode normalizes its impulse by total energy, so ADDING late
+       reflections quietly turns the early ones DOWN — the shaft and the far
+       returns below would otherwise have been paid for out of the wall
+       strikes, which are the part of an alley you actually recognise. The
+       ratio here is measured (the new impulse carries ~1.3× the energy of the
+       old one), so the strikes land exactly where they used to and the new
+       material sits on top rather than instead. Same reasoning for the city. */
+    wet: 0.78, slap: 0.028, fb: 0.44, lp: 7200, lo: 4,
   },
+  /* THE CITY STREET, second pass — and this is the one the whole rebuild is
+     for, because a street canyon is the space where distance sounds best.
+
+     A tunnel is impressive and it is also simple: one surface, very close,
+     very loud, and every car in it sounds the same. A street is the opposite.
+     The two facades are twenty metres apart so their slap arrives as a
+     separate event rather than as a ring, and then — the part that was
+     missing — the sound keeps going DOWN THE STREET and comes back off
+     everything else in it. Junctions, the block opposite, the row behind you,
+     a car park two hundred metres away. Those returns land between 200ms and
+     1.4 seconds later, they are individually quiet, and by the time they
+     arrive the air has eaten everything above about 2kHz.
+
+     That late, dark, scattered cloud is what a V12 three streets away sounds
+     like, and it is the reason car spotters stand on street corners rather
+     than in tunnels. The tunnel gives you volume; the street gives you SIZE,
+     and size is the thing you can hear the distance in. See `far` below and
+     the distance handling in audioTick(). */
   city: {
     name: "CITY STREET", desc: "A canyon of glass and render, twenty metres wide and broken up by every window in it.",
-    widthM: 21, walls: 26, absorb: 0.9, tailS: 1.9, dark: 0.3, scatter: 3.2,
-    wet: 0.36, slap: 0.122, fb: 0.3, lp: 3800, lo: 2.5,
+    widthM: 21, heightM: 26, walls: 26, absorb: 0.9, tailS: 3.2, dark: 0.3, scatter: 3.2,
+    vertAbsorb: 0.7, vertLevel: 0.16, vertScatter: 4,
+    /* [when, how loud, how smeared] — the blocks down the street, in order of
+       how far away they are. Each one is quieter, later and more smeared than
+       the last, and the smear is what stops them reading as slap-back echoes:
+       a building face 90m away is not a mirror, it is forty windows, ten
+       balconies and a parked van, and what comes back off it is a cloud. */
+    far: [[0.235, 0.34, 3200], [0.405, 0.26, 5200], [0.62, 0.19, 7000],
+          [0.88, 0.13, 9000], [1.24, 0.075, 12000]],
+    wet: 0.49, slap: 0.122, fb: 0.3, lp: 3800, lo: 2.5,
   },
   hill: {
     name: "HILLCLIMB", desc: "A flint wall down one side, hay bales and trees down the other. Tight, dark and lopsided.",
@@ -3657,13 +4023,70 @@ function makeSpaceIR(ctx, sp) {
       }
       g *= sp.absorb || 0.9;
     }
-    // one far face down the road — the end of the alley, the building across
-    // the junction, the bank on the outside of the corner ahead
-    const at = Math.floor((sp.slap || 0.1) * 2.4 * sr * wob);
-    let s = 0;
-    for (let j = 0; j < 1800 && at + j < len; j++) {
-      s += ((Math.random() * 2 - 1) - s) * 0.2;
-      d[at + j] += s * 0.16 * (1 - j / 1800);
+    /* --- the shaft. An alley is a box with no lid, and the missing lid is
+       the reason the WIDTH flutter alone reads as a corridor rather than as
+       somewhere outdoors. Six storeys of brick gives a second, much slower
+       comb running vertically — around 110ms up and back on 19m — and it is
+       broken up by every fire escape and drainpipe on the way, so it comes
+       back smeared where the width strikes come back hard.
+
+       Deliberately quiet (vertLevel ~0.3 at most). This is not a sound you
+       are supposed to identify. Take it out and the alley sounds narrow;
+       leave it in and it sounds narrow AND tall, and only one of those is
+       what standing in one is like. */
+    if (sp.heightM) {
+      const vrt = (sp.heightM * 2) / 343;
+      let vg = (sp.vertLevel || 0.25);
+      for (let n = 1; n <= 14; n++) {
+        const at = Math.floor(vrt * (1 + (wob - 1) * 0.4) * n * sr);
+        if (at >= len) break;
+        // no polarity flip: the two surfaces are floor and sky, and the sky
+        // isn't one. Vertical returns fuse into body rather than into a ring.
+        const w = Math.min(1600, 60 + n * 40 * (sp.vertScatter || 2));
+        let v = 0;
+        for (let j = 0; j < w && at + j < len; j++) {
+          v += ((Math.random() * 2 - 1) - v) * 0.3;
+          d[at + j] += v * vg * (1 - j / w);
+        }
+        vg *= (sp.vertAbsorb || 0.8);
+      }
+    }
+
+    /* --- DOWN THE STREET.
+       Everything above happens in the few metres either side of you. This is
+       what happens to the rest of it: the sound that went off down the road,
+       found a junction, a facade, a row of parked cars and the block behind
+       them, and came back a fifth of a second to a second and a half later.
+
+       Three properties, and all three matter:
+         LATE      far enough that it arrives after the near reflections have
+                   already died, so it is not part of them
+         DARK      air absorption over 200-400m of round trip takes everything
+                   above ~2kHz, and each return is duller than the last
+         SMEARED   a building face is not a mirror. `w` is the smear width and
+                   it grows with distance, so the nearest return is nearly an
+                   echo and the farthest is pure cloud.
+
+       This cloud is inaudible as an effect and enormous as a cue. It is the
+       entire difference between a car that is loud and a car that is FAR AND
+       loud, and it is what makes a big engine heard across a city better than
+       the same engine in a tunnel. */
+    const far = sp.far || [[(sp.slap || 0.1) * 2.4, 0.16, 1800]];
+    for (const [tm, gain, w] of far) {
+      const at = Math.floor(tm * sr * wob);
+      if (at >= len) continue;
+      let s = 0, s2 = 0;
+      for (let j = 0; j < w && at + j < len; j++) {
+        // two cascaded one-poles rather than one: a single pole leaves a
+        // buzzy top that reads as noise. Two gives the soft, air-eaten
+        // rumble a long return actually has.
+        s  += ((Math.random() * 2 - 1) - s) * 0.16;
+        s2 += (s - s2) * 0.22;
+        // a raised-cosine window, so the cloud swells and fades instead of
+        // starting on a transient — a distant return has no attack left
+        const env = 0.5 - 0.5 * Math.cos((j / w) * Math.PI * 2);
+        d[at + j] += s2 * gain * env * 2.2;
+      }
     }
   }
   return buf;
@@ -3706,8 +4129,8 @@ function setSpace(id) {
    don't instead: what the space is doing to the sound. */
 const SPACE_NOTES = {
   open: "Only the car, and a hint of room tone so it isn't uncomfortably dry. Everything below is a surface to bounce off.",
-  alley: "The round trip is 25ms — too fast to hear as an echo, so it fuses into a ring instead. Lift off and the bangs come back at you.",
-  city: "Far enough that you hear the slap arrive separately, broken up enough that it comes back scattered rather than as a strike.",
+  alley: "The round trip is 25ms — too fast to hear as an echo, so it fuses into a ring instead. Above it the six-storey shaft answers about a tenth of a second later, which is the part that sounds tall. Lift off and the bangs come back at you.",
+  city: "The slap arrives separately and scattered, and then the rest of the street answers for a second and a half after it. The further away the car is, the more of what you hear is that answer rather than the car — which is exactly why a big engine sounds best from three streets away.",
   hill: "Hard reflection on one ear, soft scatter on the other. Wear headphones for this one — the lopsidedness is the whole effect.",
 };
 
@@ -4197,21 +4620,105 @@ function audioTick() {
   // over about 18m either side of the pass — which at 200km/h is a quarter
   // of a second, and that is exactly how abrupt the handover sounds.
   let flyDir = 0;
+  // distance in metres, and what the air and the buildings do with it
+  let flyR = 14, flyAirHz = 20000, spDist = 1, spPreS = 0.004, flyPass = 0;
   if (S.flyby) {
     const d = 14, x = S.flyX, r = Math.hypot(x, d);
-    const vr = flybyV() * (-x) / r;                // closing speed toward listener (boosted past 200)
+    const vr = flybyV() * (-x) / r;                // closing speed toward listener
     dop = 343 / Math.max(80, 343 - vr);
-    flyG = clamp(22 / r, 0.12, 1.5);
+    flyR = r;
+    /* Distance gain, and it is allowed to go much quieter than it used to.
+       The old floor of 0.12 existed because the direct sound was the ONLY
+       sound — drop it further and the car simply vanished. It is no longer
+       the only sound: the space chain below now holds its level as the direct
+       path collapses, so a car three hundred metres away can be genuinely
+       faint and still be enormous, which is the actual experience. */
+    flyG = clamp(24 / r, 0.045, 1.5);
     flyP = clamp(x / 70, -0.95, 0.95);
     flyLp = clamp(26 / r, 0.45, 1);
     flyDir = clamp(x / 18, -1, 1);
+    // 1 at the moment it goes past, 0 by forty metres either side
+    flyPass = clamp(1 - Math.abs(x) / 40, 0, 1);
+    /* AIR ABSORPTION. Roughly: the further it has come, the less of the top
+       survived the trip. Fitted so that a car at the far end of the run
+       arrives with nothing above about 1.5kHz — all bark, no rasp, no
+       mechanical detail — and one going past your feet is essentially
+       unfiltered. This one filter does more for the sense of distance than
+       any amount of level ever did. */
+    flyAirHz = clamp(22000 / (1 + r / 38), 900, 20000);
+    /* …and the reverberant field, which is the other half of it. See the
+       AU.spDist comment in initAudio(): reflected energy barely falls off
+       with distance, so as the direct path collapses the send into the
+       buildings has to be pushed back up to compensate. The exponent is the
+       whole control — at 0.28 the reflections lose about a quarter of what
+       the direct sound loses, which is roughly right for a street and is
+       what makes a distant car read as BIG rather than as quiet. */
+    const flyWet = clamp(Math.pow(flyG, 0.28), 0.4, 1.15);
+    spDist = clamp(flyWet / flyG, 1, 9);
+    // and the reflections arrive later than the direct sound does, by more
+    // and more as the direct path lengthens. This gap is heard as depth.
+    spPreS = clamp((r / 343) * 0.35, 0.004, 0.09);
   }
   AU.flyGain.gain.setTargetAtTime(flyG, t, 0.08);
   AU.flyPan.pan.setTargetAtTime(flyP, t, 0.08);
+  AU.flyAir.frequency.setTargetAtTime(flyAirHz, t, 0.06);
   // the wet send is tapped upstream of the flyby stage, so it has to be told
   // about the distance itself — otherwise a car half a kilometre away still
   // rings the tunnel as hard as one going past your feet
   AU.wetSend.gain.setTargetAtTime(flyG, t, 0.08);
+  if (AU.spDist) {
+    AU.spDist.gain.setTargetAtTime(spDist, t, 0.12);
+    AU.spPre.delayTime.setTargetAtTime(spPreS, t, 0.15);
+    // the reflected path is longer than the direct one, so it is darker still
+    AU.spAir.frequency.setTargetAtTime(clamp(flyAirHz * 0.62, 700, 20000), t, 0.08);
+  }
+
+  /* ---- the air the car is pushing ----
+     See THE FLYBY AIR RIG in initAudio() for what the three layers are. This
+     is the part that decides when you hear them, and the one rule that
+     matters is that they do NOT all fade with distance at the same rate.
+
+     Low frequencies carry. The blast layer lives under 200Hz, which is the
+     band that survives three hundred metres of air more or less intact, so
+     it is deliberately compensated back up as the car recedes — that wide
+     low roar arriving well before you can identify the engine is the whole
+     "you hear it long before you see it" effect, and it was the thing most
+     obviously missing. The shear and tyre layers live in the mid and get no
+     such help, because in real life they don't get any either: from far away
+     a fast car is a rumble, and it only becomes a hiss and a tear when it is
+     nearly on top of you.
+
+     Everything here is downstream of AU.flyGain, so the distance attenuation
+     is applied once, by the flyby stage, and these numbers are the SHAPE of
+     the falloff rather than the falloff itself. */
+  if (S.flyby) {
+    const sp = Math.abs(S.v);
+    // air noise goes as roughly the square of speed; below ~30km/h there is
+    // effectively none, which is why a slow pass is all engine
+    const aw = clamp(Math.pow(Math.max(0, sp - 6) / 52, 1.7), 0, 1.5);
+    // how much of the direct-path attenuation each layer is allowed to dodge
+    const lowComp = clamp(Math.pow(flyG, -0.55), 1, 6.5);
+    const midComp = clamp(Math.pow(flyG, -0.22), 1, 2.2);
+    const gust = 1 + (S.gust || 0) * 1.4;
+    // the pressure front. Wide, low, and the layer you hear from the far end.
+    AU.fbBlastG.gain.setTargetAtTime(aw * (0.26 + 0.5 * flyPass) * lowComp * gust, t, 0.12);
+    AU.fbBlastLp.frequency.setTargetAtTime(120 + sp * 1.6 + flyPass * 220, t, 0.12);
+    // body turbulence — the layer that Dopplers audibly, because it is the
+    // only one of the three with enough top in it for a shift to show
+    AU.fbShearG.gain.setTargetAtTime(aw * (0.16 + 0.62 * flyPass) * midComp * gust, t, 0.07);
+    AU.fbShearBp.frequency.setTargetAtTime((240 + sp * 8) * dop, t, 0.05);
+    // …and it broadens as it gets closer: far away the wake is one smooth
+    // band, up close it is a whole spectrum of separate turbulent noises
+    AU.fbShearBp.Q.setTargetAtTime(0.75 - 0.45 * flyPass, t, 0.1);
+    // four contact patches, and at speed they are as loud as the exhaust
+    AU.fbTyreG.gain.setTargetAtTime(
+      (S.v ? 1 : 0) * clamp(sp / 40, 0, 1.1) * (0.10 + 0.34 * flyPass) * midComp, t, 0.08);
+    AU.fbTyreBp.frequency.setTargetAtTime((620 + sp * 4.5) * dop, t, 0.05);
+  } else if (AU.fbBlastG) {
+    AU.fbBlastG.gain.setTargetAtTime(0, t, 0.15);
+    AU.fbShearG.gain.setTargetAtTime(0, t, 0.15);
+    AU.fbTyreG.gain.setTargetAtTime(0, t, 0.15);
+  }
   /* The spectral half of the handover. Approaching, the bottom end is
      literally pointed away from you and has to diffract round the car to
      arrive at all, so it is DOWN, and the induction top is up. Once it's
@@ -4348,6 +4855,28 @@ function audioTick() {
   const nMul = (VC.sound.noiseMul || 1) * P.intake * dirIntake;
   // …and on a rig car this is zero, because the rig has a proper intake layer
   // of its own and stacking a second one on top just makes mud
+  /* ---- the gas leaving the pipe ----
+     See AU.gasG in initAudio(). Mass flow, not revs: it is the product of how
+     fast the engine is turning and how open the throttle is, and both terms
+     have to be there. At 7,000rpm on a closed throttle the engine is a pump
+     with nothing going through it — the note is still enormous and the rush
+     is gone, and that hole is exactly what an overrun sounds like from behind
+     a car. Weighted toward load rather than revs for the same reason.
+
+     The band moves with flow as well. A trickle of gas out of a big pipe is
+     a low rumble; the same pipe at full flow is a roar that reaches well up
+     the spectrum, because the flow has gone turbulent. */
+  const gasEar = P.gas == null ? 0.12 : P.gas;
+  if (AU.gasG) {
+    const flow = rFrac * (0.22 + 0.78 * load) * (running ? 1 : 0);
+    AU.gasG.gain.setTargetAtTime(
+      Math.pow(flow, 1.25) * 0.5 * gasEar * (VC.sound.volTrim || 1), t, 0.07);
+    AU.gasLp.frequency.setTargetAtTime(420 + flow * 2600, t, 0.09);
+    // a big lazy pipe rumbles lower than a thin race one — the body highpass
+    // the car already declares is the best single measure of which it has
+    AU.gasHp.frequency.setTargetAtTime(clamp((VC.sound.hp || 60) * 0.8, 45, 220), t, 0.2);
+  }
+
   const boostHiss = CC.asp === "turbo" && !CC.turboRig ? S.boost * 0.09 * P.turbo : 0;
   // On a naturally aspirated engine with open trumpets there is no turbo to
   // whoosh, and induction roar takes its place — but it does not track revs
@@ -5428,6 +5957,48 @@ function sfxTwinRelease(amt, boost) {
    fork reaching the end of its travel). If you can pick it out as a separate
    sound effect it is too loud; you should only notice that the pause has
    something happening in it. */
+/* THE REFUSAL — a paddle pulled with the clutch out.
+
+   Worth building properly rather than reusing a clunk, because it is the one
+   sound that teaches the car. What happens mechanically is that the lever
+   moves its few millimetres of free play, the selector drum takes up against
+   a loaded dog ring, and STOPS. So there is a light plastic/alloy tick from
+   the linkage, and then a dead, damped thud with no ring on it at all —
+   nothing rang, because nothing moved. The deadness is the information. */
+function sfxSeqBalk() {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  // the linkage taking up its free play
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.5;
+  const f = ctx.createBiquadFilter(); f.type = "bandpass";
+  f.frequency.value = 2300; f.Q.value = 1.1;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.001, t);
+  g.gain.linearRampToValueAtTime(0.14, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+  n.connect(f); f.connect(g); g.connect(AU.sfx); n.start(t); n.stop(t + 0.05);
+  // …and the drum arriving at something that will not turn. Short, low,
+  // and deliberately without a tail — a stopped mechanism does not ring.
+  const o = ctx.createOscillator(); o.type = "triangle";
+  o.frequency.setValueAtTime(190, t + 0.012);
+  o.frequency.exponentialRampToValueAtTime(96, t + 0.06);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.001, t + 0.012);
+  og.gain.linearRampToValueAtTime(0.2, t + 0.02);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.075);
+  o.connect(og); og.connect(AU.sfx); o.start(t + 0.012); o.stop(t + 0.09);
+}
+
+/* …and the visible half of it: the pedal you did not use lights up. */
+function flashClutchNeed() {
+  const pg = $("pgClutch");
+  if (!pg || pg.classList.contains("hidden")) return;
+  pg.classList.remove("need");
+  void pg.offsetWidth;
+  pg.classList.add("need");
+  setTimeout(() => pg.classList.remove("need"), 420);
+}
+
 function sfxDogSelect(strength = 1) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime;
@@ -8106,18 +8677,70 @@ function sfxHybridFire() {
   o.connect(of); of.connect(og); og.connect(AU.sfx); o.start(t); o.stop(t + 0.38);
 }
 
-/* wind blast as the car passes the flyby listener */
+/* THE PASS ITSELF — the pressure wave arriving at your face.
+
+   The old version was a lowpassed noise burst with a 100ms attack and a
+   symmetrical-ish decay, which is a whoosh in the sound-effects-library sense
+   and is not what a car going past at speed does to the air. Three things
+   were wrong with it and all three are fixable:
+
+     THE ATTACK IS INSTANT. A pressure front is a step. 100ms of ramp turns a
+     slap into a swell, and a swell reads as a distant aeroplane.
+
+     IT SWEEPS DOWN. Everything about the source is Dopplering through the
+     pass, the noise included, so the band falls hard through the event. A
+     fixed filter is the single biggest tell that a whoosh is synthetic.
+
+     THE WAKE OUTLASTS THE FRONT, BY A LOT. Turbulence behind a car takes the
+     better part of a second to break up, and it is dirtier and lower than the
+     front was. The asymmetry between a 5ms arrival and a 900ms departure is
+     most of what makes a real pass feel violent.
+
+   So: a low body that slams in and sweeps down, a bright shear crack on the
+   front that is gone in a tenth of a second, and a long dirty tail behind
+   both of them. */
 function sfxWhoosh(amp) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime;
-  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.loop = true; n.playbackRate.value = 0.8;
-  const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 900;
+
+  // --- the front and the wake: one source, swept hard downward
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.loop = true; n.playbackRate.value = 0.62;
+  const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.Q.value = 0.8;
+  f.frequency.setValueAtTime(2400, t);
+  f.frequency.exponentialRampToValueAtTime(760, t + 0.16);   // the Doppler fall
+  f.frequency.exponentialRampToValueAtTime(190, t + 0.95);   // …and the wake going dark
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.001, t);
-  g.gain.linearRampToValueAtTime(amp, t + 0.1);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
+  g.gain.linearRampToValueAtTime(amp, t + 0.008);            // a step, not a swell
+  g.gain.exponentialRampToValueAtTime(amp * 0.34, t + 0.22);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 1.05);      // the long dirty tail
   n.connect(f); f.connect(g); g.connect(AU.sfx);
-  n.start(t); n.stop(t + 0.7);
+  n.start(t); n.stop(t + 1.1);
+
+  // --- the shear crack off the leading edge. Bright, tiny, and the thing
+  //     that makes the pass land on your face rather than in front of you.
+  const c = ctx.createBufferSource(); c.buffer = AU.noiseBuf; c.playbackRate.value = 1.7;
+  const cf = ctx.createBiquadFilter(); cf.type = "bandpass"; cf.Q.value = 0.7;
+  cf.frequency.setValueAtTime(3400, t);
+  cf.frequency.exponentialRampToValueAtTime(1100, t + 0.11);
+  const cg = ctx.createGain();
+  cg.gain.setValueAtTime(0.001, t);
+  cg.gain.linearRampToValueAtTime(amp * 0.5, t + 0.005);
+  cg.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+  c.connect(cf); cf.connect(cg); cg.connect(AU.sfx);
+  c.start(t); c.stop(t + 0.16);
+
+  // --- and the thump you feel. A car displacing its own volume of air at
+  //     200km/h puts a real low-frequency pulse through you, and without it
+  //     the pass is loud but weightless.
+  const o = ctx.createOscillator(); o.type = "sine";
+  o.frequency.setValueAtTime(74, t);
+  o.frequency.exponentialRampToValueAtTime(31, t + 0.3);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.001, t);
+  og.gain.linearRampToValueAtTime(amp * 0.55, t + 0.012);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+  o.connect(og); og.connect(AU.sfx); o.start(t); o.stop(t + 0.45);
 }
 
 /* ================================================================
@@ -9832,13 +10455,24 @@ function stepPhysics(dt) {
     }
   }
 
-  // flyby spectator: the car sweeps past a trackside listener over and over
+  /* flyby spectator: the car sweeps past a trackside listener over and over.
+
+     The run is 620m each way rather than 380. That is not a cosmetic change —
+     the approach is where the sound lives. At 200km/h the old 380m gave about
+     seven seconds of run-in, most of which was already close enough to be
+     loud; 620m gives eleven, and the first four of them are the part where
+     you can hear something big coming and cannot yet tell what it is. That is
+     the bit worth listening to, and the reason to stand at the side of a road
+     in the first place. */
   if (S.flyby) {
     const prevX = S.flyX;
     S.flyX += flybyV() * dt;
+    // the pressure wave itself, at the moment it reaches you. The air rig
+    // handles the build and the wake; this is the transient in the middle of
+    // them, and it scales with the square of speed the way pressure does.
     if (prevX < 0 && S.flyX >= 0 && Math.abs(S.v) > 12)
-      sfxWhoosh(Math.min(0.75, Math.abs(S.v) * 0.007));
-    if (S.flyX > 380) S.flyX = -380;
+      sfxWhoosh(clamp(Math.pow(Math.abs(S.v) / 42, 1.6) * 0.42, 0.05, 0.95));
+    if (S.flyX > 620) S.flyX = -620;
   }
 
   /* --- automatic gearbox logic ---
@@ -11388,6 +12022,25 @@ function seqHighlight() {
 
 function seqShift(dir) {
   if (S.mode !== "manual") return;
+
+  /* THE LEFT FOOT.
+
+     On a clutch-sequential car the paddle is not a request to a computer, it
+     is a lever bolted to a selector drum, and the drum will not turn while
+     the dogs are loaded. Nothing in the car will unload them for you. So a
+     pull with your foot off the pedal is not a slow shift or a rough shift —
+     it is no shift, and what you get is the lever refusing to move.
+
+     0.3 rather than the gate's 0.55 on purpose: this is not a synchromesh
+     clutch that has to be fully out of the way before the shafts can be
+     dragged into line. It only has to take the drive off the dogs, which
+     happens in the first third of the travel, and that is why a rally shift
+     is a brush of the pedal rather than a press. */
+  if (CC.seqClutch && S.clutchPedal < 0.3 && S.gear !== 0) {
+    sfxSeqBalk();
+    flashClutchNeed();
+    return;
+  }
   const order = seqOrder();
   const i = order.indexOf(S.gear);
   const j = clamp(i + dir, 0, order.length - 1);
@@ -11433,7 +12086,18 @@ function seqShift(dir) {
        Firing only 1 and 3 gives you a hole with a bang on the end, and the
        shift reads as a dropout rather than as machinery. Event 2 is the whole
        difference, and it costs one scheduled sound. */
-    S.shiftCut = ((CC.race || CC.gearWhine) ? 0.075 : CC.mechBox ? 0.085 : 0.10) + lag;
+    /* …and the exception. Every other box on this page breaks the drive with
+       the IGNITION, because there is nothing else available to break it with —
+       a paddle car with no clutch pedal has to cut fuel to unload the dogs, and
+       that cut is the hole you hear in the middle of the shift.
+
+       This car has a clutch pedal and a driver's foot on it, so it does not
+       need to do that. The drive comes off mechanically and comes back
+       mechanically, the engine never stops firing, and the change is a CLACK
+       laid over a note that never went away. That is what "seamless like a
+       rally car" actually means, and it is the whole difference between this
+       and the R's quarter-second of silence. */
+    S.shiftCut = CC.seqClutch ? 0.018 : ((CC.race || CC.gearWhine) ? 0.075 : CC.mechBox ? 0.085 : 0.10) + lag;
 
     /* THE BLIP GOES FIRST. This was backwards: the throttle blip fired from
        seqEngage(), which runs when the dogs have already landed — so the car
@@ -11645,6 +12309,7 @@ function applyEvChrome() {
     b.title = locked
       ? (ev ? "Single-speed — this car is automatic only"
          : only === "clutch" ? "Gated six-speed and three pedals. That is the car."
+         : only === "manual" ? "Dog sequential and a clutch pedal. There is no other gearbox in it."
          : "No manual mode — this car does not discuss its gearbox")
       : "";
   });
@@ -11772,16 +12437,27 @@ function setMode(mode) {
   $("gateWrap").style.display = mode === "clutch" ? "" : "none";
   $("seqPanel").style.display = mode === "manual" ? "" : "none";
   $("autoPanel").style.display = mode === "auto" ? "" : "none";
-  $("pgClutch").classList.toggle("hidden", mode !== "clutch");
+  // the clutch pedal belongs to the GEARBOX, not to the mode: a dog
+  // sequential has one too, and you use it on every single change.
+  $("pgClutch").classList.toggle("hidden", mode !== "clutch" && !(mode === "manual" && CC.seqClutch));
 
   $("consoleTitle").textContent =
-    { auto: "SELECTOR", manual: "SEQUENTIAL BOX", clutch: CAR.top + "-SPEED GATE" }[mode];
+    { auto: "SELECTOR",
+      manual: CC.seqClutch ? "DOG SEQUENTIAL" : "SEQUENTIAL BOX",
+      clutch: CAR.top + "-SPEED GATE" }[mode];
   $("consoleHint").innerHTML =
-    { auto: "P · R · N · D", manual: "clutchless — revs are matched for you",
+    { auto: "P · R · N · D",
+      manual: CC.seqClutch
+        ? "dip <kbd>SPACE</kbd> · <kbd>Q</kbd> down · <kbd>E</kbd> up"
+        : "clutchless — revs are matched for you",
       clutch: "hold <kbd>SPACE</kbd> · <kbd>←</kbd> gear down · <kbd>→</kbd> gear up" }[mode];
   $("bayModeNote").innerHTML =
     { auto: "Two pedals. Select <b>D</b> and go.",
-      manual: "Shift with <kbd>Q</kbd>/<kbd>E</kbd> — no clutch needed.",
+      manual: CC.seqClutch
+        ? "Brush the clutch (<kbd>SPACE</kbd>) and pull <kbd>Q</kbd>/<kbd>E</kbd>. "
+        + "The dogs don't need matching, they need unloading — that is all the pedal is for, "
+        + "and it only has to be down for the instant the paddle moves. Pull without it and nothing happens."
+        : "Shift with <kbd>Q</kbd>/<kbd>E</kbd> — no clutch needed.",
       clutch: "Clutch in (<kbd>SPACE</kbd>), <kbd>←</kbd>/<kbd>→</kbd> to shift (or drag the stick), then let it out. "
             + "The gear does not go in because you asked — it goes in when the synchro has matched the shafts, "
             + "so a big downshift hangs at the gate and a rev-matched one snicks straight through." }[mode];
@@ -13653,7 +14329,7 @@ function initInput() {
       case "KeyM": if (down && !e.repeat) toggleCassette(); return true;
       case "KeyV": if (down && !e.repeat) $("cabinBtn").click(); return true;
       case "Space": case "KeyC":
-        if (S.mode === "clutch") { S.in.clutch = down ? 1 : 0; return true; }
+        if (S.mode === "clutch" || seqClutchBox()) { S.in.clutch = down ? 1 : 0; return true; }
         return e.code === "Space";      // still swallow space (page scroll)
       case "KeyE": if (down && !e.repeat) seqShift(1); return true;
       case "KeyQ": if (down && !e.repeat) seqShift(-1); return true;
@@ -13813,7 +14489,7 @@ function initInput() {
 
   $("flybyBtn").addEventListener("click", () => {
     S.flyby = !S.flyby;
-    S.flyX = -380;
+    S.flyX = -620;
     $("flybyBtn").classList.toggle("on", S.flyby);
     save();
   });

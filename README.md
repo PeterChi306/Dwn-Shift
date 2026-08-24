@@ -82,6 +82,28 @@ Workshop → **WHERE YOU LISTEN**. Same engine, four microphones.
 | **At the tailpipe** | All bass and rasp, every overrun bang going off in your face, no intake at all. The loudest place to stand and the least informative. |
 | **Back seat** | Through the bulkhead and the parcel shelf. Boomy and distant — which is exactly what a chauffeur car is voiced for. |
 
+### The tailpipe is not the driver's seat with more bass
+
+It used to be, and that was the problem: the EQ was right and the *position*
+was wrong. Four things make standing a foot behind a running exhaust what it
+is, and only one of them is tone.
+
+- **Level.** It is simply the loudest place on the car, by a lot. No amount of
+  low shelf makes something feel loud if it isn't louder.
+- **Proximity.** A pipe has a length and the length has a note, so the bottom
+  end now comes up as a resonant **peak** at 85Hz rather than a shelf. That is
+  the difference between "bassy" and "standing behind a pipe".
+- **Width.** At a metre away the tips are further apart than your ears are, so
+  the sound stops being in front of you and wraps around you instead.
+- **Gas.** The one nobody models. An exhaust is not only making a note, it is
+  venting a few hundred litres a second of hot gas out of a hole, and that
+  rush is broadband, loud, and has no pitch at all. From the driver's seat you
+  cannot hear it — the note is thirty decibels louder by the time it gets
+  there. At the pipe it is half of what you hear, and it is why a real
+  tailpipe recording sounds dirty and physical where a synthesized one sounds
+  like a tone generator. It rides **load**, not revs: lift off at seven
+  thousand and the note stays while the rush vanishes.
+
 The two outside positions genuinely are outside, so the cabin toggle does
 nothing from there. You can be looking at the cabin and listening at the
 tailpipe; the tailpipe wins.
@@ -312,6 +334,44 @@ Workshop → **SHIFTER FEEL**, and the default is whatever the car actually came
 with, because a Zonda's open gate and a Carrera GT's beech ball are facts
 about those cars rather than matters of taste.
 
+## The third kind of gearbox
+
+Until now there were two. A gate with three pedals, where the clutch is a
+disconnection and the synchroniser does the work. And paddles, where there is
+no clutch pedal at all and a computer does everything.
+
+The **Ingolstadt S1 Quattro** has the one in between, and it is the one that
+Group B actually used: a straight-cut **dog sequential** with a real clutch
+pedal.
+
+It works nothing like either of the others. There is no gate — one direction,
+one notch per pull, `Q` down and `E` up. And there is no synchroniser, because
+the dogs do not need *matching*, they need **unloading**. That is the entire
+job of the pedal, and it is why a rally shift is a brush of the clutch rather
+than a press: the drive comes off the dogs in the first third of the travel,
+the drum turns, and it is over.
+
+Two consequences, and both of them are audible:
+
+- **Pull a paddle with your foot off it and nothing happens.** Not a slow
+  shift — no shift. The lever takes up its free play, finds a loaded dog ring,
+  and stops dead. You get a tick and a flat thud with no ring on it, because
+  nothing rang: nothing moved. The clutch pedal flashes at you.
+- **There is no hole in the middle of the shift.** Every other paddle car in
+  here has to cut the ignition to unload the dogs, and that cut is the gap you
+  hear — a fifth of a second of nothing in the race car, forty milliseconds in
+  a twin-clutch. This car has your left foot instead, so it doesn't cut. The
+  engine never stops firing and the change is a **CLACK laid over a note that
+  never went away**. That is what "seamless like a rally car" means, and it is
+  the opposite of seamless in the twin-clutch sense: you hear far *more*
+  machinery, not less.
+
+The engine under it is a 2.1-litre **five**, which fires every 144°. Five is
+odd, so no two cylinders ever balance and the exhaust pulses never settle into
+pairs — the note walks, and that walk is the warble. On top of it sits a KKK
+the size of a fist at around 2.2 bar, which means there is nothing at all
+below three thousand rpm and then the whole engine arrives at once.
+
 ## Traction control is its own switch now
 
 ABS is a brake system, traction control is an engine system, and they were
@@ -434,6 +494,92 @@ Holding a car against the limiter is survivable, incidentally, even with
 consequences on. That is what the limiter is *for*. What is still fatal is the
 money shift, which puts the crank somewhere the fuelling has no say in and
 does it in one go.
+
+## Hearing a car you cannot see
+
+Workshop → **THE SPACE AROUND YOU**, and `F` for the flyby. These two used to
+be separate features. They are the same feature, and the thing that joins them
+is distance.
+
+### The mistake distance usually makes
+
+Direct sound obeys the inverse square law. Reflected sound does not — it fills
+the whole space more or less evenly, so past a few metres it barely falls off
+at all. Which means the **ratio** between them swings enormously with
+distance, and that ratio is what your ear actually measures distance with.
+
+The flyby used to scale the reverb send by the same number as the dry path,
+which quietly locked the wet/dry ratio to a constant and is exactly what makes
+distance in games sound like a volume knob. A car half a kilometre away came
+out as a small quiet car instead of a big distant one.
+
+Now the reflections hold their level as the direct path collapses. Three
+things move with distance instead of one:
+
+- the direct sound falls away, and it is allowed to get genuinely faint now
+- the **air** eats the top of it — at the far end of the run there is nothing
+  above about 1.5kHz, which is why you can hear something big coming and still
+  not be able to tell what it is
+- the reflections arrive **later**, by tens of milliseconds, and that lag is
+  heard as depth rather than as delay
+
+### Which is what the city street is for
+
+A tunnel is impressive and it is also simple: one surface, very close, very
+loud, and every car in it sounds the same. A street canyon is the opposite.
+The two facades are twenty metres apart, so their slap arrives as a separate
+event rather than as a ring — and then the sound keeps going **down the
+street** and comes back off everything else in it. Junctions, the block
+opposite, the row behind you, a car park two hundred metres away. Those
+returns land between a fifth of a second and a second and a half later, each
+one quieter, later and more smeared than the last, and by the time they arrive
+the air has taken everything bright out of them.
+
+That late dark cloud is inaudible as an effect and enormous as a cue. It is
+the reason car spotters stand on street corners rather than in tunnels: the
+tunnel gives you volume, the street gives you **size**, and size is the thing
+you can hear the distance in. Put a V12 on the flyby, pick CITY STREET, and
+listen to the far end of the run.
+
+The back alley got the two dimensions it was missing, too. The 25ms flutter
+across four metres of brick was always right; what wasn't there is that an
+alley is **a box with no lid**. Six storeys of brick gives a second, much
+slower comb running up and down the shaft, broken up by every fire escape and
+drainpipe on the way, and it is the entire reason an alley sounds tall rather
+than merely narrow.
+
+## The flyby, and the air in front of the car
+
+Standing at the side of a road, the engine is not the first thing you hear and
+it is not the loudest thing at the moment of the pass. **It is air**, and the
+whole shape of a trackside pass is air.
+
+- **From far**, a wide low wandering roar with almost no engine in it yet — a
+  car pushing a column of atmosphere down the road ahead of itself, arriving
+  before it does. Low frequencies carry, so this layer is deliberately allowed
+  to fall off much more slowly than the rest.
+- **Closing**, the roar tightens and rises as it stops being something the
+  whole valley is doing and becomes something happening in one direction.
+- **The pass** is a step, not a swell. A pressure front has no attack time.
+  There is a bright shear crack off the leading edge, a low thump you feel
+  rather than hear, and the whole band sweeps *downward* through the event
+  because everything about the source is Dopplering.
+- **Gone**, and the wake outlasts the front by a factor of five or six.
+  Turbulence behind a car takes the better part of a second to break up, and
+  it is dirtier and lower than the front was. That asymmetry — five
+  milliseconds in, a second out — is most of what makes a real pass feel
+  violent.
+
+Under all of it, four contact patches tearing at tarmac, which at 200km/h is
+genuinely as loud as the exhaust and is the layer everyone forgets. It is why
+a car passing on a coast-down still makes an enormous noise.
+
+The run is 620 metres each way rather than 380, and very fast cars are no
+longer sped up to a cartoon. The honest reason a 400km/h pass felt
+underwhelming was never that the car was too slow — at that speed it crosses
+your window of usable directivity in well under a second and there is nothing
+left to hear. The fix for that is a **longer approach**, not a faster car, and
+the approach is the part worth standing there for.
 
 ## The one that asks the most
 
