@@ -767,25 +767,49 @@ const CARS = [
        Big midrange bark, screaming intake orders up top, and the party trick:
        it arrives in total silence, then twelve cylinders detonate on demand. */
     sound: {
-      // race-bred howl to nine-five
-      f0Mul: 0.84, air: 0, jitter: 1.4,
+      /* SECOND PASS, and both halves of the complaint were the same bug.
+
+         TOO HIGH: the voice was pitched at 0.84 of the literal firing
+         frequency, which is nearly where a firing-order calculator puts it
+         and nowhere near where the car actually sits. A 6.5 running twelve
+         cylinders into a car with a carbon tub and two long pipes has its
+         audible fundamental well under the firing rate — what you hear from
+         behind one is the half-order and the pipe resonance, and the firing
+         frequency is a texture riding on top of them. So the whole voice
+         comes down, the highpass floor comes down with it so the sub is not
+         thrown away before it reaches the mix, and the bottom two formants
+         move down and widen to give it a chest.
+
+         TOO FLAT: every layer was a straight two-point crossfade, so the
+         harmonic balance at 3,000rpm was a scaled copy of the balance at
+         9,000 and the engine only ever got LOUDER. Real ones change shape
+         twice. Every layer now has a mid-range waypoint: bottom is sub and
+         half-order muscle, the middle hardens into the bark, and the top
+         brings the intake howl and the metallic edge up WITHOUT letting go
+         of the bottom end. Keeping the sub while the top arrives is the
+         whole difference between a V12 that gets louder and one that gets
+         angry, and it is what "powerful" is made of. */
+      f0Mul: 0.62, air: -1.5, jitter: 1.5,
+      hp: 15,                  // it makes real bass. Stop filtering it off.
       layers: [
-        ["sine",     0.5,   0.36, 0.12],   // sub chest
-        ["square",   0.5,   0.24, 0.08],   // low-rev muscle
-        ["sawtooth", 0.995, 0.22, 0.28],   // unison low…
-        ["sawtooth", 1,     0.46, 0.54],   // …center voice…
-        ["sawtooth", 1.007, 0.26, 0.34],   // …unison high — 3-voice chorus
-        ["sawtooth", 1.5,   0.11, 0.28],   // half-order growl
-        ["sawtooth", 2.01,  0.14, 0.46],   // exhaust bite
-        ["sawtooth", 2.5,   0.04, 0.20],   // between-note density
-        ["sawtooth", 3.02,  0.06, 0.38],   // intake howl
-        ["sawtooth", 4.03,  0.0,  0.26],   // metallic edge past 8k
-        ["triangle", 5.04,  0.0,  0.20],   // upper shimmer
-        ["sine",     6.02,  0.0,  0.12],   // pure air over the wail
+        ["sine",     0.5,   0.64, 0.60, 0.46],   // the sub chest. Never leaves.
+        ["square",   0.5,   0.42, 0.36, 0.24],   // half-order muscle underneath
+        ["sawtooth", 0.994, 0.24, 0.30, 0.30],   // unison low…
+        ["sawtooth", 1,     0.50, 0.62, 0.58],   // …center voice…
+        ["sawtooth", 1.008, 0.26, 0.34, 0.34],   // …unison high — 3-voice chorus
+        ["sawtooth", 1.5,   0.20, 0.28, 0.18],   // half-order growl, fattest mid
+        ["sawtooth", 2.01,  0.14, 0.34, 0.50],   // exhaust bite, hardening
+        ["sawtooth", 2.5,   0.03, 0.11, 0.17],   // between-note density
+        ["sawtooth", 3.02,  0.02, 0.12, 0.42],   // intake howl — arrives late
+        ["sawtooth", 4.03,  0.0,  0.03, 0.28],   // metallic edge past 8k
+        ["triangle", 5.04,  0.0,  0.01, 0.19],   // upper shimmer
+        ["sine",     6.02,  0.0,  0.0,  0.11],   // pure air over the wail
       ],
-      formants: [[118, 0.9, 5], [560, 1.5, 5.5], [1500, 2.1, 5], [3100, 2.5, 5]],
-      loadDrive: 0.6, noiseMul: 1.2, volTrim: 1.4, scream: 2500,
-      drive: 0.8, pulseDepth: 0.18, raspMul: 1.6, hunt: 1.1,
+      // body cavity, then the pipe, then the two howl bands. The bottom pair
+      // are lower, wider and stronger than they were: that is the chest.
+      formants: [[95, 0.8, 7], [430, 1.2, 5], [1250, 1.9, 4.5], [2900, 2.5, 4]],
+      loadDrive: 0.62, noiseMul: 1.15, volTrim: 1.5, scream: 2300,
+      drive: 0.86, pulseDepth: 0.30, raspMul: 1.45, hunt: 1.1,
     },
   },
   {
@@ -2379,16 +2403,35 @@ function curEx() { return EXHAUSTS[curMod().ex] || EXHAUSTS.stock; }
    It sits OVER the workshop rather than replacing it, so the pitch, tone and
    volume sliders still do what they say — they're just working on a factory
    car now. */
+/* SECOND PASS. The first set of numbers made a car that was slightly
+   politer than the mapped one. That is not what the switch is for, and it is
+   not what a factory car is: the gap between a road 458 and a straight-piped
+   one is not 30%, it is enormous, and the whole value of the switch is being
+   able to hear how much of the noise you like is aftermarket.
+
+   Everything is further down, and one new term does most of the work.
+
+   `harm` is the missing one. Volume, saturation and a lowpass make a sound
+   quieter, dirtier-free and darker, but they do not make it BORING, and
+   boring is the actual character of a factory exhaust. A muffler is not a
+   tone control, it is a set of tuned chambers whose job is to cancel the
+   upper orders of the firing frequency and leave the fundamental — which is
+   why every stock car, whatever is under the bonnet, converges on the same
+   flat, even, one-note drone. So the harmonic layers above the second order
+   get pulled down individually (see the layer loop in audioTick), and what
+   is left is the fundamental, the half-order and very little else. That is
+   the riff going away, and it is the thing that was missing. */
 const STOCK = {
-  vol: 0.7,        // a stock system is genuinely quieter, not just duller
-  drive: 0.6,      // most of the snarl is saturation, and factory cars don't
-  tone: 0.55,      // the lowpass sits way down: no top-end edge at all
-  scream: 0.3,     // and the intake howl mostly stays in the airbox
-  rasp: 0.35,
-  pop: 0.12,       // "minimal" — a faint tick on a lift, never a bang
-  whistle: 0.2,
-  chuff: 0.8,
-  air: -3.5,       // and one more shelf off the top
+  vol: 0.52,       // a stock system is genuinely quieter, not just duller
+  drive: 0.45,     // most of the snarl is saturation, and factory cars don't
+  tone: 0.38,      // the lowpass sits way down: no top-end edge at all
+  scream: 0.14,    // and the intake howl mostly stays in the airbox
+  rasp: 0.2,
+  pop: 0.07,       // "minimal" — a faint tick on a lift, never a bang
+  whistle: 0.12,
+  chuff: 0.7,
+  air: -5.5,       // and one more shelf off the top
+  harm: 0.9,       // how hard the muffler cancels the upper orders, 0..1
 };
 function stockOn() { return !!S.stock; }
 /* the exhaust as far as the SOUND is concerned. In stock mode the pipe's
@@ -3143,8 +3186,25 @@ function initAudio() {
   AU.popBus.connect(AU.popRev); AU.popRev.connect(AU.conv);
   AU.popEcho = ctx.createGain(); AU.popEcho.gain.value = 0;
   AU.popBus.connect(AU.popEcho); AU.popEcho.connect(AU.echo);
-  // a bang off a brick wall four metres away is the loudest thing in this
-  // whole simulator, and it is the reason to drive an alley at all
+  /* How much of an overrun bang goes into the buildings — and it is NOT the
+     same fraction as the engine note, which is what it used to be.
+
+     A pop is a millisecond-scale pressure spike. Almost all of its energy is
+     transient, and a transient is the one thing a hard surface does not hand
+     back to you intact: the wavefront hits brick, the corners and sills and
+     drainpipes scatter it, and what returns is a diffuse smear at a fraction
+     of the level rather than a second bang. Sending flames into the space
+     reverb at engine-note strength is what turned every lift in the alley
+     into a firework going off in a stairwell — ONE crack from the car and
+     then six more from nowhere, ringing longer than the note that caused
+     them. That is not what a car with flames sounds like against a wall; it
+     is what a starting pistol in a car park sounds like.
+
+     So this is now set per space (see `popSp` in SPACES) and it is well
+     under 1 everywhere the walls are close. The bang still cracks — it is
+     still the loudest thing in the simulator, and it still reads as being
+     in a hard place, because the DRY path is untouched. It just stops
+     having a tail of its own. */
   AU.popSp = ctx.createGain(); AU.popSp.gain.value = 0.8;
   // …and they take the distance stage with everything else, so an overrun
   // bang from three hundred metres away arrives as a roll off the buildings
@@ -4004,6 +4064,10 @@ const SPACES = {
        that puts the wall strikes back precisely where they were before any of
        this started. Same method for the other two. */
     wet: 0.72, slap: 0.028, fb: 0.44, lp: 7200, lo: 4,
+    // four metres of brick is the wettest space here, so it is also the one
+    // where a full-strength flame send stacked into a wall of banging. The
+    // flutter on a pop is short and hard, not a ring. See AU.popSp.
+    popSp: 0.26,
   },
   /* THE CITY STREET, second pass — and this is the one the whole rebuild is
      for, because a street canyon is the space where distance sounds best.
@@ -4043,6 +4107,10 @@ const SPACES = {
     far: [[0.235, 0.34, 3200], [0.405, 0.26, 5200], [0.62, 0.19, 7000],
           [0.88, 0.13, 9000], [1.24, 0.075, 12000]],
     wet: 0.42, slap: 0.122, fb: 0.3, lp: 3800, lo: 2.5,
+    // twenty metres to the facades and five sets of returns down the road:
+    // a bang fed in at full strength came back five separate times. It gets
+    // one usable slap off the buildings opposite, and that is the effect.
+    popSp: 0.3,
   },
   hill: {
     name: "HILLCLIMB", desc: "A flint wall down one side, hay bales and trees down the other. Tight, dark and lopsided.",
@@ -4052,6 +4120,9 @@ const SPACES = {
     widthM: 11, walls: 9, absorb: 0.72, spread: 0.11, tailS: 0.7,
     dark: 0.5, scatter: 2.2, oneSided: true, bed: 0.022,
     wet: 0.36, slap: 0.064, fb: 0.2, lp: 2500, lo: 1,
+    // hay and trees eat transients faster than anything: a crack off a bale
+    // barely comes back at all. Half the send of the hard spaces.
+    popSp: 0.55,
   },
 };
 
@@ -4224,6 +4295,8 @@ function applySpace(instant) {
   AU.spEchoWet.gain.setTargetAtTime((sp.wet > 0 ? 0.3 : 0) * duck, t, tc);
   AU.spLp.frequency.setTargetAtTime(sp.lp || 6000, t, tc);
   AU.spLo.gain.setTargetAtTime(sp.lo || 0, t, tc);
+  // …and the flames get their own, much smaller, send into the same walls
+  if (AU.popSp) AU.popSp.gain.setTargetAtTime((sp.popSp === undefined ? 0.8 : sp.popSp) * duck, t, tc);
 }
 
 function setSpace(id) {
@@ -4737,8 +4810,24 @@ function audioTick() {
   let flyR = 14, flyAirHz = 20000, spDist = 1, spPreS = 0.004, flyPass = 0;
   if (S.flyby) {
     const d = 14, x = S.flyX, r = Math.hypot(x, d);
-    const vr = flybyV() * (-x) / r;                // closing speed toward listener
-    dop = 343 / Math.max(80, 343 - vr);
+    /* DOPPLER RUNS ON THE REAL SPEED, not the pass speed.
+
+       flybyV() inflates everything over 300km/h by 1.4 so a very fast car
+       does not cross the usable window before you have heard it. That is a
+       fair cheat on the GEOMETRY — it only decides where the car is — and it
+       was a disaster on the PITCH, because it was feeding the Doppler term
+       too. A 400km/h car was being shifted as though it were doing 540:
+       roughly a minor third up on approach and a third down going away, an
+       interval no car has ever produced, and the ear reads a shift that big
+       as a sample being scrubbed rather than as something moving. It is the
+       single thing that made a fast pass sound fake.
+
+       So the ratio is computed from the actual road speed. The car still
+       crosses the frame quickly; it just changes pitch by the amount a car
+       going that fast changes pitch. The clamp is a backstop for the
+       workshop's pitch slider stacking on top of it. */
+    const vr = Math.abs(S.v) * (-x) / r;           // closing speed toward listener
+    dop = clamp(343 / Math.max(120, 343 - vr), 0.7, 1.5);
     flyR = r;
     /* Distance gain, and it is allowed to go much quieter than it used to.
        The old floor of 0.12 existed because the direct sound was the ONLY
@@ -4746,7 +4835,23 @@ function audioTick() {
        the only sound: the space chain below now holds its level as the direct
        path collapses, so a car three hundred metres away can be genuinely
        faint and still be enormous, which is the actual experience. */
-    flyG = clamp(24 / r, 0.045, 1.5);
+    /* …and the ends of the run are faded out, which is the OTHER half of why
+       a pass sounded wrong. The run wraps: the car reaches +620m behind you
+       and is instantly moved to -620m in front of you. Nothing about the
+       audio graph wraps with it, so in one frame the Doppler flipped from
+       receding to approaching, the pan snapped from hard right to hard left
+       and the directivity tilt inverted — an audible lurch every eleven
+       seconds, right when the last pass was still ringing.
+
+       Rather than paper over the seam, make there be nothing at the seam.
+       Over the outer 90m at each end the direct path fades to silence, so
+       the car genuinely arrives out of nothing and genuinely disappears into
+       it, and the teleport happens in a gap where there is no signal to
+       glitch. It costs nothing: at 600m the car is already down 28dB and
+       what you were hearing was the reverberant field anyway. */
+    const flyEdge = clamp((620 - Math.abs(x)) / 90, 0, 1);
+    const flyDirect = clamp(24 / r, 0.045, 1.5);
+    flyG = flyDirect * flyEdge;
     flyP = clamp(x / 70, -0.95, 0.95);
     flyLp = clamp(26 / r, 0.45, 1);
     flyDir = clamp(x / 18, -1, 1);
@@ -4766,8 +4871,14 @@ function audioTick() {
        whole control — at 0.28 the reflections lose about a quarter of what
        the direct sound loses, which is roughly right for a street and is
        what makes a distant car read as BIG rather than as quiet. */
-    const flyWet = clamp(Math.pow(flyG, 0.28), 0.4, 1.15);
-    spDist = clamp(flyWet / flyG, 1, 9);
+    /* Both terms use the UN-faded distance gain: the fade at the ends of the
+       run is a mute, not a distance, and dividing by it would push the
+       reverb send up by exactly the amount the direct path was being taken
+       down — leaving the car audible at the seam as pure reflections with no
+       source, which is worse than the seam was. The edge fade is applied to
+       the result instead, so the whole car, wet and dry, goes away together. */
+    const flyWet = clamp(Math.pow(flyDirect, 0.28), 0.4, 1.15) * flyEdge;
+    spDist = clamp(flyWet / Math.max(flyG, 1e-4), 1, 9);
     // and the reflections arrive later than the direct sound does, by more
     // and more as the direct path lengthens. This gap is heard as depth.
     spPreS = clamp((r / 343) * 0.35, 0.004, 0.09);
@@ -4851,6 +4962,14 @@ function audioTick() {
   const rFrac = clamp(rpm / vMax, 0, 1);
   const gCurve = Math.pow(rFrac, 1.6);             // how far "up the rev range" the voice is
   const jm = VC.sound.jitter || 1;       // per-car mechanical looseness
+  /* the muffler, as far as the harmonic series is concerned. See STOCK.
+     Order 1 and below (the fundamental and the half-order lope) come through
+     untouched — those are the parts a silencer is built around rather than
+     against. Everything above it is progressively cancelled, so the third
+     and fourth orders that carry the howl and the metallic edge are all but
+     gone and the note flattens into a drone. */
+  const stkHarm = stockOn() ? (STOCK.harm || 0) : 0;
+  const harmCut = m => stkHarm ? 1 / (1 + Math.max(0, m - 1.05) * 2.4 * stkHarm) : 1;
   for (const L of AU.oscs) {
     // each voice wanders independently — fast flutter plus a slow random-walk
     // drift; coherent motion sounds digital, independent motion sounds alive
@@ -4864,10 +4983,13 @@ function audioTick() {
       const lvl = gCurve < 0.5
         ? L.gLo + (L.gMid - L.gLo) * (gCurve / 0.5)
         : L.gMid + (L.gHi - L.gMid) * ((gCurve - 0.5) / 0.5);
-      L.g.gain.setTargetAtTime(lvl, t, 0.06);
-    } else if (L.gHi !== L.gLo) {
-      L.g.gain.setTargetAtTime(L.gLo + (L.gHi - L.gLo) * gCurve, t, 0.06);
+      L.g.gain.setTargetAtTime(lvl * harmCut(L.mult), t, 0.06);
+    } else if (L.gHi !== L.gLo || stkHarm !== L.stkWas) {
+      L.g.gain.setTargetAtTime((L.gLo + (L.gHi - L.gLo) * gCurve) * harmCut(L.mult), t, 0.06);
     }
+    // a fixed-level layer still has to be re-sent when the muffler goes on
+    // or off, or it keeps whatever gain the last mode left it holding
+    L.stkWas = stkHarm;
   }
 
   const running = S.engineOn && !S.cranking;
