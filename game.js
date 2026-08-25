@@ -7269,18 +7269,55 @@ function crankProfile(c) {
   p.flareT = diesel ? 1.0 : c.asp === "na" ? (cyl >= 10 ? 1.25 : 1.1) : 1.05;
   const m = Object.assign(p, c.start || {});
 
-  /* Every car swings to somewhere between three and four thousand and comes
-     straight back down — that's the whole shape of a start, and it doesn't
-     matter whether the redline is 4,550 or 12,100. Where inside that band a
-     given car lands is down to how eager it is: a light naturally aspirated
-     engine goes higher than a heavy turbo one. Anything with a low redline
-     is held to three quarters of it so the needle never looks silly. */
-  if (m.peak == null)
-    m.peak = clamp(c.idle * (diesel ? 3.4 : c.asp === "na" ? 3.8 : 3.5),
-                   3000, Math.min(4000, c.cut * 0.78));
-  // and it needs the authority to actually get there
-  m.flare = Math.max(m.flare, 0.95);
-  m.flareT = Math.max(m.flareT, 1.6);
+  /* THE START FLARE — rewritten, because the old rule was a myth.
+
+     It used to say that every car swings to somewhere between three and four
+     thousand, whatever it is, and it enforced that with a hard floor of
+     3,000rpm. That is a supercar start, and it is very nearly the only start
+     that looks like that. Put it on everything and a city hatch begins its
+     morning at 3,400rpm, a diesel truck flares like it has been dropped a
+     gear, and the Phantom — a car whose entire engineering brief is that you
+     cannot tell it is running — announces itself. It is also why the whole
+     thing sounded loud in a way no real car is: the noise was in proportion
+     to a rev event that was not happening.
+
+     What actually decides the flare is how much fuel the ECU has to dump to
+     light the thing, and how fast the crank can run away with it once lit.
+     Every engine over-fuels a little on a cold start — that is the 1.3 —
+     and past that it is a question of eagerness. A long-stroke diesel with
+     a flywheel on it barely twitches; a 12,100rpm V12 with titanium rods and
+     nothing to slow it down is at three and a half thousand before the ECU
+     has caught up with it. Two terms carry that:
+
+       revHead — how far past a normal redline this thing goes. An engine
+                 that only turns 6,000 has nowhere to flare TO.
+       light   — the inverse of rotating inertia, which is literally how
+                 hard it is for a burst of fuel to accelerate the crank.
+
+     The result runs from about 1.35× idle (a truck: a cough and it is
+     idling) to about 3.4× (a T.50: the famous swing). No floor, no band —
+     a car that does not do it does not do it. A per-car `start.peak` still
+     overrides all of this for the handful that are genuinely peculiar. */
+  if (m.peak == null) {
+    const revHead = clamp((c.cut - 6000) / 6000, 0, 1);
+    const light   = clamp((0.34 - (c.inertia || 0.3)) / 0.26, 0, 1);
+    const eager   = 0.5 * revHead + 0.5 * light;
+    // a diesel has no throttle plate to blip against and a governor that
+    // wants it idling: it gets a fast idle, not a flare
+    const mult = diesel ? 1.5 : 1.3 + 2.1 * eager;
+    m.peak = clamp(c.idle * mult, c.idle * 1.2, Math.min(c.idle * 4.2, c.cut * 0.62));
+  }
+  /* …and the authority to get there is now derived from HOW FAR it has to
+     go, rather than being pinned wide open for a second and a half on every
+     car in the garage. That blanket floor was the other half of the
+     unnaturalness: it slammed the throttle to 95% and held it, so even the
+     cars whose peak was near idle got there instantly and sat on it, which
+     is a rev-limiter bounce, not a start. `reach` is the flare measured in
+     idles — a car going from 900 to 1,300 gets a nudge, one going from
+     1,000 to 3,400 gets the lot. */
+  const reach = (m.peak - c.idle) / Math.max(300, c.idle);
+  m.flare  = Math.max(m.flare,  clamp(0.34 + reach * 0.33, 0.34, 0.95));
+  m.flareT = Math.max(m.flareT, clamp(0.48 + reach * 0.36, 0.48, 1.5));
   // a genuinely feeble engine needs longer to swing that far — the Peel makes
   // ten horsepower and has to drag itself up there
   if (Math.max(...c.curve.map(q => q[1])) < 60) m.flareT *= 2.4;
@@ -7297,12 +7334,22 @@ function sfxCrank(p, amp = 1) {
   const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(AU.sfx);
   const chug = (p.cyl / 2) * (p.rpm / 60);      // compressions per second
 
-  /* --- the solenoid throwing the pinion into the ring gear --- */
+  /* --- the solenoid throwing the pinion into the ring gear ---
+     Levels down from 0.55/0.42, and for the same headroom reason as the
+     catch. These two land in the same two hundredths of a second as the
+     first compression, so what the bus actually saw at the moment you
+     pressed the button was 0.69 + 0.53 + 0.81 — two full scale over unity,
+     every single start. The clack is a transient; a clipped transient stops
+     being a clack and becomes a click, which is why the starter engaging
+     sounded like a mouse button rather than like a pinion hitting a ring
+     gear. The compressions below are raised slightly to hold their level
+     against the lower bus amp, because the compressions are the part you
+     are actually listening to. --- */
   const sol = ctx.createBufferSource(); sol.buffer = AU.noiseBuf; sol.playbackRate.value = 1.6;
   const solF = ctx.createBiquadFilter(); solF.type = "bandpass";
   solF.frequency.value = 2300; solF.Q.value = 1.3;
   const solG = ctx.createGain();
-  solG.gain.setValueAtTime(0.55 * amp, t);
+  solG.gain.setValueAtTime(0.34 * amp, t);
   solG.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
   sol.connect(solF); solF.connect(solG); solG.connect(bus);
   sol.start(t); sol.stop(t + 0.06);
@@ -7311,7 +7358,7 @@ function sfxCrank(p, amp = 1) {
   mesh.frequency.setValueAtTime(240, t);
   mesh.frequency.exponentialRampToValueAtTime(78, t + 0.06);
   const meshG = ctx.createGain();
-  meshG.gain.setValueAtTime(0.42 * amp, t);
+  meshG.gain.setValueAtTime(0.30 * amp, t);
   meshG.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
   mesh.connect(meshG); meshG.connect(bus); mesh.start(t); mesh.stop(t + 0.11);
 
@@ -7367,7 +7414,7 @@ function sfxCrank(p, amp = 1) {
     nf.frequency.value = 230 + p.grit * 170;
     const ng = ctx.createGain();
     ng.gain.setValueAtTime(0.001, tt);
-    ng.gain.linearRampToValueAtTime(0.3 * lvl, tt + 0.006);
+    ng.gain.linearRampToValueAtTime(0.36 * lvl, tt + 0.006);
     ng.gain.exponentialRampToValueAtTime(0.001, tt + 0.05);
     n.connect(nf); nf.connect(ng); ng.connect(bus);
     n.start(tt); n.stop(tt + 0.07);
@@ -7376,7 +7423,7 @@ function sfxCrank(p, amp = 1) {
     k.frequency.setValueAtTime(84 + Math.random() * 14, tt);
     k.frequency.exponentialRampToValueAtTime(46, tt + 0.045);
     const kg = ctx.createGain();
-    kg.gain.setValueAtTime(0.26 * lvl, tt);
+    kg.gain.setValueAtTime(0.31 * lvl, tt);
     kg.gain.exponentialRampToValueAtTime(0.001, tt + 0.06);
     k.connect(kg); kg.connect(bus); k.start(tt); k.stop(tt + 0.08);
     // diesels and tired old engines clatter on top of every stroke
@@ -7414,7 +7461,31 @@ function sfxCrank(p, amp = 1) {
 function sfxCatch(p, amp = 1) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime;
-  const hard = clamp(amp, 0.2, 2.2);
+  /* The ceiling comes down from 2.2 to 1.35, and this is the loudness fix.
+
+     A car with a pops rating of 2.6 was arriving here at amp 1.95, and each
+     of its first fires stacked a 0.34 crack, a 0.40 body and a 0.38 thump on
+     the same sample — about 2.6 peak, per fire, straight into the sfx bus,
+     four or five times in a fifth of a second. That is well past unity
+     before anything downstream sees it, so what you heard was not a loud
+     start, it was a clipped one: the transients squared off, the low end
+     pumped, and the whole event read as a sound effect rather than as an
+     engine. Loudness and level are different things. The event keeps its
+     dynamics — the fires still climb, they still land unevenly — it just
+     stops running out of headroom while doing it. */
+  const hard = clamp(amp, 0.2, 1.35);
+  /* …and the fires happen at the engine's OWN pitch and the engine's OWN
+     rhythm, which they did not before. Every car got a 150Hz body, a 120Hz
+     thump and a fixed 82ms gap, so a diesel four and a 12,000rpm V12 lit
+     with identical noises at identical spacing. Both come from the crank
+     now: `chug` is this engine's firing rate at cranking speed, so a twelve
+     turning at 230rpm fires every 43ms and a four at 300rpm every 100ms,
+     and the fundamental follows the same voice drop the running engine uses
+     so the first fires and the idle that follows them are the same animal. */
+  const chug = (p.cyl / 2) * (p.rpm / 60);      // firing events per second
+  const vc = voiceCar() || CC;
+  const vf = (vc.sound && vc.sound.f0Mul) || 1;
+  const body = clamp(96 + chug * 3.4 * vf, 80, 260);
 
   /* --- the pinion kicked back out: a falling whine, gone in a blink --- */
   const bx = ctx.createOscillator(); bx.type = "sawtooth";
@@ -7430,7 +7501,7 @@ function sfxCatch(p, amp = 1) {
 
   /* --- the ragged first fires. Intervals close up as the crank speeds,
          amplitude climbs as more cylinders join in. --- */
-  let dt = 0.0, gap = 0.082;
+  let dt = 0.0, gap = clamp(1 / chug, 0.035, 0.16);
   for (let i = 0; i < (p.fires || 3); i++) {
     const lvl = hard * (0.5 + 0.5 * (i / Math.max(1, p.fires - 1))) * (0.8 + Math.random() * 0.4);
     const tt = Math.max(t, t + dt + (Math.random() - 0.5) * 0.012);
@@ -7438,30 +7509,34 @@ function sfxCatch(p, amp = 1) {
     const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 1.5;
     const nf = ctx.createBiquadFilter(); nf.type = "highpass"; nf.frequency.value = 900;
     const ng = ctx.createGain();
-    ng.gain.setValueAtTime(0.34 * lvl, tt);
+    ng.gain.setValueAtTime(0.24 * lvl, tt);
     ng.gain.exponentialRampToValueAtTime(0.001, tt + 0.055);
     n.connect(nf); nf.connect(ng); ng.connect(AU.sfx); n.start(tt); n.stop(tt + 0.07);
     // the body of the combustion — a fat, fast-falling low tone
     const o = ctx.createOscillator(); o.type = "sawtooth";
-    o.frequency.setValueAtTime(150 + Math.random() * 50, tt);
-    o.frequency.exponentialRampToValueAtTime(58, tt + 0.09);
+    o.frequency.setValueAtTime(body * (1 + Math.random() * 0.33), tt);
+    o.frequency.exponentialRampToValueAtTime(body * 0.39, tt + 0.09);
     const of = ctx.createBiquadFilter(); of.type = "lowpass";
     of.frequency.setValueAtTime(2200, tt);
     of.frequency.exponentialRampToValueAtTime(500, tt + 0.1);
     const og = ctx.createGain();
-    og.gain.setValueAtTime(0.4 * lvl, tt);
+    og.gain.setValueAtTime(0.3 * lvl, tt);
     og.gain.exponentialRampToValueAtTime(0.001, tt + 0.12);
     o.connect(of); of.connect(og); og.connect(AU.sfx); o.start(tt); o.stop(tt + 0.14);
     // and the punch in the chest
     const k = ctx.createOscillator(); k.type = "sine";
-    k.frequency.setValueAtTime(120, tt);
-    k.frequency.exponentialRampToValueAtTime(42, tt + 0.08);
+    k.frequency.setValueAtTime(body * 0.8, tt);
+    k.frequency.exponentialRampToValueAtTime(body * 0.28, tt + 0.08);
     const kg = ctx.createGain();
-    kg.gain.setValueAtTime(0.38 * lvl, tt);
+    kg.gain.setValueAtTime(0.3 * lvl, tt);
     kg.gain.exponentialRampToValueAtTime(0.001, tt + 0.1);
     k.connect(kg); kg.connect(AU.sfx); k.start(tt); k.stop(tt + 0.12);
     dt += gap;
-    gap *= 0.72;                              // the fires close up into a run
+    // the fires close up as the crank runs away from the starter — but they
+    // close toward the interval the engine will actually be idling at, not
+    // toward nothing. 0.72 compounding over six fires took a V12 down to a
+    // 6ms spacing, which is not a series of fires, it is a buzz.
+    gap = Math.max(gap * 0.78, 1 / (chug * 3.2));
   }
 
   /* --- the intake taking its first proper breath as the revs fly up --- */
@@ -9995,7 +10070,13 @@ function stepPhysics(dt) {
     const lead = S.rpm + rate * 0.2;             // where it is headed
     if (S.rpm >= peak) S.catchT = 0;             // there. Hand back to idle.
     else if (lead < peak) {
-      const band = Math.max(180, (peak - ENG.idle) * 0.28);
+      /* the approach band, and it has to be a PROPORTION of the flare now
+         that a flare can be a hundred and eighty rpm tall. A flat 180 was
+         wider than the Phantom's entire start-up swing, so the governor
+         held full authority all the way to the top and then hit the ceiling
+         at speed — a small car-park rev, not a wafting V12 clearing its
+         throat. Proportional, with limits either end. */
+      const band = clamp((peak - ENG.idle) * 0.35, 60, 400);
       eff = Math.max(eff, (S.catchAmt || 0.55)
         * clamp((peak - lead) / band, 0, 1)
         * Math.min(1, S.catchT / 0.4));
@@ -10012,7 +10093,16 @@ function stepPhysics(dt) {
     S.settleT = 0;
     S.settleDur = 7.5;                     // the whole warm-up, start to finish
     S.settleFrom = Math.max(S.rpm, ENG.idle + 100);
-    S.fastIdle = ENG.idle * 1.55;          // where it sits while it warms
+    /* where it sits while it warms — and it has to be UNDER what it just
+       came down from. The fast idle used to be a flat 1.55× idle, which was
+       safe only because every car flared to at least 3,000rpm. Now that a
+       diesel truck flares to nine hundred and change, a fixed 1.55× would be
+       ABOVE the flare, and the settle governor would spend the next second
+       revving the engine up to its own warm-up target — the opposite of a
+       start. It tracks the flare down instead, and only then falls back on
+       the 1.55× ceiling for the cars big enough to need it. */
+    S.fastIdle = Math.min(ENG.idle * 1.55,
+                          Math.max(ENG.idle * 1.12, S.settleFrom * 0.72));
   }
   if (S.settleDur > 0 && S.settleT < S.settleDur) {
     S.settleT += dt;
@@ -11358,7 +11448,7 @@ function toggleIgnition() {
   $("lampStall").classList.remove("lit", "blink");
   const btn = $("ignition");
   btn.classList.add("cranking");
-  AU.crankFx = sfxCrank(p, quiet ? 0.4 : 1.25);
+  AU.crankFx = sfxCrank(p, quiet ? 0.36 : 0.9);
   // the needle sits at cranking speed, wavering on every compression, and the
   // whole thing runs on the clock rather than a timeout so letting go of the
   // button can stop it dead partway through
@@ -11410,8 +11500,13 @@ function engineCaught(p, quiet, seq) {
   S.catchT = p.flareT;
   S.catchPeak = p.peak;               // …up to here and no further
   S.catchGuard = p.flareT + 0.8;
-  // open pipes make a meal of the first fires; a stock system barely coughs
-  sfxCatch(p, quiet ? 0.4 : 0.65 + Math.min(1.9, popsRating() * 0.5));
+  /* Open pipes make a meal of the first fires; a stock system barely coughs.
+     The pops term used to be able to add 1.9 on top of the 0.65 base, which
+     tripled the event on the cars that already had the most going on and is
+     where the clipping came from. It adds up to 0.7 now — still the clear
+     difference between a straight-piped V12 and a factory hatch, and still
+     inside the headroom the rest of the mix has to share. */
+  sfxCatch(p, quiet ? 0.35 : 0.55 + Math.min(0.7, popsRating() * 0.24));
   S.sweep = 0;                        // needle sweep
   accBedStop(1.1);                    // the engine takes over from the fans
   // and you flip the cover back down over the running engine, which is what
