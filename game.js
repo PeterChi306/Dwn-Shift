@@ -172,7 +172,12 @@ const CARS = [
     shiftLag: 0.045,              // 7-speed twin-clutch behind the axle
     mass: 1580, finalDrive: 3.4, clutchCap: 900, cdA: 0.62, brakeMax: 15000,
     grip: 1.8,                                    // fat rear rubber — ~3s to 60
-    asp: "na", pops: 2.2, tachMax: 10, redK: 8.9, kmhMax: 360, mphMax: 240, dial: "classic",
+    asp: "na", pops: 2.2, tachMax: 10, redK: 8.9, kmhMax: 360, mphMax: 240,
+    /* The 812's cluster is the one Ferrari has been building since the F50:
+       a single enormous rev counter in the middle of everything, painted the
+       yellow of the Modena shield, with the speed and everything else pushed
+       out to the sides where it belongs. See dial "ferrari". */
+    dial: "ferrari", dash: { accent: "#f5c518", face: "ferrari" },
     shiftLights: true,
     /* voice morphs with rpm: silky sub burble at idle → bass-heavy rumble low
        down → metallic intake howl mid-range → razor-sharp F1 wail at the top.
@@ -746,70 +751,109 @@ const CARS = [
     },
   },
   {
-    id: "revuelto", name: "Sant'Agata Revuelto", tag: "V12 hybrid flagship · 9,500 rpm", layout: "V12 · 6.5L NA + 3 e-motors",
+    id: "revuelto", name: "Sant'Agata Revuelto Gintani", tag: "straight-pipe V12 hybrid · 9,500 rpm", layout: "V12 · 6.5L NA · open pipes + 3 e-motors",
+    crackle: "hard",   // nothing left downstream of the headers to soften anything
     cyl: 12, idle: 950, max: 9250, cut: 9500, inertia: 0.15, shiftLights: true, awd: true,
     bootRich: true,          // full supercar dash boot on the key
     start: { rpm: 300, dur: 0.5,  fires: 3, flare: 0.7,  flareT: 0.6 },
-    curve: [[0, 200], [1000, 400], [3000, 560], [5000, 650], [6750, 725], [8000, 712],
-            [9250, 655], [9800, 420]],
+    /* A straight-pipe on a naturally aspirated V12 is worth something, and it
+       is worth it in a specific place: the back pressure it removes is
+       proportional to flow, so nothing changes at idle and the gain is all at
+       the top where the engine is actually trying to push gas. About 25 hp
+       and it all arrives after 6,000 — which is also exactly where the noise
+       arrives, and the two being the same event is most of why people fit
+       these. */
+    curve: [[0, 200], [1000, 400], [3000, 562], [5000, 656], [6750, 740], [8000, 730],
+            [9250, 672], [9800, 430]],
     shiftLag: 0.04,               // 8-speed twin-clutch, quickest of the lot
-    mass: 1820, finalDrive: 3.4, clutchCap: 1400, cdA: 0.60, brakeMax: 16000, grip: 2.1,
-    asp: "na", pops: 2.6, tachMax: 10, redK: 9.25, kmhMax: 360, mphMax: 220,
+    // the cats, the muffler and the valves all leave together: about 20kg of
+    // it, hung off the very back of the car where it counts double
+    mass: 1800, finalDrive: 3.4, clutchCap: 1400, cdA: 0.60, brakeMax: 16000, grip: 2.1,
+    asp: "na", pops: 3.4, tachMax: 10, redK: 9.25, kmhMax: 360, mphMax: 220,
     startCap: true,
     // 296-style hybrid: silent EV creep on the front axle motors up to ~130km/h,
     // then you light the V12 yourself (H / eDrive button)
     edrive: true, evCapKmh: 130, evForce: 8200, badge: "V12-H", fireLbl: "FIRE V12",
     evBoot: "lambo",             // avionics bus, not a doorbell
     dash: { accent: "#7ed957" },
-    /* the new flagship: the SVJ's savagery moved a thousand rpm up the tach.
-       Lighter crank, cleaner headers — less open-pipe chaos than the Gintani
-       car, more of a hard, race-bred HOWL that keeps climbing to nine-five.
-       Big midrange bark, screaming intake orders up top, and the party trick:
-       it arrives in total silence, then twelve cylinders detonate on demand. */
+    /* The flagship with the exhaust deleted — the SVJ Gintani treatment
+       applied to the car that replaced it. The hybrid side is untouched,
+       because a titanium straight-pipe does not know the front axle exists:
+       it still creeps out in silence on the e-motors and it still detonates
+       twelve cylinders on demand. What changes is everything downstream of
+       the headers, and there is now nothing downstream of the headers. */
     sound: {
-      /* SECOND PASS, and both halves of the complaint were the same bug.
+      /* THIRD PASS: THE GINTANI CAR.
 
-         TOO HIGH: the voice was pitched at 0.84 of the literal firing
-         frequency, which is nearly where a firing-order calculator puts it
-         and nowhere near where the car actually sits. A 6.5 running twelve
-         cylinders into a car with a carbon tub and two long pipes has its
-         audible fundamental well under the firing rate — what you hear from
-         behind one is the half-order and the pipe resonance, and the firing
-         frequency is a texture riding on top of them. So the whole voice
-         comes down, the highpass floor comes down with it so the sub is not
-         thrown away before it reaches the mix, and the bottom two formants
-         move down and widen to give it a chest.
+         The brief for this one is unusually precise and worth writing down
+         exactly, because it describes something most synthesised V12s get
+         wrong in both directions at once: DEEP under three or four thousand,
+         and then a deep-mechanical HIGH-PITCHED sound above it. Not deep OR
+         bright. Both, at the same time, from the same engine.
 
-         TOO FLAT: every layer was a straight two-point crossfade, so the
-         harmonic balance at 3,000rpm was a scaled copy of the balance at
-         9,000 and the engine only ever got LOUDER. Real ones change shape
-         twice. Every layer now has a mid-range waypoint: bottom is sub and
-         half-order muscle, the middle hardens into the bark, and the top
-         brings the intake howl and the metallic edge up WITHOUT letting go
-         of the bottom end. Keeping the sub while the top arrives is the
-         whole difference between a V12 that gets louder and one that gets
-         angry, and it is what "powerful" is made of. */
-      f0Mul: 0.62, air: -1.5, jitter: 1.5,
-      hp: 15,                  // it makes real bass. Stop filtering it off.
+         That combination is not a compromise between two settings — it is a
+         specific physical situation, and you get it by being honest about
+         three things:
+
+         THE BOTTOM IS DEEPER WITH THE MUFFLER GONE, NOT THINNER.
+         The intuition runs the other way: strip a car and it gets raspy and
+         loses its bass. That is true of a small four with a big tip, and it
+         is false here, because a muffler is not a treble filter — it is an
+         absorber, and what it absorbs best is exactly the long wavelengths a
+         6.5 twelve makes at 2,000rpm. Delete it and the sub stops being eaten
+         on the way out. So the half-order and the sub go UP, not down, and
+         the low end of this car is heavier than the stock one, not lighter.
+         That is the "deep under 3000-4000" and it is the easy half.
+
+         THE HIGH END HAS TO BE MECHANICAL, WHICH MEANS SLIGHTLY OUT OF TUNE.
+         This is the half that matters and the half that is almost always
+         missed. An upper partial at exactly 4× or 5× the fundamental is a
+         MUSICAL harmonic: the ear fuses it into the note and hears one
+         brighter tone. Detune it a couple of percent and the ear can no
+         longer fuse it, so it stops being part of the note and starts being
+         a separate thing happening on top of the note — which is precisely
+         how a valvetrain, a dry-sump scavenge pump and twelve sets of
+         reciprocating steel actually present themselves. Inharmonicity IS
+         the mechanical quality. It is why a piano sounds like a machine with
+         wires in it and a sine wave does not, and it is the difference
+         between a V12 that screams and a V12 that sounds like it is being
+         operated. Hence 4.06, 5.09, 6.13 rather than 4, 5, 6 — deliberately
+         off, individually, in a direction that does not divide evenly.
+
+         AND THE SUB STAYS PUT WHILE THAT HAPPENS.
+         The stock car already had this idea and the note above it says why:
+         keeping the bottom while the top arrives is what "angry" is made of.
+         The Gintani car needs it more, not less, because without it the
+         inharmonic uppers on their own would read as thin and metallic —
+         a coffee grinder rather than a bull. The sub layer therefore holds
+         0.60 at the redline, which is higher than most cars here idle at.
+         THAT is the "deep-mechanical high pitch": a genuinely high, genuinely
+         gritty top sitting on a bottom end that refuses to get out of its
+         way. Neither one alone is the sound. */
+      f0Mul: 0.60, air: 1.0, jitter: 1.7,
+      hp: 12,                  // even less filtering: it makes more bass now
       layers: [
-        ["sine",     0.5,   0.64, 0.60, 0.46],   // the sub chest. Never leaves.
-        ["square",   0.5,   0.42, 0.36, 0.24],   // half-order muscle underneath
-        ["sawtooth", 0.994, 0.24, 0.30, 0.30],   // unison low…
+        ["sine",     0.5,   0.80, 0.74, 0.60],   // THE sub. Louder than stock, and it never leaves.
+        ["square",   0.5,   0.52, 0.46, 0.34],   // half-order muscle underneath
+        ["sawtooth", 0.992, 0.26, 0.32, 0.32],   // unison low…
         ["sawtooth", 1,     0.50, 0.62, 0.58],   // …center voice…
-        ["sawtooth", 1.008, 0.26, 0.34, 0.34],   // …unison high — 3-voice chorus
-        ["sawtooth", 1.5,   0.20, 0.28, 0.18],   // half-order growl, fattest mid
-        ["sawtooth", 2.01,  0.14, 0.34, 0.50],   // exhaust bite, hardening
-        ["sawtooth", 2.5,   0.03, 0.11, 0.17],   // between-note density
-        ["sawtooth", 3.02,  0.02, 0.12, 0.42],   // intake howl — arrives late
-        ["sawtooth", 4.03,  0.0,  0.03, 0.28],   // metallic edge past 8k
-        ["triangle", 5.04,  0.0,  0.01, 0.19],   // upper shimmer
-        ["sine",     6.02,  0.0,  0.0,  0.11],   // pure air over the wail
+        ["sawtooth", 1.010, 0.28, 0.36, 0.36],   // …unison high — wider chorus, open pipes
+        ["sawtooth", 1.5,   0.26, 0.34, 0.22],   // half-order growl — the 3-4k thickness
+        ["sawtooth", 2.01,  0.16, 0.38, 0.54],   // exhaust bite, hardening
+        ["sawtooth", 2.5,   0.05, 0.14, 0.20],   // between-note density
+        ["sawtooth", 3.02,  0.03, 0.15, 0.48],   // intake howl — arrives late, arrives loud
+        ["sawtooth", 4.06,  0.0,  0.05, 0.34],   // ← inharmonic. valvetrain, not harmony.
+        ["sawtooth", 5.09,  0.0,  0.02, 0.26],   // ← inharmonic. the titanium sizzle.
+        ["triangle", 6.13,  0.0,  0.0,  0.15],   // ← inharmonic. mechanical air over the top.
       ],
-      // body cavity, then the pipe, then the two howl bands. The bottom pair
-      // are lower, wider and stronger than they were: that is the chest.
-      formants: [[95, 0.8, 7], [430, 1.2, 5], [1250, 1.9, 4.5], [2900, 2.5, 4]],
-      loadDrive: 0.62, noiseMul: 1.15, volTrim: 1.5, scream: 2300,
-      drive: 0.86, pulseDepth: 0.30, raspMul: 1.45, hunt: 1.1,
+      /* Body cavity, pipe, howl, ring. The bottom band drops to 88Hz and gets
+         wider still — that is the chest, and with no muffler in the way it is
+         a real one. The top band is the new one that matters: 3,400Hz at Q7,
+         narrow and hard, is a resonating titanium tube and it is what makes
+         the high end read as METAL rather than as loudness. */
+      formants: [[88, 0.8, 8], [400, 1.3, 5.5], [1150, 1.9, 4.5], [3400, 2.5, 7]],
+      loadDrive: 0.7, noiseMul: 1.4, volTrim: 1.7, scream: 2600,
+      drive: 0.92, pulseDepth: 0.32, raspMul: 2.0, hunt: 1.25,
     },
   },
   {
@@ -1421,15 +1465,30 @@ const CARS = [
     // clutchCap must clear peak torque × full boost (665 × 1.78 ≈ 1180) or the
     // clutch slips at the top end and the revs hunt — that was the instability
     shiftLag: 0.04,               // 8-speed twin-clutch
-    mass: 1545, finalDrive: 3.62, clutchCap: 1600, cdA: 0.58, brakeMax: 15500, grip: 1.85,
+    mass: 1470, finalDrive: 3.62, clutchCap: 1600, cdA: 0.60, brakeMax: 15500, grip: 1.98,
     asp: "turbo", pops: 0.8, boostMax: 0.78, spool: 2400, spoolRate: 2.6, psiMax: 26,
     twin: 0.85,                   // a foot behind the bulkhead, like everything else on it
-    whistleMul: 0.55, whistleFreqMul: 1.05, turboBreath: 1.0, breathHz: 1600,
-    tachMax: 9, redK: 8.5, kmhMax: 340, mphMax: 210,
+    whistleMul: 0.78, whistleFreqMul: 1.05, turboBreath: 1.25, breathHz: 1600,
+    tachMax: 9, redK: 8.5, kmhMax: 330, mphMax: 205,
     // hybrid eDrive: silent electric running up to ~50mph. The V6 never fires
     // on its own — you choose the moment (H / eDrive button). See fireHybrid().
     edrive: true, evCapKmh: 80, evForce: 9600, badge: "eDRIVE", evBoot: "ferrari",
-    dash: { accent: "#f5c518", face: "dark" },
+    /* 830 cv, and 167 of them are electric. The rear-mounted MGU-K sits
+       between the V6 and the eight-speed, so its torque goes through the
+       gearbox and arrives at the road as a flat 4200N shove until it runs out
+       of watts at around 105 km/h. That is the whole trick of this car: the
+       V6 has turbo lag it cannot design out, and the motor covers exactly the
+       hole the lag leaves. 0-100 in 2.9, 0-200 in 7.3. See the e-assist
+       block in stepPhysics(). */
+    eAssist: 4200, ePower: 96000,
+    /* Rear drive, and that is the whole story of this car's launch: 830 cv
+       and 665 Nm arriving at two contact patches, with the weight transfer
+       of a mid-engined car helping and nothing else. 1.10g is what that is
+       worth, and it is why a 296 runs 2.9 to 100 while an SF90 with barely
+       more power runs 2.5 — the difference between them is not the engine,
+       it is how many wheels are pushing. See launchG in stepPhysics(). */
+    launchG: 1.10,
+    dash: { accent: "#f5c518", face: "ferrari" }, dial: "ferrari",
     /* the 120° hot-vee V6 Ferrari calls "the little V12": an even 240° firing
        order with equal-length headers gives a clean, SOPRANO wail — the voice
        lives in the upper harmonics, not the fundamental. A tight 3-voice
@@ -1438,25 +1497,46 @@ const CARS = [
        formants (the tuned "hot tube" resonator), civil rasp, almost no burble
        — this engine sings, it doesn't shout. */
     sound: {
-      // a soprano by design
-      f0Mul: 1.0, air: 1.5, jitter: 1.0,
+      /* A soprano — but a TURBOCHARGED soprano, and the difference is the
+         whole correction here. What this used to be was an NA V12's voice
+         written an octave up, with the chargers turned almost off; what the
+         car actually is has two turbines sitting in the exhaust stream ahead
+         of everything you hear, and a turbine is a low-pass filter you cannot
+         switch off. So three things move, and all three move the same way the
+         real hardware does:
+
+           THE TOP COMES DOWN A LITTLE. Not much — this engine really does
+           sing, and it really is the closest a six has come to the old V12 —
+           but the glassy 8th-order sparkle at the redline was a naturally
+           aspirated artefact. A turbo V6 does not have that and pretending it
+           does is the one note that gives the synthesis away.
+
+           THE BOTTOM COMES UP. 500Nm from 2500rpm has to be audible. That is
+           what a turbo does TO a small engine and it is why the 296 pulls out
+           of a corner in a way no NA V6 ever has.
+
+           THE CHARGERS BECOME AUDIBLE. whistleMul was 0.55 on a car whose
+           turbos are eighteen inches behind the driver's head with a carbon
+           bulkhead in between. They are part of the voice, not a leak. */
+      f0Mul: 1.0, air: 1.1, jitter: 1.0,
       layers: [
-        ["sine",     0.5,   0.16, 0.04],   // light sub — just enough chest
-        ["square",   0.5,   0.14, 0.03],   // faint low-rev muscle, gone up top
+        ["sine",     0.5,   0.24, 0.05],   // sub — the boosted bottom end
+        ["square",   0.5,   0.19, 0.04],   // low-rev muscle: 500Nm at 2500
         ["sawtooth", 0.996, 0.18, 0.22],   // unison low…
         ["sawtooth", 1,     0.42, 0.44],   // …center voice…
         ["sawtooth", 1.005, 0.20, 0.26],   // …unison high — tight 3-voice chorus
-        ["sawtooth", 1.5,   0.08, 0.20],   // half-order colour between firings
+        ["sawtooth", 1.5,   0.07, 0.17],   // 120° vee, even fire: little between-note
         ["sawtooth", 2.01,  0.16, 0.52],   // 2nd order — the wail's backbone
-        ["sawtooth", 3.02,  0.06, 0.46],   // 3rd order — intake howl, huge up top
-        ["sawtooth", 4.03,  0.0,  0.30],   // 4th order — metallic edge at 8k+
-        ["triangle", 5.04,  0.0,  0.20],   // silky shimmer
-        ["sine",     6.02,  0.0,  0.16],   // pure soprano air over the top
-        ["sine",     8.04,  0.0,  0.09],   // glassy sparkle at the redline
+        ["sawtooth", 3.02,  0.06, 0.44],   // 3rd order — intake howl, huge up top
+        ["sawtooth", 4.03,  0.0,  0.26],   // 4th order — metallic edge at 8k+
+        ["triangle", 5.04,  0.0,  0.15],   // silky shimmer, turbine-damped
+        ["sine",     6.02,  0.0,  0.10],   // what is left of the soprano air
       ],
-      formants: [[260, 1.0, 3.5], [1900, 2.4, 6], [4300, 2.9, 7.5]],
-      loadDrive: 0.4, noiseMul: 0.95, volTrim: 1.18, scream: 4400,
-      drive: 0.6, pulseDepth: 0.12, raspMul: 1.2,
+      // the tuned "hot tube" resonator, but the top one pulled down out of
+      // NA-scream territory: a turbine in front of it damps exactly that band
+      formants: [[255, 1.05, 3.5], [1850, 2.4, 6], [3600, 2.6, 6]],
+      loadDrive: 0.42, noiseMul: 0.95, volTrim: 1.18, scream: 5200,
+      drive: 0.62, pulseDepth: 0.12, raspMul: 1.2,
     },
   },
   {
@@ -1515,18 +1595,39 @@ const CARS = [
             [8000, 700], [8600, 460]],
     // the real car's 8-speed DCT is 30% closer-stacked than a 7-speed; the
     // garage runs 6 ratios everywhere, so these are squeezed to match the feel
-    ratios: { R: -3.2, 1: 3.3, 2: 2.15, 3: 1.62, 4: 1.28, 5: 1.03, 6: 0.84 },
+    /* Six ratios standing in for the real car's eight, and sixth had been
+       squeezed along with the rest of them — which left the car hitting its
+       limiter in top at 310 km/h and simply unable to reach the 340 it is
+       sold on. A top gear is not part of the close-ratio stack; it is the
+       one that has to reach the number on the brochure, so it gets let out
+       to 0.74 and the stack below it keeps the spacing it had. */
+    ratios: { R: -3.2, 1: 3.3, 2: 2.15, 3: 1.62, 4: 1.28, 5: 1.00, 6: 0.77 },
     shiftLag: 0.04,               // 8-speed twin-clutch
-    mass: 1670, finalDrive: 3.7, clutchCap: 1750, cdA: 0.57, brakeMax: 16500, grip: 2.15,
+    mass: 1650, finalDrive: 3.7, clutchCap: 1750, cdA: 0.57, brakeMax: 16500, grip: 2.42,
     asp: "turbo", pops: 1.6, boostMax: 0.82, spool: 2300, spoolRate: 2.9, psiMax: 28,
     twin: 0.85,                   // ditto — and three e-motors do not muffle air
-    whistleMul: 0.6, whistleFreqMul: 1.0, turboBreath: 1.1, breathHz: 1500,
+    whistleMul: 0.74, whistleFreqMul: 1.0, turboBreath: 1.2, breathHz: 1500,
     tachMax: 9, redK: 8, kmhMax: 340, mphMax: 211,
     // plug-in hybrid: the two front e-motors alone move it in silence to
     // ~135 km/h, then you light the V8 yourself (H / eDrive button)
     edrive: true, evCapKmh: 135, evForce: 11000, badge: "eDRIVE", fireLbl: "FIRE V8",
     evBoot: "ferrari",
-    dash: { accent: "#f5c518", face: "dark" },
+    /* 1000 cv. Two motors on the front axle and one between the V8 and the
+       box, 220 cv of them together, and — the number that actually matters —
+       all of it at zero rpm through wheels the engine cannot reach. That is
+       why this car does 2.5 to 100 and 6.7 to 200 while weighing 1650kg: it
+       is not out-powering the 296, it is out-GRIPPING it, four driven wheels
+       against two. The flat 9000N holds to about 65 km/h and then falls away
+       as 1/v, which is exactly the shape of the real car's acceleration
+       trace — savage to 150, merely very fast after it. */
+    eAssist: 9000, ePower: 128000,
+    /* Four driven wheels, two of them fed by motors that make full torque
+       from a standstill, and a launch control that uses all of it. 1.32g,
+       which is close to the limit of what a road tyre will do on a dry
+       surface and exactly why this car's 0-100 is a number people did not
+       believe when it was published. See launchG in stepPhysics(). */
+    launchG: 1.32,
+    dash: { accent: "#f5c518", face: "ferrari" }, dial: "ferrari",
     /* the 90° hot-vee flat-plane V8 with the turbos sitting INSIDE the vee.
        Same 180° crank as the 458, so the 2nd order still owns the voice — but
        two turbines in the exhaust stream eat the upper harmonics the naked 458
@@ -1534,23 +1635,42 @@ const CARS = [
        harder, deeper, industrial, with a whistle over the top and the wall of
        boost doing the work the revs used to. It shoves rather than shrieks. */
     sound: {
-      // turbos already ate the top; don't fake it back
-      f0Mul: 0.8, air: -1.5, jitter: 1.1,
+      /* IT IS STILL A FLAT-PLANE, AND IT WAS BEING TREATED LIKE A MUSCLE CAR.
+
+         f0Mul was 0.8. That is not a trim, it is a transposition — it takes
+         the entire voice down nearly four semitones, and four semitones is
+         the difference between a 4.0 flat-plane and a 6.2 cross-plane. The
+         reasoning behind it was sound (the turbos really do eat the top of
+         this engine, and the SF90 really is the muted one next to a 458) but
+         the fix was applied to the wrong parameter: damping the upper orders
+         makes an engine duller, dropping f0 makes it BIGGER, and this engine
+         is not bigger than a 458, it is smaller.
+
+         So the pitch comes back to very nearly where the physics puts it, and
+         the muting is done where it actually happens — in the harmonics above
+         the second order and in the formants, which is where a turbine in the
+         exhaust stream does its damage. The result is what the car is: the
+         458's bark, hard and metallic and still recognisably flat-plane, with
+         the shriek pressed flat and a wall of boost underneath it. It shoves
+         rather than shrieks, and now it shoves at the right pitch. */
+      f0Mul: 0.94, air: -0.2, jitter: 1.1,
       layers: [
-        ["sine",     0.5,   0.28, 0.10],   // deep chest — the boosted bottom end
-        ["square",   0.5,   0.26, 0.08],   // hot-vee gravel under the bark
+        ["sine",     0.5,   0.26, 0.09],   // deep chest — the boosted bottom end
+        ["square",   0.5,   0.24, 0.07],   // hot-vee gravel under the bark
         ["sawtooth", 0.995, 0.22, 0.26],   // unison low…
         ["sawtooth", 1,     0.48, 0.50],   // …center voice…
         ["sawtooth", 1.006, 0.24, 0.28],   // …unison high — 3-voice chorus
-        ["sawtooth", 1.5,   0.05, 0.12],   // flat-plane even fire: little between-note
-        ["sawtooth", 2.01,  0.22, 0.50],   // THE flat-plane order — still the backbone
-        ["sawtooth", 3.02,  0.08, 0.30],   // intake howl, turbo-damped vs the 458
-        ["sawtooth", 4.03,  0.0,  0.16],   // metallic edge, muted by the turbines
-        ["triangle", 5.04,  0.0,  0.09],   // faint shimmer — the turbos ate the rest
+        ["sawtooth", 1.5,   0.05, 0.11],   // flat-plane even fire: little between-note
+        ["sawtooth", 2.01,  0.22, 0.54],   // THE flat-plane order — the backbone
+        ["sawtooth", 3.02,  0.08, 0.34],   // intake howl, turbo-damped vs the 458
+        ["sawtooth", 4.03,  0.0,  0.22],   // the metallic edge the 458 has too…
+        ["triangle", 5.04,  0.0,  0.13],   // …and the shimmer over it, damped…
+        ["sine",     6.02,  0.0,  0.07],   // …with just a trace of air on top
       ],
-      // turbos in the vee = a lower, tighter resonator set than the open 458
-      formants: [[185, 1.0, 5], [1040, 2.0, 5.5], [2450, 2.4, 4]],
-      loadDrive: 0.6, noiseMul: 1.2, volTrim: 1.24, scream: 2400,
+      // turbos in the vee: a tighter resonator set than the open 458, but not
+      // a LOWER-pitched engine. The damping lives here, not in f0Mul.
+      formants: [[215, 1.0, 4.5], [1250, 2.1, 5], [2900, 2.5, 4.5]],
+      loadDrive: 0.6, noiseMul: 1.2, volTrim: 1.24, scream: 3200,
       drive: 0.72, pulseDepth: 0.15, raspMul: 1.35,
     },
   },
@@ -2269,10 +2389,60 @@ function applyDash(c) {
       b.setProperty("--needle", "#8c2f22");
       b.setProperty("--dial-accent", "#3b3227");
     }
-  } else if (d.face === "dark") {
+  } else if (d.face === "dark" || d.face === "ferrari") {
+    /* "ferrari" is a DIAL palette, not a page palette. The cluster paints
+       itself from ferrariFace() and ignores these entirely; what these do is
+       keep the digital readouts and the gate lettering — which also drink
+       --tick — legible on the dark console the cluster sits in. Painting the
+       whole console Modena yellow because the tach is would be a costume,
+       not a dashboard. */
     b.setProperty("--face", "#0e0f12"); b.setProperty("--face-ring", "#1c1d22");
     b.setProperty("--tick", "#b9bbc2"); b.setProperty("--tick-dim", "#4c4e56");
   }
+}
+
+/* ================================================================
+   THE MODENA CLUSTER
+
+   Every Ferrari road car since the F50 has had the same argument with its own
+   dashboard and won it the same way: one enormous rev counter in the middle,
+   painted the yellow of the Modena shield, and everything else — speed, gear,
+   temperatures, the lot — pushed out to the sides in the dark where it can be
+   read without being looked at. The 812's is a real needle over a real yellow
+   dial; the 296's and the SF90's are a screen pretending to be one, down to
+   the shadow the needle casts. Both are the same instrument.
+
+   So the tach is the HERO and it is yellow, and the speedo is its opposite
+   number: black, with the same yellow doing the markings. Giving both of them
+   a yellow face would be the mistake — the whole point of the yellow is that
+   exactly one thing on the dashboard has it, and that thing is engine speed,
+   because in this car engine speed is the subject.
+
+   Numerals are red, per the brief, and the ticks stay black: red numerals on
+   black ticks on yellow is what the shield does, and it is also the only
+   pairing where the numbers stay findable at a glance — red on yellow has
+   plenty of value contrast at that size, red on red would not. Past the
+   redline the numerals and their ticks BOTH go red, which is the one moment
+   the dial stops distinguishing between the two.
+   ================================================================ */
+function ferrariFace(o) {
+  return o.hero ? {
+    // the rev counter: Modena yellow, lit from above like a painted dial
+    face: "#e8b400", faceHi: "#ffd92b",
+    ring: "#0d0d10", tick: "#171512", tickDim: "#6b5406",
+    numeral: "#c8102e", redline: "#c8102e", needle: "#d81420",
+    muted: "#7a6208", hub: "#101013", hubHi: "#3d3e44",
+    accentSoft: "rgba(200,16,46,0.26)", accentGlow: "rgba(232,44,40,0.55)",
+    bezel: "#0b0b0e", bezelHi: "#3a3b41",
+  } : {
+    // everything else on the cluster: black, with the yellow doing the work
+    face: "#0a0a0c", faceHi: "#1a1b20",
+    ring: "#24252a", tick: "#e6dcc0", tickDim: "#4e4f57",
+    numeral: "#f5c518", redline: "#c8102e", needle: "#f5c518",
+    muted: "#7c7d86", hub: "#141519", hubHi: "#45474e",
+    accentSoft: "rgba(245,197,24,0.18)", accentGlow: "rgba(245,197,24,0.45)",
+    bezel: "#0b0b0e", bezelHi: "#3a3b41",
+  };
 }
 
 // "#rrggbb" + alpha → "rgba(r,g,b,a)"
@@ -5181,10 +5351,38 @@ function audioTick() {
     wf = (400 + rpm * 0.32) * dop;
     wg = 0.005 + load * 0.014 + rFrac * 0.009 + (S.brake > 0.2 && Math.abs(S.v) > 2 ? 0.009 : 0);
   } else if (CC.edrive && S.powered && S.eDrive === "ev") {
-    // eDrive gliding: barely-there inverter whisper that tracks road speed
-    const sp = Math.abs(S.v);
-    wf = (300 + sp * 45) * dop;
-    wg = 0.005 + S.throttle * 0.018 + (S.brake > 0.2 && sp > 2 ? 0.015 : 0);
+    /* eDrive gliding. This used to be one sine tracking road speed, which is
+       the sound of a fridge, and it is not what a car like this does when it
+       creeps out of a garage in silence.
+
+       An e-motor makes TWO sounds at once and they move independently, which
+       is the whole texture:
+
+         THE ROTOR ORDER rises with WHEEL SPEED. It is the pole-passing
+         frequency — the physical rate at which magnets go past coils — so it
+         is a direct, honest reading of how fast you are going, and it climbs
+         from a barely-audible hum at walking pace to a clear tone at the
+         electric cap. It is the part that sounds like motion.
+
+         THE SWITCHING WHINE is the inverter's carrier and it does NOT track
+         speed. It tracks TORQUE, because it is a current, so it appears the
+         instant you touch the pedal at any speed at all and vanishes the
+         instant you lift — including standing still. That inversion is the
+         single most recognisable thing about driving an electric car and the
+         old code had none of it.
+
+       Both stay quiet. The reason a 296 in eDrive is impressive is that it
+       is nearly silent; making the motor audible enough to enjoy would be
+       making a different car. */
+    const sp = Math.abs(S.v), cap = (CC.evCapKmh || 80) / 3.6;
+    const spF = clamp(sp / cap, 0, 1.1);
+    const regen = S.brake > 0.2 && sp > 2 ? clamp(S.brake, 0, 1) : 0;
+    // rotor order — road speed, and it sweetens as it climbs
+    wf = (240 + sp * 62) * dop;
+    wg = 0.004 + spF * 0.013 + regen * 0.012;
+    // the carrier — pedal, not speed. High, thin, and gone the moment you lift.
+    w2f = (2100 + sp * 34) * dop;
+    w2g = (S.throttle * 0.017 + regen * 0.010) * (0.5 + spF * 0.5);
   } else if (running && CC.fan) {
     // the ground-effect fan: a 48V turbine behind your head. A smooth whoosh
     // that builds with speed — and steps up HARD when braking mode sucks the
@@ -5196,6 +5394,25 @@ function audioTick() {
     tbF = (1500 + sp * 22) * dop;
     tbG = 0.018 + sp * 0.0014 + brk * 0.055;
   }
+  /* --- THE MOTOR THAT DIDN'T GO AWAY ---
+     A hybrid running on petrol is still a hybrid. The MGU-K is still turning,
+     still taking current every time the pedal moves, and in a 296 or an SF90
+     the thing filling the hole under the turbos is audible under the V6 as a
+     thin electrical edge that rises with the pedal rather than with the revs.
+     That mismatch — a whine that answers the pedal instantly while the engine
+     behind it is still spooling — is what a hybrid actually sounds like from
+     the inside, and it is the sound the eAssist force earned.
+
+     Outside the if/else chain above for the same reason the gearbox is: the
+     turbo branch wins that chain on these cars, so a motor written as another
+     branch of it would never make a sound at all. The car has both. And it
+     rides w2 only where nothing else is using it. */
+  if (running && CC.eAssist && S.eDrive === "gas" && !CC.seqTurbo) {
+    const eF = clamp((S.eAssistNow || 0) / CC.eAssist, 0, 1);
+    w2f = (1750 + Math.abs(S.v) * 26 + rpm * 0.06) * dop;
+    w2g = Math.max(w2g, eF * 0.020);
+  }
+
   /* --- the straight-cut gearbox ---
      Deliberately NOT part of the if/else chain above, and this is a fix, not
      a style choice. The chain picks ONE forced-induction voice, and the
@@ -8926,65 +9143,235 @@ function sfxBootRace(amp = 1) {
   });
 }
 
-/* the 296's own power-on: a soft ascending three-note motif — a C-major
-   arpeggio in warm triangles with a pure octave shimmer over each note and
-   a low swell underneath as the systems wake. Elegant, not gadgety. */
+/* THE POWER-ON.
+
+   The old one was three triangle waves playing a C major arpeggio with an
+   octave over each. That is a doorbell. It is the sound a microwave makes,
+   and the reason it read as cheap is worth writing down because it is the
+   same reason most synthesised "premium" chimes read as cheap:
+
+     A MAJOR ARPEGGIO IS A CADENCE. It goes somewhere and arrives, and having
+     arrived it is finished. Expensive marques almost never do this. They
+     state an interval and let it HANG, because a sound that resolves is a
+     sound that is over, and the car is not over — it has just woken up and
+     is now waiting for you.
+
+     THERE WAS NO NOISE IN IT. Every part of that chime was a pure periodic
+     oscillator, and nothing in the physical world is. What makes a mastered
+     UI sound expensive is almost always a filtered noise bed that arrives
+     late, sits under the tone and leaves after it. It costs nothing and it is
+     the entire difference between "synthesised" and "produced".
+
+     NOTHING HAPPENED FIRST. A car that weighs 1500kg and holds 800 volts does
+     not go straight to being musical. The contactors land first. A tiny,
+     dry, unmusical mechanical event before the tone is what tells you a
+     machine did this rather than a speaker.
+
+   So: contactors, then a low swell, then a stated FIFTH — root and fifth,
+   the open interval, no third to resolve it — with a fourth-order shimmer
+   arriving late over the top and a noise bed under all of it. Detuned in
+   pairs, because a single oscillator is a beep and two a few cents apart is
+   an instrument. It hangs for a second and a half and then simply stops
+   being there, which is the closest a sound gets to saying "ready" without
+   saying anything.
+
+   Ferrari's own is built on A, so this is. */
 function sfxChimeFerrari(amp = 1) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime;
-  [[523.25, 0, 0.55], [659.25, 0.16, 0.55], [783.99, 0.32, 0.75]].forEach(([hz, dt, dur]) => {
-    const o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = hz;
+
+  // --- the hardware, before any of the music. Two contactors, dry, close
+  //     together, entirely without pitch. You are meant to barely notice it.
+  [0, 0.055].forEach((dt, i) => {
+    const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 2.2 - i * 0.4;
+    const nf = ctx.createBiquadFilter(); nf.type = "bandpass";
+    nf.frequency.value = 2100 - i * 500; nf.Q.value = 2.2;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime((0.11 - i * 0.035) * amp, t + dt);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.04);
+    n.connect(nf); nf.connect(ng); ng.connect(AU.inner); n.start(t + dt); n.stop(t + dt + 0.06);
+  });
+
+  // --- the swell. A2 rising a whisker into pitch as the bus comes up: the
+  //     pitch arriving is what makes it read as something powering on rather
+  //     than something being played.
+  [[55, 0.05], [110, 0.038]].forEach(([hz, lvl]) => {
+    const o = ctx.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(hz * 0.975, t + 0.03);
+    o.frequency.linearRampToValueAtTime(hz, t + 0.55);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.001, t + 0.03);
+    g.gain.linearRampToValueAtTime(lvl * amp, t + 0.4);
+    g.gain.setValueAtTime(lvl * amp, t + 0.8);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 1.65);
+    o.connect(g); g.connect(AU.inner); o.start(t + 0.03); o.stop(t + 1.7);
+  });
+
+  /* --- the statement. A, then the E above it, and then nothing else, ever.
+         Each note is a detuned pair of triangles under a lowpass — the pair
+         beats slowly against itself, which is the "warmth" that a single
+         oscillator cannot produce at any volume. The second note is louder
+         and longer than the first and does NOT resolve upward to the octave,
+         because the whole point is that it hangs. */
+  [[220, 0.22, 0.045, 1.05], [329.63, 0.40, 0.062, 1.30]].forEach(([hz, dt, lvl, dur]) => {
+    [-3.5, 3.5].forEach((cents) => {
+      const o = ctx.createOscillator(); o.type = "triangle";
+      o.frequency.value = hz * Math.pow(2, cents / 1200);
+      const f = ctx.createBiquadFilter(); f.type = "lowpass";
+      f.frequency.setValueAtTime(1200, t + dt);
+      f.frequency.linearRampToValueAtTime(3400, t + dt + 0.25);   // it opens as it speaks
+      f.Q.value = 0.7;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.001, t + dt);
+      g.gain.linearRampToValueAtTime(lvl * amp, t + dt + 0.09);   // no transient at all
+      g.gain.exponentialRampToValueAtTime(0.001, t + dt + dur);
+      o.connect(f); f.connect(g); g.connect(AU.inner);
+      o.start(t + dt); o.stop(t + dt + dur + 0.05);
+    });
+  });
+
+  // --- the shimmer: two high partials of the fifth, arriving late, quiet
+  //     enough that they are felt as brightness rather than heard as notes.
+  [[1318.5, 0.52, 0.014], [1976, 0.62, 0.008]].forEach(([hz, dt, lvl]) => {
+    const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = hz;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.001, t + dt);
-    g.gain.linearRampToValueAtTime(0.085 * amp, t + dt + 0.06);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dt + dur);
-    o.connect(g); g.connect(AU.inner); o.start(t + dt); o.stop(t + dt + dur + 0.05);
-    const s = ctx.createOscillator(); s.type = "sine"; s.frequency.value = hz * 2;
-    const sg = ctx.createGain();
-    sg.gain.setValueAtTime(0.001, t + dt);
-    sg.gain.linearRampToValueAtTime(0.022 * amp, t + dt + 0.09);
-    sg.gain.exponentialRampToValueAtTime(0.001, t + dt + dur);
-    s.connect(sg); sg.connect(AU.inner); s.start(t + dt); s.stop(t + dt + dur + 0.05);
+    g.gain.linearRampToValueAtTime(lvl * amp, t + dt + 0.3);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.95);
+    o.connect(g); g.connect(AU.inner); o.start(t + dt); o.stop(t + dt + 1);
   });
-  // the warm swell underneath — C3 rising to G3 as everything comes alive
-  const b = ctx.createOscillator(); b.type = "sine"; b.frequency.setValueAtTime(130.8, t);
-  b.frequency.linearRampToValueAtTime(196, t + 0.5);
-  const bg = ctx.createGain();
-  bg.gain.setValueAtTime(0.001, t);
-  bg.gain.linearRampToValueAtTime(0.05 * amp, t + 0.3);
-  bg.gain.exponentialRampToValueAtTime(0.001, t + 0.95);
-  b.connect(bg); bg.connect(AU.inner); b.start(t); b.stop(t + 1);
+
+  // --- and the bed. The part that costs nothing and does most of the work:
+  //     a narrow band of air sweeping up behind the notes and leaving after
+  //     them, so the tones sit IN something instead of on top of silence.
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.loop = true;
+  const nf = ctx.createBiquadFilter(); nf.type = "bandpass"; nf.Q.value = 1.3;
+  nf.frequency.setValueAtTime(900, t + 0.1);
+  nf.frequency.exponentialRampToValueAtTime(5200, t + 1.2);
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.001, t + 0.1);
+  ng.gain.linearRampToValueAtTime(0.017 * amp, t + 0.6);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 1.75);
+  n.connect(nf); nf.connect(ng); ng.connect(AU.inner); n.start(t + 0.1); n.stop(t + 1.8);
 }
 
-/* the hybrid transformation: the e-motor spins the V6 straight to speed and
-   it catches almost politely — a soft intake breath and a brief, muted swell
-   that hands over to the engine voice. No bark, no drama: seamless. */
-function sfxHybridFire() {
+/* THE TRANSFORMATION.
+
+   What you are listening to when a 296 lights its V6 is NOT a start. There is
+   no starter motor in the car — the MGU-K is already spinning the crank,
+   already synchronised, already silent. The engine does not have to be turned
+   over; it has to be JOINED. So the sound has three parts and none of them is
+   a crank:
+
+     THE THROTTLES CRACK OPEN. A short intake breath, quiet, wide-band, gone
+     in a fifth of a second. This is the only part that is audibly mechanical
+     and it is the first thing you hear.
+
+     THE FIRST FIRINGS. Not a bang. A V6 catching at 1800rpm with no load on
+     it produces a handful of soft pressure pulses that arrive at the firing
+     rate and are individually audible for about a tenth of a second before
+     they smear together into a note. Modelling them AT the firing rate is
+     the whole thing: get the interval right and the ear hears an engine
+     arriving; get it wrong and it hears a synthesiser.
+
+     THE NOTE ARRIVES. A round, low, fast swell that fades out from underneath
+     as the running voice fades in over it — a crossfade, not a handoff. The
+     old version peaked at 0.16 in fifty milliseconds, which is a bark, and a
+     bark is precisely what this car is famous for not doing.
+
+   `target` is where the crank is landing and `rolling` says whether it is
+   joining a moving driveline. Both change the sound: stationary it is soft
+   and low and over quickly, rolling there is a little more air in it because
+   there is a little more work being asked of it. */
+function sfxHybridFire(target = 1800, rolling = false) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime;
-  // soft intake breath as the throttles crack open
-  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 0.9;
-  const nf = ctx.createBiquadFilter(); nf.type = "bandpass"; nf.Q.value = 1.1;
-  nf.frequency.setValueAtTime(400, t);
-  nf.frequency.exponentialRampToValueAtTime(1600, t + 0.18);
+  const f0 = (target / 60) * ((CC.cyl || 6) / 2);   // the firing rate it lands at
+  const amp = rolling ? 1 : 0.78;
+
+  // --- the throttles. Air, briefly, and nothing else.
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 0.85;
+  const nf = ctx.createBiquadFilter(); nf.type = "bandpass"; nf.Q.value = 0.9;
+  nf.frequency.setValueAtTime(340, t);
+  nf.frequency.exponentialRampToValueAtTime(1250, t + 0.16);
+  nf.frequency.exponentialRampToValueAtTime(520, t + 0.36);
   const ng = ctx.createGain();
   ng.gain.setValueAtTime(0.001, t);
-  ng.gain.linearRampToValueAtTime(0.09, t + 0.05);
-  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
-  n.connect(nf); nf.connect(ng); ng.connect(AU.sfx); n.start(t); n.stop(t + 0.38);
-  // muted first-fire swell — low, round, quickly folded into the running note
+  ng.gain.linearRampToValueAtTime(0.055 * amp, t + 0.06);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+  n.connect(nf); nf.connect(ng); ng.connect(AU.sfx); n.start(t); n.stop(t + 0.44);
+
+  // --- the first firings, spaced at the actual firing interval. Four of
+  //     them: by the fifth the ear has stopped counting and started hearing
+  //     a pitch, which is exactly where the running voice should take over.
+  const gap = 1 / Math.max(f0, 12);
+  for (let i = 0; i < 4; i++) {
+    const dt = 0.09 + i * gap;
+    const o = ctx.createOscillator(); o.type = "triangle";
+    o.frequency.setValueAtTime(f0 * (0.62 + i * 0.13), t + dt);
+    const of = ctx.createBiquadFilter(); of.type = "lowpass";
+    of.frequency.value = 340 + i * 190; of.Q.value = 0.8;
+    const og = ctx.createGain();
+    // each one a little stronger than the last as the fuelling stabilises
+    const lvl = (0.035 + i * 0.017) * amp;
+    og.gain.setValueAtTime(0.001, t + dt);
+    og.gain.linearRampToValueAtTime(lvl, t + dt + 0.008);
+    og.gain.exponentialRampToValueAtTime(0.001, t + dt + gap * 1.6);
+    o.connect(of); of.connect(og); og.connect(AU.sfx);
+    o.start(t + dt); o.stop(t + dt + gap * 1.8);
+  }
+
+  // --- and the note underneath, swelling in and handing over. Slow attack
+  //     on purpose: it is the crossfade, so it must not have a transient.
+  const b = ctx.createOscillator(); b.type = "sine";
+  b.frequency.setValueAtTime(f0 * 0.5, t + 0.06);
+  b.frequency.linearRampToValueAtTime(f0, t + 0.34);
+  const bg = ctx.createGain();
+  bg.gain.setValueAtTime(0.001, t + 0.06);
+  bg.gain.linearRampToValueAtTime(0.075 * amp, t + 0.2);
+  bg.gain.exponentialRampToValueAtTime(0.001, t + 0.62);
+  b.connect(bg); bg.connect(AU.sfx); b.start(t + 0.06); b.stop(t + 0.66);
+}
+
+/* …and switching it back off, which is a different event and used to play
+   the power-on chime. An engine that stops while the car keeps going does
+   three things: the fuel goes, the crank coasts down through maybe half a
+   second of decreasing firing rate with nothing driving it, and the exhaust
+   stops being pressurised — which you hear as the resonance in the pipe
+   collapsing rather than as any kind of note. Then nothing, which on this
+   car is the point. */
+function sfxHybridQuiet() {
+  if (!AU.ready) return;
+  const ctx = AU.ctx, t = ctx.currentTime;
+  const f0 = (Math.max(ENG.idle || 900, 800) / 60) * ((CC.cyl || 6) / 2);
+  // the crank running down — pitch AND level falling together
   const o = ctx.createOscillator(); o.type = "triangle";
-  o.frequency.setValueAtTime(110, t);
-  o.frequency.exponentialRampToValueAtTime(220, t + 0.13);
-  o.frequency.exponentialRampToValueAtTime(160, t + 0.3);
+  o.frequency.setValueAtTime(f0, t);
+  o.frequency.exponentialRampToValueAtTime(f0 * 0.32, t + 0.42);
   const of = ctx.createBiquadFilter(); of.type = "lowpass";
-  of.frequency.setValueAtTime(600, t);
-  of.frequency.linearRampToValueAtTime(1400, t + 0.14);
+  of.frequency.setValueAtTime(700, t);
+  of.frequency.exponentialRampToValueAtTime(180, t + 0.45);
   const og = ctx.createGain();
-  og.gain.setValueAtTime(0.001, t);
-  og.gain.linearRampToValueAtTime(0.16, t + 0.05);
-  og.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
-  o.connect(of); of.connect(og); og.connect(AU.sfx); o.start(t); o.stop(t + 0.38);
+  og.gain.setValueAtTime(0.07, t);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+  o.connect(of); of.connect(og); og.connect(AU.sfx); o.start(t); o.stop(t + 0.55);
+  // the pipe letting go: a short soft exhale, low, no edge on it
+  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 0.5;
+  const nf = ctx.createBiquadFilter(); nf.type = "lowpass"; nf.frequency.value = 620;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.001, t);
+  ng.gain.linearRampToValueAtTime(0.03, t + 0.05);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+  n.connect(nf); nf.connect(ng); ng.connect(AU.sfx); n.start(t); n.stop(t + 0.46);
+  // and the inverter taking the load back — one soft note up, not a chime
+  const e = ctx.createOscillator(); e.type = "sine";
+  e.frequency.setValueAtTime(420, t + 0.16);
+  e.frequency.linearRampToValueAtTime(660, t + 0.44);
+  const eg = ctx.createGain();
+  eg.gain.setValueAtTime(0.001, t + 0.16);
+  eg.gain.linearRampToValueAtTime(0.02, t + 0.3);
+  eg.gain.exponentialRampToValueAtTime(0.001, t + 0.62);
+  e.connect(eg); eg.connect(AU.inner); e.start(t + 0.16); e.stop(t + 0.66);
 }
 
 /* THE PASS ITSELF — the pressure wave arriving at your face.
@@ -10437,6 +10824,45 @@ function stepPhysics(dt) {
     }
   }
 
+  /* ---- THE OTHER HALF OF A HYBRID ---------------------------------------
+
+     Until now `evForce` only existed in the EV branch, which meant that the
+     moment you lit the engine on a 296 or an SF90 the electric side of the
+     car simply stopped existing. That is not a small omission: an SF90 is a
+     1000cv car of which 220cv is electric, and a 296 is 830cv of which 167cv
+     is. Take that away and you are driving a 780cv V8 that weighs what a
+     1000cv car weighs, which is exactly why they felt slow.
+
+     An e-motor is not an engine and does not behave like one, so it is not
+     modelled as extra crank torque. It is modelled as what it is — force at
+     the road, delivered instantly, with two limits on it:
+
+       TORQUE LIMIT   below a corner speed the inverter is current-limited
+                      and the force is simply flat. This is the shove off
+                      the line, and it is available at zero rpm, which is the
+                      whole reason these cars launch the way they do.
+       POWER LIMIT    above it the motor is making all the watts it has, so
+                      the force falls as 1/v. This is why the electric
+                      contribution is huge to 100km/h, still worth having to
+                      200, and worth almost nothing at the top end.
+
+     It goes in BEFORE the traction section on purpose: e-motor force is
+     force through the same four contact patches, so it is subject to the
+     same tire curve as everything else. A hybrid cannot cheat the road. */
+  if (CC.eAssist && !evNow && S.engineOn && S.eDrive === "gas" && !(DMG.on && S.batt <= 0)) {
+    const fwd = S.mode === "auto" ? S.autoSel === "D" : (S.gear !== 0 && S.gear !== "R");
+    if (fwd && driveF > 0) {
+      const pw = CC.ePower || CC.eAssist * 18;             // W at the wheels
+      const eF = Math.min(CC.eAssist, pw / Math.max(Math.abs(S.v), 4));
+      // it follows the pedal, and it fades out as the pack empties rather
+      // than switching off — a hybrid that suddenly loses 200cv mid-corner
+      // would be a very different car to drive than the real one
+      const soc = DMG.on ? clamp(S.batt / 0.15, 0, 1) : 1;
+      driveF += eF * S.throttle * soc;
+      S.eAssistNow = eF * S.throttle * soc;                // for the dash bar
+    } else S.eAssistNow = 0;
+  } else if (!evNow) S.eAssistNow = 0;
+
   /* ---- TIRES ------------------------------------------------------------
      What used to be here was a threshold and a clamp: past a number the
      drive force got chopped to a fixed fraction and a counter ran up. Two
@@ -10609,6 +11035,40 @@ function stepPhysics(dt) {
   S.slipR = sRatio;
   S.slipSigned = sSigned;
   driveF = slideTick(dt, driveF, sSigned, SP, rwd, gripLock, tcOn);
+  /* ---- THE CEILING THE CHEAT CANNOT LIFT --------------------------------
+
+     The workshop's infinite-grip switch is on by default, and for most of
+     this garage that is a kindness — it takes the wheelspin out of a car you
+     are driving with a keyboard and leaves the engine, which is the part
+     anyone came here for. It also, quietly, removes the only thing standing
+     between 830 cv and the road.
+
+     For most cars that does not matter, because they are power-limited
+     anyway: the 812 makes 600 Nm through a long first gear and lands on its
+     real 0-60 with or without the switch. For the two hybrids it matters
+     enormously. A 296 has 665 Nm and a short first, and an SF90 has 800 plus
+     three electric motors; with the traction model switched off they were
+     reaching 60 in under two seconds, which is a full second faster than
+     either car has ever managed and quicker than anything with tyres on it.
+
+     So these cars carry `launchG`: the most acceleration their contact
+     patches will actually deliver, as a multiple of g, applied as a hard
+     ceiling on drive force whatever the grip switch says. It is not a
+     handicap and it is not a difficulty setting — it is the tyre, which is a
+     real component that the cheat had been deleting.
+
+     And because it is a CEILING rather than a target, it binds only where it
+     should. Off the line the car is against it and pulling its full 1.1 or
+     1.3g; by the time the gearing has run out of torque multiplication the
+     engine is making less force than the ceiling allows and the limit stops
+     mattering entirely. Traction-limited, then power-limited — which is the
+     shape of a real acceleration run and the reason the second half of one
+     takes so much longer than the first. */
+  if (CC.launchG && driveF > 0) {
+    const ceil = CAR.mass * 9.81 * CC.launchG * (S.rain ? 0.76 : 1);
+    if (driveF > ceil) driveF = ceil;
+  }
+
   S.tracF = Math.max(0, driveF);             // what pitches the car next frame
 
   // the factory governor. The big saloons and SUVs are limited to a number
@@ -11589,14 +12049,65 @@ function fireHybrid() {
   // sequential it stays exactly where they left it — it used to grab 1st for
   // you, which is not the car's decision to make.
   if (S.mode === "auto") {
-    S.autoGear = 1;
-    S.gear = S.autoSel === "D" ? 1 : S.autoSel === "R" ? "R" : 0;
+    /* …but it has to pick a gear that suits the road speed, and this used to
+       grab first no matter what. Light the engine at 90km/h with first
+       selected and the driveline drags the crank to nine thousand the instant
+       the clutch takes up — the opposite of a seamless handover, and quite a
+       lot louder than the flare this function was already being blamed for.
+
+       An auto box being handed a running engine at speed does what it does
+       any other time: it is already IN the gear that suits the speed, because
+       it never left it. So: the tallest gear that still has the engine above
+       a working rpm, which at a standstill is first and at 90 is not. */
+    let g = 1;
+    for (let n = CAR.top; n >= 1; n--) {
+      if (matchRpm(n) >= (ENG.idle || 900) * 1.25) { g = n; break; }
+    }
+    S.autoGear = g;
+    S.gear = S.autoSel === "D" ? g : S.autoSel === "R" ? "R" : 0;
   }
-  S.rpm = 3500;                               // the fire-up flare
+  /* ---- THE HANDOVER, AND WHY IT USED TO BE WRONG ----------------------
+
+     This function used to do one thing regardless of what the car was doing:
+     slam the crank to 3500 and let it fall. That is a cold start on a
+     starter motor, and it is not what happens in a 296 or an SF90. There is
+     no starter. The MGU-K is ALREADY turning with the driveline, bolted
+     between the engine and the gearbox; lighting the V6 means fuelling a
+     crank that is already at speed and already smooth. Nothing has to be
+     spun up, so nothing flares.
+
+     Which means the right target is not a number, it is a QUESTION — what is
+     the driveline doing right now?
+
+       STOPPED    Nothing to match. The motor rolls the crank up to just over
+                  idle, it lights, and it settles. There is no load on it and
+                  no reason to go anywhere near 3500, so it doesn't: 2000 rpm
+                  is the ceiling, and in practice it lands nearer 1800. This
+                  is the one the brief was about, and it is the one that used
+                  to sound like a jump-start in a car park.
+
+       ROLLING    The crank has to arrive at the speed the gearbox is already
+                  turning it, because it is about to be connected to it. So
+                  the target IS matchRpm() — the rev-match a downshift uses,
+                  for exactly the same reason. Land on that number and the
+                  clutch takes up with nothing to absorb, which is why the
+                  real car's handover is something you notice in the mirror
+                  and not in your spine.
+
+     `catchAmt` comes down with it. That value is how hard the ECU holds the
+     throttle open through the catch, and holding a warm engine open when it
+     has no work to do is the other half of the old flare. */
+  const idleRpm = ENG.idle || 900;
+  const rolling = Math.abs(S.v) > 1.2;
+  const target = rolling
+    ? clamp(matchRpm(S.mode === "auto" ? (S.autoGear || 1) : (S.gear || 1)),
+            idleRpm * 1.1, ENG.max * 0.75)
+    : Math.min(2000, idleRpm * 1.95);
+  S.rpm = Math.max(idleRpm * 0.85, target * 0.72);   // it comes UP to the target
   S.shiftCool = 0.45;                         // a beat before the box reacts
-  S.catchT = 0.1; S.catchAmt = 0.45; S.catchPeak = 3600;
+  S.catchT = 0.22; S.catchAmt = rolling ? 0.3 : 0.2; S.catchPeak = target;
   S.sweep = -1;
-  sfxHybridFire();
+  sfxHybridFire(target, rolling);
   sayEvent("gas", CC.cyl >= 12 ? "V twelve engaged" : "Combustion engine engaged", { cool: 4 });
   updateRunLamp(); updateEdriveUi();
 }
@@ -11616,7 +12127,13 @@ function toElectric() {
     return;
   }
   S.eDrive = "ev"; S.engineOn = false; S.rpm = 0; S.boost = 0;
-  sfxEvBoot(0.7);                             // a quieter grace note mid-drive
+  S.catchT = 0; S.catchAmt = 0; S.sweep = 0;
+  /* Going the other way is not the same event backwards. Nothing starts —
+     something STOPS, and the sound of it is the fuel going away, the crank
+     freewheeling down half a turn against the clutch, and the pipe emptying.
+     Playing the power-on chime here (which is what this used to do) was the
+     car congratulating you for switching part of it off. */
+  sfxHybridQuiet();
   sayEvent("ev", "Electric mode on", { cool: 4 });
   updateRunLamp(); updateEdriveUi();
 }
@@ -11684,6 +12201,9 @@ function makeGauge(canvas, optsFn) {
     canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
     G.dpr = dpr;
     G.opts = optsFn();
+    // a dial with its own paint job overrides the theme's, once, here —
+    // rather than in two places that can drift apart
+    if (G.opts.dial === "ferrari") Object.assign(G.opts, ferrariFace(G.opts));
     G.face = document.createElement("canvas");
     G.face.width = canvas.width; G.face.height = canvas.height;
     drawFace(G);
@@ -11713,9 +12233,46 @@ function drawFace(G) {
   const span = A1 - A0, range = opts.max - opts.min;
   const ang = (v) => A0 + ((v - opts.min) / range) * span;
 
-  // redline arc
-  if (opts.redFrom != null) {
-    ctx.strokeStyle = opts.redline; ctx.lineWidth = R * 0.035;
+  /* THE REDLINE.
+
+     On every other dial here it is a thin arc outboard of the numerals, which
+     works because the numerals are pale and the arc is the only red thing on
+     the face. On the Modena dial the numerals are ALREADY red — that is the
+     brief — so an arc in the same colour says nothing at all, and the dial
+     loses the one marking a driver actually uses at speed.
+
+     So it becomes a BAND: a filled red sector running from the redline to the
+     stop, wide enough to swallow the numerals inside it, with those numerals
+     re-struck in the dial's own yellow so they read as knocked out of the red
+     rather than printed on it. That is exactly what the screen in a 296 does
+     and what the paint on an 812 does, and it means the top of the rev range
+     is legible as a SHAPE — you see how much yellow is left without reading a
+     number, which is the entire job of an analogue tachometer. */
+  const isFerrari = (opts.dial || "sport") === "ferrari";
+  if (opts.redFrom != null && isFerrari && opts.hero) {
+    /* The band starts a fraction of a division EARLY, and that is not a
+       fudge — it is what a printed dial does. A numeral is centred on its
+       tick, so a band that begins exactly at the redline cuts the redline's
+       own numeral in half down the middle and leaves it half yellow-on-red
+       and half yellow-on-yellow, which is worse than either. Every real dial
+       lays the red down so the first red number sits wholly inside it. Only
+       shows up on a car whose redline lands exactly on a labelled division —
+       the SF90's does, at 8 — but the offset is right for all of them. */
+    const redAt = Math.max(opts.min, opts.redFrom - (opts.label || 1) * 0.3);
+    const a0 = ang(redAt);
+    ctx.fillStyle = opts.redline;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.925, a0, A1);
+    ctx.arc(cx, cy, R * 0.50, A1, a0, true);
+    ctx.closePath(); ctx.fill();
+    // a darker leading edge so the band starts at a line rather than a fade
+    ctx.strokeStyle = "rgba(90,6,18,0.75)"; ctx.lineWidth = R * 0.012;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a0) * R * 0.50, cy + Math.sin(a0) * R * 0.50);
+    ctx.lineTo(cx + Math.cos(a0) * R * 0.925, cy + Math.sin(a0) * R * 0.925);
+    ctx.stroke();
+  } else if (opts.redFrom != null) {
+    ctx.strokeStyle = opts.redline; ctx.lineWidth = R * (isFerrari ? 0.045 : 0.035);
     ctx.beginPath(); ctx.arc(cx, cy, R * 0.86, ang(opts.redFrom), A1); ctx.stroke();
   }
 
@@ -11725,7 +12282,11 @@ function drawFace(G) {
     const major = Math.abs(v / opts.major - Math.round(v / opts.major)) < 1e-6;
     const inR = major ? 0.80 : 0.855;
     const red = opts.redFrom != null && v >= opts.redFrom;
-    ctx.strokeStyle = red ? opts.redline : (major ? opts.tick : opts.tickDim);
+    // inside the filled band there is nothing left to say in red — the ticks
+    // knock out in the dial colour instead, the way paint on paint does
+    ctx.strokeStyle = red
+      ? (isFerrari && opts.hero ? "#ffdf4a" : opts.redline)
+      : (major ? opts.tick : opts.tickDim);
     ctx.lineWidth = major ? R * 0.020 : R * 0.010;
     ctx.beginPath();
     ctx.moveTo(cx + Math.cos(a) * R * inR, cy + Math.sin(a) * R * inR);
@@ -11738,20 +12299,31 @@ function drawFace(G) {
   ctx.fillStyle = opts.tick;
   ctx.font = dial === "classic"
     ? `500 ${Math.round(R * 0.105)}px Georgia, "Times New Roman", serif`
+    : dial === "ferrari"
+    ? `700 ${Math.round(R * 0.132)}px "Outfit", "Helvetica Neue", sans-serif`
     : `600 ${Math.round(R * 0.115)}px "JetBrains Mono", monospace`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  // the ink the numbers are written in is not necessarily the ink the ticks
+  // are: on the Modena dial the ticks are black and the numerals are red
+  const ink = opts.numeral || opts.tick;
   for (let v = opts.min; v <= opts.max + 1e-6; v += opts.label) {
     const a = ang(v);
     const red = opts.redFrom != null && v >= opts.redFrom;
-    ctx.fillStyle = red ? opts.redline : opts.tick;
+    ctx.fillStyle = red
+      ? (isFerrari && opts.hero ? "#ffe45c" : opts.redline)
+      : ink;
     ctx.fillText(String(opts.fmt ? opts.fmt(v) : v),
-      cx + Math.cos(a) * R * 0.66, cy + Math.sin(a) * R * 0.66);
+      cx + Math.cos(a) * R * (dial === "ferrari" ? 0.63 : 0.66),
+      cy + Math.sin(a) * R * (dial === "ferrari" ? 0.63 : 0.66));
   }
 
   // caption
   ctx.fillStyle = opts.muted;
-  ctx.font = `600 ${Math.round(R * (dial === "gear" ? 0.06 : 0.072))}px "Outfit", sans-serif`;
-  ctx.fillText(opts.caption, cx, cy - R * (dial === "gear" ? 0.14 : 0.32));
+  ctx.font = `600 ${Math.round(R * (dial === "gear" ? 0.06 : dial === "ferrari" ? 0.055 : 0.072))}px "Outfit", sans-serif`;
+  // on the Modena dial the caption gets out of the way: small, low, and under
+  // the hub rather than over it, because the top half of this face belongs to
+  // the numbers and the shield and nothing else
+  ctx.fillText(opts.caption, cx, cy + R * (dial === "ferrari" ? 0.30 : 0) - R * (dial === "gear" ? 0.14 : dial === "ferrari" ? 0 : 0.32));
 
   if (dial === "classic") {
     // polished chrome bezel ring
@@ -11773,6 +12345,52 @@ function drawFace(G) {
       ctx.beginPath();
       ctx.moveTo(sx - R * 0.02, sy - R * 0.012); ctx.lineTo(sx + R * 0.02, sy + R * 0.012);
       ctx.stroke();
+    }
+  }
+
+  if (dial === "ferrari") {
+    /* THE BEZEL. A painted dial in a real binnacle has a deep matte-black
+       surround with a single bright line where the light catches its inner
+       lip, and that one highlight is most of what stops a flat-coloured disc
+       reading as a coloured disc. It is also what the 296's screen spends its
+       pixels faking, so it is not a skeuomorphism here — it is the subject. */
+    const bz = ctx.createLinearGradient(cx, cy - R, cx, cy + R);
+    bz.addColorStop(0, opts.bezelHi); bz.addColorStop(0.35, opts.bezel);
+    bz.addColorStop(1, opts.bezel);
+    ctx.strokeStyle = bz; ctx.lineWidth = R * 0.075;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.962, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.16)"; ctx.lineWidth = R * 0.008;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.925, Math.PI * 0.9, Math.PI * 2.1); ctx.stroke();
+
+    // a thin black hairline under the numerals, the way a printed dial is
+    // struck — it gives the numbers a floor to sit on
+    ctx.strokeStyle = opts.hero ? "rgba(23,21,18,0.35)" : "rgba(255,255,255,0.07)";
+    ctx.lineWidth = R * 0.006;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.48, A0, A1); ctx.stroke();
+
+    /* the shield. Small, high, and in outline — a Ferrari puts the Cavallino
+       on the dial at about this size and never larger, because a badge that
+       competes with the redline for attention is a badge in the wrong place. */
+    if (opts.hero) {
+      const sh = R * 0.115, sx = cx, sy = cy - R * 0.46;
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.beginPath();
+      ctx.moveTo(-sh * 0.62, -sh);
+      ctx.lineTo(sh * 0.62, -sh);
+      ctx.lineTo(sh * 0.62, sh * 0.34);
+      ctx.quadraticCurveTo(sh * 0.62, sh, 0, sh * 1.15);
+      ctx.quadraticCurveTo(-sh * 0.62, sh, -sh * 0.62, sh * 0.34);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(23,21,18,0.14)"; ctx.fill();
+      ctx.strokeStyle = "rgba(23,21,18,0.55)"; ctx.lineWidth = R * 0.011; ctx.stroke();
+      // the S F, stacked, as they are on the shield
+      ctx.fillStyle = "rgba(23,21,18,0.6)";
+      ctx.font = `700 ${Math.round(sh * 0.72)}px "Outfit", sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("SF", 0, sh * 0.05);
+      ctx.restore();
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
     }
   }
 
@@ -11857,6 +12475,19 @@ function renderGauge(G, value) {
     ctx.shadowBlur = 0;
     ctx.fillStyle = o.hub;
     ctx.beginPath(); ctx.arc(-R * 0.15, 0, R * 0.036, 0, Math.PI * 2); ctx.fill();
+  } else if (dial === "ferrari") {
+    /* An orange-red blade with a long counterweight behind the hub, which is
+       what a real one has and what makes it read as a balanced pointer rather
+       than a wedge drawn from the centre. Wide at the root, tapering to a
+       point that lands ON the tick rather than near it. */
+    ctx.moveTo(-R * 0.22, -R * 0.020);
+    ctx.lineTo(-R * 0.06, -R * 0.033);
+    ctx.lineTo(R * 0.79, -R * 0.007);
+    ctx.lineTo(R * 0.845, 0);
+    ctx.lineTo(R * 0.79, R * 0.007);
+    ctx.lineTo(-R * 0.06, R * 0.033);
+    ctx.lineTo(-R * 0.22, R * 0.020);
+    ctx.closePath(); ctx.fill();
   } else if (dial === "gear") {
     // chunky flat blade
     ctx.moveTo(-R * 0.10, -R * 0.028);
@@ -11905,6 +12536,7 @@ function buildGauges() {
   tachG = makeGauge($("tach"), () => ({
     ...gaugeTheme(),
     dial: CC.dial,
+    hero: true,                       // the Modena dial's yellow belongs to THIS one
     min: 0, max: CC.tachMax,
     minor: CC.tachMax > 9 ? 0.5 : 0.25, major: 1,
     label: CC.tachMax > 10 ? 2 : 1,
@@ -11914,7 +12546,7 @@ function buildGauges() {
   speedG = makeGauge($("speedo"), () => {
     const mx = S.units === "kmh" ? CC.kmhMax : CC.mphMax;
     const lab = mx <= 200 ? 20 : 40;
-    return { ...gaugeTheme(), dial: CC.dial, min: 0, max: mx, minor: lab / 4, major: lab / 2,
+    return { ...gaugeTheme(), dial: CC.dial, hero: false, min: 0, max: mx, minor: lab / 4, major: lab / 2,
              label: lab, redFrom: null, caption: S.units === "kmh" ? "KM/H" : "MPH" };
   });
   tachG.rebuild(); speedG.rebuild();
@@ -11960,19 +12592,165 @@ function buildGateLayout() {
   GATE.gearMap = map;
 }
 
+/* ================================================================
+   WHAT THE LEVER IS MADE OF
+
+   A gear lever is the only part of a car you hold in your hand for the entire
+   drive, and manufacturers have never agreed on what it should be. The same
+   six-speed box has been sold with a leather boot over it, with a milled
+   aluminium plate and nothing over it at all, and with the whole linkage left
+   visible under glass — and those are not three finishes, they are three
+   different arguments about what a gearchange is for.
+
+     GRAPHIC   The instrument-panel reading. Slots as dark voids, mono
+               numerals, no material claimed at all. It is not trying to be a
+               gearbox; it is trying to be a diagram of one, and diagrams are
+               easier to read at speed than objects are.
+
+     LEATHER   The GT reading, and the one nearly every road car chose. A
+               stitched boot over the mechanism, because what is under it is
+               oily and loud and the buyer would rather not think about it.
+               Contrast stitching, embossed numerals, and the numbers sitting
+               in the hide rather than on it.
+
+     ALLOY     The open gate. A milled plate, a polished ball, six fingers of
+               metal and no boot — the choice that says the mechanism is the
+               point and hiding it would be an apology. Engraved numerals with
+               the paint wiped into them, chamfers catching the light, and the
+               plate itself doing the sound.
+
+     MECHANISM The one almost nobody built and everybody photographs: the
+               plate in smoked glass with the selector rods, the pivot and the
+               detent spring left visible underneath, moving. It is showing
+               you the thing the leather exists to hide.
+
+   All four drive the same gearbox. Only the surfaces change — which is the
+   honest version of what a trim option is.
+   ================================================================ */
+const GATE_LOOKS = ["graphic", "leather", "alloy", "mech"];
+function gateLook() {
+  // buildGateSvg() runs during boot, before the mod store necessarily has a
+  // car to answer about — so this has to be safe to ask early
+  let g = null;
+  try { g = curMod() && curMod().gateLook; } catch (e) { /* not up yet */ }
+  return GATE_LOOKS.includes(g) ? g : "graphic";
+}
+
 function buildGateSvg() {
   buildGateLayout();
+  const look = gateLook();
   const svg = $("gateSvg");
-  const slot = (x, y, w, h) =>
-    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="9" fill="rgba(0,0,0,0.42)" stroke="rgba(0,0,0,0.5)" stroke-width="1"/>` +
-    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="9" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1" transform="translate(0,1.5)"/>`;
+  const gateEl = $("gate");
+  GATE_LOOKS.forEach(l => gateEl.classList.toggle("look-" + l, l === look));
+
+  /* Each material makes its slots differently, and the difference is entirely
+     in the EDGE. A void in a graphic has no edge. A cut in leather has a
+     rolled-under one and a line of stitching beside it. A slot milled in
+     billet has a bright chamfer on top and a dark shadow at the bottom, and
+     that pair of lines is the only reason machined metal looks machined. */
+  const slot = (x, y, w, h) => {
+    const r = 9;
+    switch (look) {
+      case "leather":
+        return (
+          // the cut itself: leather has thickness, so the hole is dark and
+          // the wall of it catches a little light on the near side
+          `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="#0a0807"/>` +
+          `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="none" stroke="rgba(0,0,0,0.85)" stroke-width="3"/>` +
+          // the rolled edge, lit from above
+          `<rect x="${x + 0.75}" y="${y + 0.75}" width="${w - 1.5}" height="${h - 1.5}" rx="${r - 1}" fill="none" stroke="rgba(184,150,110,0.30)" stroke-width="1.4"/>` +
+          // and the stitching beside it — the detail that makes hide read as
+          // hide. Dashed, warm, offset out from the cut the way a saddler does.
+          `<rect x="${x - 5}" y="${y - 5}" width="${w + 10}" height="${h + 10}" rx="${r + 4}" fill="none" ` +
+            `stroke="rgba(196,150,86,0.55)" stroke-width="1.3" stroke-dasharray="4 4.5" stroke-linecap="round"/>`
+        );
+      case "alloy":
+        return (
+          `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="url(#gCut)"/>` +
+          // the chamfer: bright along the top and left, dark along the bottom
+          `<rect x="${x - 1.2}" y="${y - 1.2}" width="${w + 2.4}" height="${h + 2.4}" rx="${r + 1}" fill="none" stroke="url(#gCham)" stroke-width="2.4"/>` +
+          `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="none" stroke="rgba(0,0,0,0.55)" stroke-width="1"/>`
+        );
+      case "mech":
+        return (
+          // smoked glass: the slot is where the glass ISN'T, so it is the one
+          // place you see straight down onto the linkage with nothing between
+          `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="rgba(0,0,0,0.30)"/>` +
+          `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="none" stroke="rgba(120,196,255,0.28)" stroke-width="1.2"/>`
+        );
+      default:
+        return (
+          `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="rgba(0,0,0,0.42)" stroke="rgba(0,0,0,0.5)" stroke-width="1"/>` +
+          `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1" transform="translate(0,1.5)"/>`
+        );
+    }
+  };
+
   const last = GATE.cols.length - 1;
   let s = "";
+
+  // gradients the metal look needs — defined once, referenced by every slot
+  if (look === "alloy") {
+    s += `<defs>` +
+      `<linearGradient id="gCut" x1="0" y1="0" x2="0" y2="1">` +
+        `<stop offset="0" stop-color="#0d0e10"/><stop offset="1" stop-color="#25272c"/>` +
+      `</linearGradient>` +
+      `<linearGradient id="gCham" x1="0" y1="0" x2="0.35" y2="1">` +
+        `<stop offset="0" stop-color="rgba(255,255,255,0.62)"/>` +
+        `<stop offset="0.45" stop-color="rgba(255,255,255,0.10)"/>` +
+        `<stop offset="1" stop-color="rgba(0,0,0,0.45)"/>` +
+      `</linearGradient></defs>`;
+  }
+
+  /* THE MECHANISM, and it goes UNDER the slots because it is under the plate.
+
+     What is actually down there on a floor-shifted box is not complicated and
+     that is why it is worth drawing honestly rather than as generic gears: a
+     cross-shaft the lever rocks fore and aft on, a selector rod for each pair
+     of gears running back to the box, and a detent — a spring pressing a ball
+     into a notch — which is the part that gives a gearchange its snick and
+     the part everyone forgets exists. Three things, and all three are
+     visible through the glass. */
+  if (look === "mech") {
+    const x0 = GATE.cols[0] - 26, x1 = GATE.cols[last] + 26;
+    // the cross-shaft the lever pivots on, running the width of the gate
+    s += `<rect x="${x0}" y="${GATE.chanY - 3}" width="${x1 - x0}" height="6" rx="3" fill="#3c4048"/>`;
+    s += `<rect x="${x0}" y="${GATE.chanY - 3}" width="${x1 - x0}" height="2" rx="1" fill="rgba(255,255,255,0.22)"/>`;
+    // a selector rod per column, running down to the box, each with its fork
+    GATE.cols.forEach((cx) => {
+      s += `<rect x="${cx - 2.5}" y="${GATE.topY - 26}" width="5" height="${GATE.botY - GATE.topY + 52}" rx="2.5" fill="#31343b"/>`;
+      s += `<rect x="${cx - 2.5}" y="${GATE.topY - 26}" width="1.6" height="${GATE.botY - GATE.topY + 52}" fill="rgba(255,255,255,0.16)"/>`;
+      // the fork that actually moves the collar
+      s += `<path d="M${cx - 11} ${GATE.botY + 34} h22 v7 h-6 v-4 h-10 v4 h-6 z" fill="#3a3e46"/>`;
+      // the pivot bearing where the rod crosses the shaft
+      s += `<circle cx="${cx}" cy="${GATE.chanY}" r="7" fill="#20232a" stroke="#565b66" stroke-width="1.6"/>`;
+      s += `<circle cx="${cx}" cy="${GATE.chanY}" r="2.4" fill="#767d8a"/>`;
+    });
+    // the detent: a coil spring pressing a ball into the centre notch. This
+    // is the snick, drawn.
+    const dx = GATE.restX;
+    let coil = `M${dx + 14} ${GATE.chanY + 40}`;
+    for (let i = 0; i < 7; i++) coil += ` l${i % 2 ? -9 : 9} 6`;
+    s += `<path d="${coil}" fill="none" stroke="#5a6070" stroke-width="2.2" stroke-linecap="round"/>`;
+    s += `<circle cx="${dx + 14}" cy="${GATE.chanY + 34}" r="5" fill="#8a919e" stroke="#c9cfdb" stroke-width="1"/>`;
+  }
+
   s += slot(GATE.cols[0] - 10, GATE.chanY - 9, GATE.cols[last] - GATE.cols[0] + 20, 18);
   GATE.gearMap.forEach((pair, i) => {
     if (pair[0] !== null) s += slot(GATE.cols[i] - 9, GATE.topY - 10, 18, GATE.botY - GATE.topY + 20);
     else s += slot(GATE.cols[i] - 9, GATE.chanY - 9, 18, GATE.botY - GATE.chanY + 19);
   });
+
+  // the alloy plate gets its fixings, because a milled plate is bolted down
+  // and the bolts are the first thing you see on every open gate ever built
+  if (look === "alloy") {
+    [[18, 20], [242, 20], [18, 280], [242, 280]].forEach(([bx, by]) => {
+      s += `<circle cx="${bx}" cy="${by}" r="5.2" fill="#1a1c20" stroke="rgba(255,255,255,0.30)" stroke-width="1.1"/>`;
+      s += `<circle cx="${bx}" cy="${by}" r="2.6" fill="#5b6068"/>`;
+      s += `<path d="M${bx - 3.4} ${by} h6.8" stroke="#0d0e10" stroke-width="1.5"/>`;
+    });
+  }
+
   svg.innerHTML = s;
 
   const labels = $("gateLabels");
@@ -13529,6 +14307,22 @@ function buildWorkshop() {
       leverAudition();
       save();
     }));
+  document.querySelectorAll("#wsGateLook .ws-card").forEach(b =>
+    b.addEventListener("click", () => {
+      curMod().gateLook = b.dataset.look;
+      refreshWorkshop();
+      /* Rebuilding is the audition. The slots, the plate, the numerals and
+         the knob all change together, and seeing the lever redraw in the new
+         material with the gear it is currently in still lit is more use than
+         any preview swatch would be. */
+      buildGateSvg();
+      // re-light the engaged numeral: the labels were just rebuilt from
+      // scratch, so the .on class went with them
+      document.querySelectorAll(".gate-labels span").forEach(el =>
+        el.classList.toggle("on", String(S.gear) === el.dataset.g));
+      sfxClunk(0.35);
+      save();
+    }));
   document.querySelectorAll("#wsPaddle .ws-card").forEach(b =>
     b.addEventListener("click", () => {
       curMod().paddle = b.dataset.paddle;
@@ -13728,6 +14522,8 @@ function refreshWorkshop() {
         "Whatever this car came with — here, " +
         (LEVER_MATS[CC.lever] || LEVER_MATS.mech).label + ".";
   });
+  document.querySelectorAll("#wsGateLook .ws-card").forEach(b =>
+    b.classList.toggle("on", b.dataset.look === gateLook()));
   document.querySelectorAll("#wsPaddle .ws-card").forEach(b =>
     b.classList.toggle("on", b.dataset.paddle === curMod().paddle));
   $("cabinBtn").classList.toggle("on", S.cabin);

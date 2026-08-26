@@ -841,6 +841,189 @@ kbd {
   color: var(--knob-dark);
   background: radial-gradient(circle at 40% 30%, rgba(255,255,255,0.25), transparent 55%);
 }
+
+/* ================================================================
+   SHIFTER TRIM — four materials, one gearbox
+
+   The rule the whole block follows: a material is not a colour, it is what
+   an EDGE does. Leather rolls under and is stitched beside; billet takes a
+   bright chamfer on the lit side and a hard shadow on the other; glass shows
+   what is behind it and puts a single specular streak across itself. Get the
+   edges right and the fill barely matters — which is why none of these
+   changes the plate's shape by a pixel.
+
+   The slots themselves are drawn in buildGateSvg(), because their geometry
+   comes from the gearbox. What lives here is everything the SVG cannot do:
+   the plate, the knob, the rod, and the numerals.
+   ================================================================ */
+
+/* ---- LEATHER: the boot the other 99% of cars came with -------------- */
+.gate.look-leather {
+  background:
+    /* the grain. Two offset radial fields at different scales read as hide
+       far more convincingly than any single noise, because real grain has a
+       coarse pebble AND a fine one and they are not aligned. */
+    /* Grain, and the first attempt at it was a perforation because every dot
+       had a hard edge and they all sat on the same tight pitch. Real hide has
+       no hard edges at all — it is a soft pebble with a much softer one under
+       it, at two pitches that do not divide into each other, so the eye never
+       finds the repeat. Hence: no colour stops, three prime-ish sizes, and
+       the dark layer well under half the strength of the light ones, because
+       grain reads as highlight catching a raised surface rather than as
+       holes punched in a flat one. */
+    radial-gradient(circle at 30% 32%, rgba(255,238,212,0.055), transparent 62%),
+    radial-gradient(circle at 68% 60%, rgba(255,232,200,0.038), transparent 58%),
+    radial-gradient(circle at 44% 78%, rgba(0,0,0,0.16), transparent 66%),
+    radial-gradient(150% 120% at 50% -10%, rgba(255,224,190,0.10), transparent 60%),
+    linear-gradient(168deg, #3b2b22, #241a15 55%, #17100c);
+  background-size: 7px 9px, 13px 11px, 19px 17px, 100% 100%, 100% 100%;
+  border-color: #120c09;
+  box-shadow:
+    inset 0 2px 14px rgba(0,0,0,0.62),
+    inset 0 -2px 6px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(214,178,132,0.14),
+    0 10px 24px -14px #000;
+}
+/* the perimeter seam — a saddler runs one all the way round the boot */
+.gate.look-leather::after {
+  content: ""; position: absolute; inset: 9px;
+  border-radius: 12px; pointer-events: none;
+  border: 1.4px dashed rgba(196,150,86,0.42);
+}
+/* numerals branded into the hide: a dark cut with a highlight under it */
+.gate.look-leather .gate-labels span {
+  font-family: var(--font-mono);
+  color: #c9a06a;
+  text-shadow: 0 1px 0 rgba(255,225,190,0.18), 0 -1px 1px rgba(0,0,0,0.85);
+}
+.gate.look-leather .gate-labels span.on {
+  color: #f0cd98; text-shadow: 0 0 12px rgba(240,205,152,0.55), 0 -1px 1px rgba(0,0,0,0.8);
+}
+/* a leather-wrapped ball, seamed down the middle like the real thing */
+.gate.look-leather .knob {
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255,232,200,0.30), transparent 46%),
+    radial-gradient(circle at 50% 58%, #4a352a, #1d1410 92%);
+  border-color: #100b08;
+  box-shadow:
+    inset 0 -6px 11px rgba(0,0,0,0.55),
+    inset 0 2px 4px rgba(255,220,180,0.22),
+    0 14px 22px -6px rgba(0,0,0,0.72);
+}
+.gate.look-leather .knob::before {
+  content: ""; position: absolute; left: 50%; top: 5px; bottom: 5px;
+  width: 0; transform: translateX(-50%);
+  border-left: 1.3px dashed rgba(214,170,112,0.55);
+  pointer-events: none;
+}
+.gate.look-leather .knob-cap { color: rgba(214,170,112,0.72); }
+.gate.look-leather .stick-rod {
+  background: linear-gradient(90deg, #17100c, #4a352a 45%, #17100c);
+}
+
+/* ---- ALLOY: the open gate --------------------------------------------
+   Billet, brushed in one direction, anodised nothing. The repeating linear
+   gradient IS the brushing — a real brushed surface is anisotropic, so it
+   only glints along one axis, and drawing that as fine parallel lines under
+   a broad sheen is the whole effect. */
+.gate.look-alloy {
+  background:
+    repeating-linear-gradient(92deg,
+      rgba(255,255,255,0.055) 0 1px,
+      rgba(0,0,0,0.05) 1px 2px,
+      transparent 2px 3.5px),
+    linear-gradient(118deg, #6f757e 0%, #a9b1ba 22%, #757c85 40%, #9aa2ac 62%, #656b74 82%, #868d97 100%);
+  border-color: #40454c;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.55),
+    inset 0 -2px 6px rgba(0,0,0,0.40),
+    0 12px 26px -14px #000;
+}
+/* engraved numerals: cut into the plate, paint wiped into the cut, and a
+   bright lip on the lower edge where the light gets under it */
+.gate.look-alloy .gate-labels span {
+  font-family: var(--font-mono); font-weight: 800;
+  color: #14161a;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.62), 0 -0.5px 0.5px rgba(0,0,0,0.5);
+}
+.gate.look-alloy .gate-labels span.on {
+  color: #7a1418;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.6), 0 0 12px rgba(200,30,36,0.5);
+}
+/* a polished steel ball. One tight specular hit, one broad fill light off
+   the plate below it — two sources, which is what makes chrome read chrome. */
+.gate.look-alloy .knob {
+  background:
+    radial-gradient(circle at 36% 22%, #ffffff 0 6%, rgba(255,255,255,0.5) 14%, transparent 34%),
+    radial-gradient(circle at 58% 88%, rgba(214,224,236,0.55), transparent 46%),
+    linear-gradient(160deg, #e6ecf3 0%, #98a2ae 34%, #4c545e 62%, #b9c2cd 88%, #6d757f 100%);
+  border-color: #2b3036;
+  box-shadow:
+    inset 0 -6px 12px rgba(0,0,0,0.42),
+    inset 0 3px 5px rgba(255,255,255,0.8),
+    0 15px 22px -6px rgba(0,0,0,0.65);
+}
+.gate.look-alloy .knob-cap { color: #23272d; }
+.gate.look-alloy .stick-rod {
+  background: linear-gradient(90deg, #3c424a, #d3dae2 42%, #7d858f 62%, #363b42);
+}
+.gate.look-alloy .boot-shadow {
+  background: radial-gradient(closest-side, rgba(0,0,0,0.42), transparent 70%);
+}
+
+/* ---- MECHANISM: the plate you can see through -------------------------
+   Smoked glass over the linkage. The plate is nearly transparent so the SVG
+   underneath shows, and the two things that stop it reading as "a dark
+   rectangle" are a single diagonal specular streak and a hard bright line
+   along the top edge where the sheet's thickness catches light. */
+.gate.look-mech {
+  background:
+    linear-gradient(118deg, transparent 34%, rgba(150,200,255,0.10) 42%, transparent 50%),
+    linear-gradient(180deg, rgba(26,34,44,0.62), rgba(10,14,20,0.80));
+  border-color: rgba(120,180,240,0.30);
+  box-shadow:
+    inset 0 1px 0 rgba(180,220,255,0.42),
+    inset 0 -1px 0 rgba(120,180,240,0.14),
+    0 12px 26px -14px #000;
+  backdrop-filter: blur(0.5px);
+}
+.gate.look-mech .gate-labels span {
+  font-family: var(--font-mono);
+  color: #7fb4de;
+  text-shadow: 0 0 8px rgba(90,160,220,0.35);
+}
+.gate.look-mech .gate-labels span.on {
+  color: #bfe4ff; text-shadow: 0 0 12px rgba(150,210,255,0.75);
+}
+/* a skeletonised knob — machined, drilled, nothing hidden */
+.gate.look-mech .knob {
+  background:
+    radial-gradient(circle at 34% 24%, rgba(220,240,255,0.55), transparent 42%),
+    radial-gradient(circle at 50% 58%, #4a525d, #191d24 92%);
+  border-color: rgba(140,190,240,0.40);
+  box-shadow:
+    inset 0 -5px 10px rgba(0,0,0,0.55),
+    inset 0 2px 4px rgba(200,230,255,0.35),
+    0 0 14px -2px rgba(110,180,240,0.35),
+    0 14px 20px -6px rgba(0,0,0,0.65);
+}
+/* the lightening holes, which is what "skeletonised" actually means */
+.gate.look-mech .knob::before {
+  content: ""; position: absolute; inset: 6px; border-radius: 50%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 16%, rgba(0,0,0,0.62) 0 3px, transparent 3.6px),
+    radial-gradient(circle at 84% 50%, rgba(0,0,0,0.62) 0 3px, transparent 3.6px),
+    radial-gradient(circle at 50% 84%, rgba(0,0,0,0.62) 0 3px, transparent 3.6px),
+    radial-gradient(circle at 16% 50%, rgba(0,0,0,0.62) 0 3px, transparent 3.6px);
+}
+.gate.look-mech .knob-cap { color: rgba(170,215,255,0.85); }
+.gate.look-mech .stick-rod {
+  background: linear-gradient(90deg, #1b2028, #9fb6cc 45%, #1b2028);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.45), 0 0 10px -3px rgba(120,190,250,0.5);
+}
+.gate.look-mech .boot-shadow { opacity: 0.45; }
+
 .gate.shake { animation: gateshake 0.09s linear infinite; }
 @keyframes gateshake {
   0% { transform: translateX(-1.5px); } 50% { transform: translateX(1.5px); } 100% { transform: translateX(-1px); }
