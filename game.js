@@ -2389,7 +2389,22 @@ function applyDash(c) {
       b.setProperty("--needle", "#8c2f22");
       b.setProperty("--dial-accent", "#3b3227");
     }
-  } else if (d.face === "dark" || d.face === "ferrari") {
+  } else if (d.face === "ferrari") {
+    /* The page vars stay dark, because the cluster paints itself from
+       ferrariFace() and these are only feeding the digital readouts and the
+       gate lettering on the dark console around it.
+
+       --dial-accent is the exception, and it is the one that was wrong. That
+       variable exists for exactly one thing: text painted ON the dial face,
+       which here is the gear character. It defaults to --accent, --accent on
+       these cars is Modena yellow, and the dial they were being drawn on is
+       also Modena yellow — so the gear you are in was rendered in the dial
+       colour, on the dial, and was invisible. Anything sitting on this face
+       has to be ink, not accent. */
+    b.setProperty("--face", "#0e0f12"); b.setProperty("--face-ring", "#1c1d22");
+    b.setProperty("--tick", "#b9bbc2"); b.setProperty("--tick-dim", "#4c4e56");
+    b.setProperty("--dial-accent", "#14120e");
+  } else if (d.face === "dark") {
     /* "ferrari" is a DIAL palette, not a page palette. The cluster paints
        itself from ferrariFace() and ignores these entirely; what these do is
        keep the digital readouts and the gate lettering — which also drink
@@ -4627,7 +4642,21 @@ function indVoice() {
 function sfxIndicator(voice, on) {
   if (!AU.ready) return;
   const t = AU.ctx.currentTime;
-  const k = on ? 1 : 0.72;                  // the return stroke is always softer
+  /* The return stroke is always softer than the make. And the whole thing is
+     louder with the windows up — more so than most things in this car, which
+     is why it gets a lift of its own on top of the interior bus rather than
+     just riding it.
+
+     An engine is outside, behind a bulkhead, and sealing the cabin muffles it
+     and then hands some of it back as body resonance. A flasher relay is
+     bolted to the back of the dash about a foot from your right knee, INSIDE
+     the box you just sealed — so closing the car does not attenuate it at all,
+     it removes the road and wind noise that was covering it. Nothing about the
+     source changed; the floor under it dropped. That is why the tick is a
+     background detail with the roof off and impossible to ignore with it on,
+     and it is the single most recognisable thing about sitting in a stationary
+     car waiting to turn. */
+  const k = (on ? 1 : 0.72) * (inCabin() ? 1.85 : 1);
   // the relay is bolted to the back of the dash, a foot from your knee — it
   // rides the interior bus, which handles getting louder when you climb in
   const B = AU.inner;
@@ -12368,30 +12397,6 @@ function drawFace(G) {
     ctx.lineWidth = R * 0.006;
     ctx.beginPath(); ctx.arc(cx, cy, R * 0.48, A0, A1); ctx.stroke();
 
-    /* the shield. Small, high, and in outline — a Ferrari puts the Cavallino
-       on the dial at about this size and never larger, because a badge that
-       competes with the redline for attention is a badge in the wrong place. */
-    if (opts.hero) {
-      const sh = R * 0.115, sx = cx, sy = cy - R * 0.46;
-      ctx.save();
-      ctx.translate(sx, sy);
-      ctx.beginPath();
-      ctx.moveTo(-sh * 0.62, -sh);
-      ctx.lineTo(sh * 0.62, -sh);
-      ctx.lineTo(sh * 0.62, sh * 0.34);
-      ctx.quadraticCurveTo(sh * 0.62, sh, 0, sh * 1.15);
-      ctx.quadraticCurveTo(-sh * 0.62, sh, -sh * 0.62, sh * 0.34);
-      ctx.closePath();
-      ctx.fillStyle = "rgba(23,21,18,0.14)"; ctx.fill();
-      ctx.strokeStyle = "rgba(23,21,18,0.55)"; ctx.lineWidth = R * 0.011; ctx.stroke();
-      // the S F, stacked, as they are on the shield
-      ctx.fillStyle = "rgba(23,21,18,0.6)";
-      ctx.font = `700 ${Math.round(sh * 0.72)}px "Outfit", sans-serif`;
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText("SF", 0, sh * 0.05);
-      ctx.restore();
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    }
   }
 
   if (dial === "gear") {
@@ -13772,6 +13777,10 @@ function selectCar(id) {
   // the box itself changed — rebuild the gate and sequential ladder
   buildGateSvg();
   buildSeqViz();
+  // …and the shift-light strip, whose COLOURS are a property of the car and
+  // not just of whether it has one. Built once at boot, this strip kept
+  // whatever palette the first car happened to want.
+  buildShiftLights();
   if (S.mode === "clutch") {
     $("consoleTitle").textContent = CAR.top + "-SPEED GATE";
     setStick(GATE.restX, GATE.chanY, false);
@@ -15953,9 +15962,28 @@ const STEP = 1 / 120;
 let lastGearChar = "";
 let shiftLightEls = [];
 
+/* THE STRIP.
+
+   Nine LEDs, and which colours they are is not decoration — it is the one
+   piece of a dashboard a driver reads with their peripheral vision at 8,000
+   rpm, so the sequence has to be legible without being looked at.
+
+   The default is the Formula-One convention everybody copied: green through
+   amber to red, cool to hot, with red meaning stop asking for more.
+
+   Ferrari does not do that, and the reason is worth knowing. On the wheel of
+   a modern one the strip runs UP through red and then, at the very top, goes
+   BLUE — a colour that appears nowhere else in the sequence and nowhere else
+   on the car. That is the point of it. Red is a warning you have been reading
+   continuously since the middle of the rev range and your eye has adapted to;
+   blue is a state change, and it arrives with no gradient in front of it, so
+   it registers as an EVENT rather than as more of the same. It means shift
+   now, not shift soon, and the discontinuity is the message. */
 function buildShiftLights() {
-  $("shiftLights").innerHTML = Array.from({ length: 9 },
-    (_, i) => `<i class="${i < 3 ? "g" : i < 6 ? "a" : "r"}"></i>`).join("");
+  const ferrari = CC.dial === "ferrari";
+  $("shiftLights").innerHTML = Array.from({ length: 9 }, (_, i) =>
+    `<i class="${ferrari ? (i < 6 ? "fr" : "fb") : (i < 3 ? "g" : i < 6 ? "a" : "r")}"></i>`
+  ).join("");
   shiftLightEls = Array.from($("shiftLights").children);
 }
 

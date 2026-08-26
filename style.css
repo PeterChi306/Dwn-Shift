@@ -436,6 +436,14 @@ kbd {
 .shift-lights i.a.lit { background: #e3b341; box-shadow: 0 0 9px #e3b341; }
 .shift-lights i.r.lit { background: #e04b41; box-shadow: 0 0 10px #e04b41; }
 
+/* The Ferrari strip: red the whole way up, then blue at the top. See
+   buildShiftLights(). The blue is deliberately the brightest and widest-
+   glowing of the two — it is not the next step in a ramp, it is a different
+   instruction arriving, and it should read that way from the corner of your
+   eye. */
+.shift-lights i.fr.lit { background: #e01b28; box-shadow: 0 0 10px #e01b28; }
+.shift-lights i.fb.lit { background: #2f8dff; box-shadow: 0 0 14px #2f8dff, 0 0 24px rgba(47,141,255,0.5); }
+
 .gear-display {
   position: absolute; left: 50%; bottom: 16%;
   transform: translateX(-50%);
