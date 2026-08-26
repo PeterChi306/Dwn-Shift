@@ -831,6 +831,14 @@ const CARS = [
          gritty top sitting on a bottom end that refuses to get out of its
          way. Neither one alone is the sound. */
       f0Mul: 0.60, air: 1.0, jitter: 1.7,
+      /* …and it does not stay at 0.60. Past 6,500 the low modes stop holding
+         and the voice climbs into the SVJ's register — see f0MulAt(). 0.60
+         becomes 0.77 by the limiter, which is a little under five semitones
+         and lands the top of this car close to where the Gintani SVJ lives
+         while leaving the bottom exactly as deep as it was. The whole point
+         is that it is the same engine arriving somewhere else, so the bottom
+         must not move. */
+      f0Rise: { at: 6500, to: 9250, mul: 1.28 },
       hp: 12,                  // even less filtering: it makes more bass now
       layers: [
         ["sine",     0.5,   0.80, 0.74, 0.60],   // THE sub. Louder than stock, and it never leaves.
@@ -2618,6 +2626,45 @@ const STOCK = {
   air: -5.5,       // and one more shelf off the top
   harm: 0.9,       // how hard the muffler cancels the upper orders, 0..1
 };
+/* ================================================================
+   THE REGISTER CHANGE
+
+   `f0Mul` places a car's voice relative to its literal firing frequency, and
+   for almost every engine here one number is right for the whole rev range: a
+   pipe's resonances do not move, so the note simply rises with the crank and
+   the character comes from which harmonics are winning.
+
+   A big naturally aspirated V12 with the silencing removed does something
+   else, and it is the thing people are describing when they say one of these
+   "wakes up". Down low, what reaches you is the half-order and the pipe
+   resonance — long wavelengths, a lot of chest, the firing frequency sitting
+   on top as texture rather than as the note. That is what f0Mul 0.60 is
+   modelling and it is why the bottom of this car sounds the way it does.
+
+   Then somewhere past six and a half thousand the balance tips. The pipe
+   stops being able to sustain the low modes at that gas velocity, the upper
+   orders take over, and the pitch your ear picks as THE note jumps up — not
+   because the engine changed speed, but because a different part of the
+   spectrum became the loudest thing in it. Perceptually it reads as the
+   engine changing register, and it is most of the difference between a V12
+   that is merely revving and an SVJ at full noise.
+
+   So the multiplier is allowed to climb. Below `at` nothing happens; from
+   there to `to` it slides up to `mul` on a smoothstep, so the change arrives
+   without a kink in it — a kink would read as a pitch-bend artefact, which
+   is exactly the thing this is trying not to sound like. The same value
+   drives the throb rate and the filter's octave tracking, because all three
+   are the same voice and letting them disagree is what makes a synthesised
+   engine come apart at the top. */
+function f0MulAt(VC, rpm) {
+  const base = (VC.sound && VC.sound.f0Mul) || 1;
+  const R = VC.sound && VC.sound.f0Rise;
+  if (!R) return base;
+  const span = Math.max(1, (R.to || 0) - R.at);
+  const x = clamp((rpm - R.at) / span, 0, 1);
+  return base * (1 + (R.mul - 1) * x * x * (3 - 2 * x));   // smoothstep
+}
+
 function stockOn() { return !!S.stock; }
 /* the exhaust as far as the SOUND is concerned. In stock mode the pipe's
    acoustic character is bypassed (but not its appearance — see curEx). */
@@ -5155,9 +5202,11 @@ function audioTick() {
   const dirIntake = S.flyby ? 1 - flyDir * 0.7 : 1;
   const dirEx     = S.flyby ? 1 + flyDir * 0.85 : 1;
 
-  // firing freq × per-car octave drop (f0Mul) × pitch mod × Doppler
+  // firing freq × per-car octave drop (f0Mul, which can climb — see f0MulAt)
+  // × pitch mod × Doppler
   const cm = curMod();
-  const f0 = (rpm / 60) * (VC.cyl / 2) * (VC.sound.f0Mul || 1) * cm.pitch * dop;
+  const vf0 = f0MulAt(VC, rpm);
+  const f0 = (rpm / 60) * (VC.cyl / 2) * vf0 * cm.pitch * dop;
   const rFrac = clamp(rpm / vMax, 0, 1);
   const gCurve = Math.pow(rFrac, 1.6);             // how far "up the rev range" the voice is
   const jm = VC.sound.jitter || 1;       // per-car mechanical looseness
@@ -5244,7 +5293,7 @@ function audioTick() {
   //     the tone stay locked together instead of beating.
   if (AU.pulseNode) {
     const PP = AU.pulseNode.parameters;
-    PP.get("cycleHz").setTargetAtTime(Math.max(0.4, (rpm / 120) * (VC.sound.f0Mul || 1) * cm.pitch * dop), t, k);
+    PP.get("cycleHz").setTargetAtTime(Math.max(0.4, (rpm / 120) * vf0 * cm.pitch * dop), t, k);
     // Coasting at 4000rpm has to sound nothing like pulling at 4000rpm — on
     // the overrun there is barely any combustion happening at all, just a
     // pump turning over. A fixed harmonic balance is precisely what makes an
@@ -5275,7 +5324,7 @@ function audioTick() {
   // (f0Mul) has all its harmonics an octave down too, so leaving the filter
   // where a high-pitched engine wants it just lets through a lot of empty
   // top end — which is exactly what reads as synthetic.
-  const oct = 0.55 + 0.45 * (VC.sound.f0Mul || 1);
+  const oct = 0.55 + 0.45 * vf0;
   AU.lp.frequency.setTargetAtTime(
     Math.max(110,
       ((150 + load * 2700 + rpm * 0.45 + (onCam ? 1500 : 0)
@@ -13447,6 +13496,21 @@ function popFlame(power) {
      turbocharged exhaust path — the energy is spent spinning turbines before
      it can reach air. */
   if (CC.noFlame) return;
+  /* A stock exhaust does not throw fire, and this is not a balance decision —
+     it is the whole reason aftermarket systems exist. For unburnt fuel to
+     ignite at the tip it has to still BE unburnt fuel when it gets there, and
+     a factory system is built to guarantee the opposite: a pair of catalytic
+     converters running at 400°C whose entire job is to finish burning
+     anything the combustion chamber missed, and behind them a muffler volume
+     that drops the gas temperature below the point where what is left could
+     light even if there were oxygen to do it with.
+
+     popsRating() already scaled stock cars down to 14%, which made the
+     flames small rather than absent — so every car in the garage still spat
+     a little fire with the standard pipe on, which no car with cats has ever
+     done. The crackle stays (that is pressure, and pressure survives a
+     muffler); the fire does not. */
+  if (stockOn()) return;
   if (!(popsRating() > 0)) return;
   if (typeof power === "boolean") power = power ? 0.7 : 0.3;
   // the workshop's flame-size knob scales the whole event: turn it down and
