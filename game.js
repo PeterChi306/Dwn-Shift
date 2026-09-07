@@ -3574,8 +3574,20 @@ function initAudio() {
   AU.tunLp.frequency.value = 5200; AU.tunLp.Q.value = 0.6;
   AU.tunHp = ctx.createBiquadFilter(); AU.tunHp.type = "highpass";
   AU.tunHp.frequency.value = 55; AU.tunHp.Q.value = 0.7;   // no sub-bass mud in the tail
+  /* THE CRACK.
+
+     The band that says "concrete" rather than "reverb". A wall three metres
+     away returns a copy of the exhaust that is still coherent and still
+     hard-edged, and what you register is not the wash — it is a slap with a
+     rising edge on it. That reads in the 2-4kHz region, and it is the thing
+     that separates a tunnel from a large room: a room's reflections have
+     been round enough corners to have their edges rounded off, and a tube's
+     have not. Off outside, because a hedge does not do this. */
+  AU.tunPres = ctx.createBiquadFilter(); AU.tunPres.type = "peaking";
+  AU.tunPres.frequency.value = 3100; AU.tunPres.Q.value = 0.8; AU.tunPres.gain.value = 0;
   AU.wetSend.connect(AU.conv);
-  AU.conv.connect(AU.tunHp); AU.tunHp.connect(AU.tunLo); AU.tunLo.connect(AU.tunLp);
+  AU.conv.connect(AU.tunHp); AU.tunHp.connect(AU.tunLo); AU.tunLo.connect(AU.tunPres);
+  AU.tunPres.connect(AU.tunLp);
   AU.tunLp.connect(AU.wet); AU.wet.connect(AU.wetOut);
 
   AU.echo = ctx.createDelay(0.6); AU.echo.delayTime.value = 0.24;
@@ -4852,10 +4864,45 @@ function applyTunnel() {
   AU.popEcho.gain.setTargetAtTime(on ? 0.22 : 0, t, tc);
   // (the interface, the ambience and the cassette deck deliberately have no
   //  send at all — see the AU.wetSend comment in initAudio)
-  // inside, the tube keeps the bottom and eats the top; outside, the "room
-  // tone" is a small honest space and shouldn't boom at all
-  AU.tunLo.gain.setTargetAtTime(on ? 6 : 0, t, tc);
-  AU.tunLp.frequency.setTargetAtTime(on ? 4600 : 9000, t, tc);
+  /* A TUNNEL DOES NOT EAT THE TOP END. NOT FROM IN HERE.
+
+     This used to close the wet path down to 4,600Hz on the reasoning that a
+     concrete tube swallows the top of the spectrum before the sound gets
+     back to you. That is a real effect and it is in the wrong place: it is
+     what a tunnel does to somebody listening from the far END of it, over
+     eighty metres of air and a dozen bounces. You are not that listener. You
+     are sitting in the car, and the wall is three metres away.
+
+     At three metres nothing has had a chance to happen yet. Concrete returns
+     upwards of 95% of what hits it at every frequency in the audible band,
+     and air absorption at 10kHz is around 0.1dB per metre — call it a
+     decibel over the whole round trip. So the first reflections come back
+     essentially intact, arrive inside 20 milliseconds, and what they add is
+     not a wash: it is a second, harder copy of the engine. That is why the
+     inside of a tunnel is BRIGHTER than the open road rather than darker,
+     and why the effect is so much more violent than a reverb send makes it
+     sound.
+
+     The frequency-dependent decay is real and it is already modelled, in the
+     only place it belongs — inside the impulse response, where it can be a
+     function of TIME. See makeTunnelIR(): the diffuse bed's filter coefficient
+     falls as the tail runs out, and the far-end returns are generated dull
+     because they genuinely have been a long way. A static biquad on top of
+     that was charging the early reflections for distance they had not
+     travelled, and the flutter comb — which is the whole voice of the tube,
+     and the one part that has to stay hard — was being filtered flattest of
+     all. So the lowpass opens to 10.5k and does almost nothing except keep
+     the very top from getting glassy, and the IR does the job it was written
+     to do.
+
+     And the boom comes down with it, from +6 to +4. Not because the mode
+     isn't there — a tube that size booms and it should — but because it had
+     been carrying the entire effect on its own. With everything above 4.6k
+     gone it was the only evidence left that anything had changed, so it was
+     turned up to compensate. Give the top back and +6 is just mud. */
+  AU.tunLo.gain.setTargetAtTime(on ? 4 : 0, t, tc);
+  AU.tunPres.gain.setTargetAtTime(on ? 5.5 : 0, t, tc);
+  AU.tunLp.frequency.setTargetAtTime(on ? 10500 : 9000, t, tc);
 }
 
 /* swap the oscillator stack to the selected car's sound profile.

@@ -798,3 +798,54 @@ Nothing about the engine changed. The steps just got smaller.
 Top gear is the exception, for the reason the SF90 note gives: a top ratio is
 not part of a close stack, it is the one that has to reach the number on the
 brochure. It stays long and does 340. Everything below it is squeezed.
+
+## A tunnel does not eat the top end — not from in here
+
+The tunnel used to close its wet path down to 4,600Hz, on the reasoning that
+concrete swallows the top of the spectrum before the sound gets back to you.
+That is a real effect, and it was in the wrong place.
+
+It is what a tunnel does to somebody standing at the far **end** of one, eighty
+metres of air and a dozen bounces away. You are not that listener. You are in
+the car, and the wall is three metres away.
+
+At three metres nothing has had a chance to happen yet. Concrete returns
+upwards of 95% of what hits it at every frequency that matters, and air
+absorption at 10kHz runs about 0.1dB per metre — call it a decibel over the
+whole round trip. So the first reflections come back essentially intact, inside
+twenty milliseconds, and what they add is not a wash. It is a second, harder
+copy of the engine, arriving slightly late. That is why the inside of a tunnel
+is **brighter** than the open road rather than darker, and why the real thing
+is so much more violent than a reverb send makes it sound.
+
+The frequency-dependent decay is real, and it was already modelled in the only
+place it belongs: inside the impulse response, where it can be a function of
+*time*. `makeTunnelIR()` lets the diffuse bed's filter coefficient fall as the
+tail runs out, and generates the far-end returns dull because those genuinely
+have been a long way. A static lowpass sitting on top of that was charging the
+early reflections for distance they had not travelled — and the flutter comb,
+which is the entire voice of a tube and the one part that has to stay hard, was
+getting filtered flattest of all.
+
+So the lowpass opens to 10.5k and now does almost nothing except keep the very
+top from turning glassy, and the IR does the job it was written to do. Measured
+across the wet path, that is about **+7dB at 3kHz and +11dB at 8kHz** relative
+to where it was.
+
+Two things move with it:
+
+- **The boom comes down**, +6 to +4 at the 104Hz axial mode. Not because the
+  mode isn't there — a tube that size booms and it should — but because it had
+  been carrying the whole effect single-handed. With everything above 4.6k
+  filtered away it was the only remaining evidence that anything had changed,
+  so it had been turned up to compensate. Give the top back and +6 is just mud.
+- **A crack gets added**, a gentle lift around 3.1kHz on the wet path only.
+  This is the band that says *concrete* rather than *reverb*. A wall three
+  metres away returns a copy that is still coherent and still hard-edged, and
+  what you register is not the wash but a slap with a rising edge on it. A
+  room's reflections have been round enough corners to have their edges rounded
+  off. A tube's have not.
+
+The entry was already right and has not been touched: 35ms in, 180ms out, with
+the mouth louder than the middle, because for that first moment you have the
+wall *and* the open road.
