@@ -797,6 +797,15 @@
 
       <section class="bay-stn">
         <h3 class="stn-head"><i class="stn-no">12</i>CONDITIONS<em>The world outside the roller door.</em></h3>
+        <div class="ws-pitch">
+          <div class="ws-pitch-head">
+            <label for="wsWind">WIND NOISE</label>
+            <span class="mono" id="wsWindVal">stock</span>
+          </div>
+          <input type="range" id="wsWind" min="0" max="2" step="0.05" value="1">
+          <div class="ws-pitch-scale"><span>sealed</span><span>stock</span><span>gale</span></div>
+          <p class="ws-swap-note">How much air over the body and the mirrors you hear at speed. Stock keeps it under the engine; wind it up if you want the motorway back.</p>
+        </div>
         <div class="ws-amb">
           <button class="ws-card" id="cabinBtn">
             <span class="ws-card-name">CABIN</span>

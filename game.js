@@ -3059,6 +3059,7 @@ const S = {
   slipSigned: 0, syncMiss: 0, tcSettle: 1, lugT: 0,
   limCut: false, limT: 0, limDip: 0,
   traffic: false, rain: false, passT: 2, splashT: 2, wiperT: 0.7, wiperDir: 1,
+  wind: 1,             // wind noise trim, 0..2 — see windMul()
   night: false, cricketT: 2, lampT: 1.5,
   dmgOn: false,                        // consequences mode — opt-in, see DMG
   softLim: false,                      // soft limiter — opt-in, see THE SOFT LIMITER
@@ -4403,6 +4404,19 @@ function inCabin() { return S.cabin && insideEar(); }
 /* what the engine voice, the wind and the road get multiplied by in here */
 function hushEng() { return 1 - 0.72 * hush(); }
 function hushAir() { return 1 - 0.62 * hush(); }
+
+/* ---- the wind noise trim ----
+   How loud the air over the body is allowed to be, as a plain multiplier on
+   both wind layers. 1 is the tuned level: present on a motorway, obviously
+   there, and still underneath the engine. 0 is a wind tunnel with the fan
+   off, and 2 is the gale this used to ship with.
+
+   It lives here rather than in the per-car mods because it is not a fact
+   about a car — it is a fact about how much roar the person listening wants
+   in their ears, and it should not reset because you walked to a different
+   bay. Set from the WIND NOISE slider in the workshop's CONDITIONS station,
+   and it is remembered. */
+function windMul() { return typeof S.wind === "number" ? S.wind : 1; }
 
 /* ---- per-car interior voicing ----
    `hush` and `rawCabin` between them cover the two ordinary cases: a car
@@ -6038,24 +6052,39 @@ function audioTick() {
   });
 
   const sp = Math.abs(S.v);
-  // wind: gentle low rumble at town speeds, then the rush piles on hard past
-  // ~60 mph (27 m/s) the way real wind noise suddenly owns the cabin
-  const rush = clamp((sp - 24) / 28, 0, 1);
-  // Inside the car, wind is most of what you hear at speed — a broad roar off
-  // the A-pillar and mirrors that buries everything else on a motorway. From
-  // outside it's just air moving past, so the cabin gets the lion's share of
-  // the lift rather than turning the whole mix into a gale.
+  /* wind: gentle low rumble at town speeds, then the rush piles on past
+     ~60 mph (27 m/s) the way real wind noise starts to own the cabin.
+
+     …but only STARTS to. This used to peak at a rush gain of 1.06 in the
+     cabin, against an engine voice that tops out around 0.4 — the wind was
+     three times louder than the car, which is not a motorway, it is a gale
+     with an engine somewhere behind it. Two things were wrong with it. It
+     was far too loud in absolute terms, and it arrived far too early and too
+     fast, so the whole top half of every gear was spent underneath it.
+
+     So: the onset moves up and stretches out (nothing at 27 m/s, not fully
+     in until 58), the curve is squarer so the middle of the range stays out
+     of the way, and both layers come down to sit UNDER the engine rather
+     than over it. Wind you notice is right; wind you have to shout over is
+     the thing that made this unpleasant to drive.
+
+     Anyone who wants the gale back has the WIND NOISE slider in the
+     workshop — see windMul(). */
+  const rush = clamp((sp - 27) / 31, 0, 1);
+  // Inside the car, wind is a bigger share of what you hear at speed — a
+  // broad roar off the A-pillar and mirrors. From outside it's just air
+  // moving past, so the cabin gets some lift, not a transformation.
   // …except in the one car built to make that untrue: foam-filled tyres,
   // double glazing and sealed door frames mean the motorway roar never
   // arrives in the first place
-  const cabW = (inCabin() ? 1.6 : 1) * hushAir() * ear().wind;
+  const cabW = (inCabin() ? 1.3 : 1) * hushAir() * ear().wind * windMul();
   // gusting: a slow random walk, a few percent either way. Dead-steady wind
   // is the giveaway that it's a noise generator and not moving air.
   S.gust = clamp((S.gust || 0) * 0.994 + (Math.random() - 0.5) * 0.016, -0.14, 0.14);
   const gust = 1 + S.gust * clamp(sp / 30, 0, 1);
-  AU.wGain.gain.setTargetAtTime((Math.min(0.26, sp * 0.0045) + rush * 0.19) * cabW * gust, t, 0.1);
+  AU.wGain.gain.setTargetAtTime((Math.min(0.085, sp * 0.0016) + rush * 0.055) * cabW * gust, t, 0.1);
   AU.wlp.frequency.setTargetAtTime(220 + sp * 26, t, 0.1);
-  AU.rushG.gain.setTargetAtTime(Math.pow(rush, 1.5) * 0.66 * cabW * gust, t, 0.15);
+  AU.rushG.gain.setTargetAtTime(Math.pow(rush, 1.8) * 0.185 * cabW * gust, t, 0.15);
   // with the glass up you lose the top of the hiss and keep the roar, so the
   // band sits lower — that's what makes it read as "inside" rather than louder
   AU.rushBp.frequency.setTargetAtTime((inCabin() ? 380 : 500) + sp * (inCabin() ? 10 : 14), t, 0.2);
@@ -15034,6 +15063,11 @@ function buildWorkshop() {
     sfxClunk(0.4);
     save();
   });
+  $("wsWind").addEventListener("input", () => {
+    S.wind = parseFloat($("wsWind").value);
+    $("wsWindVal").textContent = fmtWind();
+    save();
+  });
   $("wsLtTgt").addEventListener("input", () => {
     S.ltTgt[S.units] = parseInt($("wsLtTgt").value, 10);
     $("wsLtVal").textContent = ltLabel();
@@ -15090,6 +15124,10 @@ function fmtTone() {
   return v === 0 ? "stock" : (v > 0 ? "+" : "") + v + " Hz";
 }
 function fmtPop() { return "×" + curMod().pop.toFixed(1); }
+function fmtWind() {
+  const w = windMul();
+  return w === 0 ? "silent" : w === 1 ? "stock" : "×" + w.toFixed(2);
+}
 function fmtFlame() { return "×" + curMod().flameSize.toFixed(1); }
 function fmtRev(r) {
   if (Math.abs(r - 1) < 0.001) return "stock";
@@ -16098,7 +16136,7 @@ function save() {
       voice: S.voice,
       car: CC.id, tunnel: S.tunnel, flyby: S.flyby, cabin: S.cabin, stock: S.stock, mods: S.mods,
       listen: S.listen, space: S.space,
-      traffic: S.traffic, rain: S.rain, lt: S.ltTgt, ltBest: LT.best,
+      traffic: S.traffic, rain: S.rain, wind: S.wind, lt: S.ltTgt, ltBest: LT.best,
       dmgOn: S.dmgOn, softLim: S.softLim, evV8: S.evV8, batt: S.batt, fuel: S.fuel,
       night: S.night, station: S.station,
       stations: MUS.saved, tapeNames: MUS.names,
@@ -16841,6 +16879,9 @@ function slideUi() {
   S.rain = !!saved.rain;
   $("rainBtn").classList.toggle("on", S.rain);
   updateWiper();
+  if (typeof saved.wind === "number") S.wind = clamp(saved.wind, 0, 2);
+  $("wsWind").value = S.wind;
+  $("wsWindVal").textContent = fmtWind();
   // night palette must be on the body BEFORE the dial faces are painted
   S.night = !!saved.night;
   document.body.classList.toggle("night", S.night);
