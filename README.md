@@ -723,3 +723,78 @@ bass. The odd orders carry it — third and fifth are loud all the way up while
 the evens stay back, and that gap is the hollow. The 68° vee with split pins
 is *nearly* even-firing, and the beat that is left over is why the idle wobbles
 and why the midrange rips instead of humming.
+
+## The one that is a bit flat, on purpose
+
+The **Sant'Agata Temerario** is the first car in here where the honest thing
+to synthesize is a disappointment, and modelling it as anything else would
+have been the one dishonest entry in the garage.
+
+Everyone who drives one says a version of the same thing: astonishing at the
+top, curiously ordinary in the middle. That is not Lamborghini losing
+interest. It is three pieces of physics stacked on each other:
+
+- **A flat-plane crank makes a narrow spectrum.** A 180° V8 fires
+  left-right-left-right in perfect alternation — two inline-fours in lockstep
+  — so the second order owns everything and the half-order has almost nothing
+  in it. That evenness is what makes a 458 scream. It is also what makes an
+  engine sound thin when nothing else is going on. The V10 this car replaced
+  had a 72° crank in a 90° vee that *could not* fire evenly, and that
+  permanent stumble is most of why people loved it.
+- **Two turbines sit between the engine and you**, and a turbo in the exhaust
+  stream is a low-pass filter you cannot switch off. What it takes is the
+  third and fourth orders — the metallic edge that is the other half of a
+  flat-plane's character.
+- **Both losses land in the same place.** Three to six thousand is where the
+  turbines are fully in and the revs are not yet high enough for the intake to
+  take over, and it is genuinely the emptiest part of this engine.
+
+So the three-zone layer gains are used the way nothing else here uses them:
+the centre voice **dips** through the middle instead of climbing, the
+half-order stays near zero throughout, and the third order is held back
+deliberately. The dip is not a synthesis compromise. The dip is the car.
+
+And then the last two thousand rpm, which is why it exists. Past eight the gas
+velocity is high enough that the turbines stop mattering acoustically, the
+resonance tube into the bulkhead comes alive, and the third and fourth orders
+arrive all at once. The step from `gMid` to `gHi` on those two layers is the
+biggest in the garage, and it happens over about fifteen hundred rpm. The
+reward is real and you have to go and get it.
+
+## Subtraction, not addition
+
+The **Maranello F12 tdf** is the 812's engine two hundred cc smaller, and
+almost everything that makes it sound like itself was taken *out*: the carpet,
+the boot lining, most of the underbody felt, and a large part of the exhaust's
+silencing volume.
+
+The obvious way to voice that is "the 812, louder", and it is wrong in a way
+that is worth being precise about. Mass law barely touches 100Hz — thirty
+kilos of felt does almost nothing to a V12's fundamental, which is already
+arriving through the floor and the glass and the seat. What felt and carpet
+actually absorb is a kilohertz and up: induction, valvetrain, the third and
+fourth orders, the ring of the pipe.
+
+So the tdf is the 812's voice with the **top half** turned up and the bottom
+left exactly where it was. That is why it reads as harder and angrier rather
+than as bigger, and turning the bottom up too just gives you an 812 played
+loud, which is a different car.
+
+The 812 carries silky triangles at 3.5 and 4.5 orders doing one job: making it
+sound expensive. A triangle at an exact half-order fuses into the note and the
+ear hears smoothness. They are gone here, and in their place the fourth order
+is a fraction sharp — 4.04, not 4.00 — so it cannot fuse and has to be heard
+as a separate thing happening on top of the note. That is the difference
+between a V12 singing and a V12 being operated near the limit of what it will
+take.
+
+The gears are the other half. Ferrari's own headline was six per cent — every
+ratio six per cent shorter than an F12berlinetta's, upshifts thirty per cent
+quicker, downshifts forty. Six per cent sounds like a rounding error and is
+not: it is the difference between a gear that runs out where you expected and
+one that runs out before you are ready, over and over, all the way up the box.
+Nothing about the engine changed. The steps just got smaller.
+
+Top gear is the exception, for the reason the SF90 note gives: a top ratio is
+not part of a close stack, it is the one that has to reach the number on the
+brochure. It stays long and does 340. Everything below it is squeezed.

@@ -208,6 +208,124 @@ const CARS = [
     },
   },
   {
+    id: "f12tdf", name: "Maranello F12 tdf", tag: "short gears, rear steer, no carpet", layout: "V12 · 6.3L NA · 1,520kg",
+    indicator: "crisp",      // not the 812's damped GT tonk: this car has no felt left in it
+    crackle: "dry",          // half an F12's silencing volume and nothing soft to ring into
+    cyl: 12, idle: 950, max: 8900, cut: 9000, inertia: 0.17,   // 200cc less and lighter rods than the 812
+    bootRich: true,          // full supercar dash boot on the key
+    /* The F140 FC's intake tract is variable-length, and on this car it
+       switches over at about six thousand three hundred. Nothing happens to
+       the torque — Ferrari tuned it for breathing, not for a step — but the
+       runners get shorter, the resonance moves up, and the voice hardens
+       audibly at a fixed rpm. That is the tdf's "second cam" and it has no
+       cam in it at all. */
+    camAt: 6300,
+    start: { rpm: 255, dur: 0.62, fires: 4, flare: 1.05, flareT: 0.85 },
+    /* 780 cv at 8,500 and 705Nm at 6,750, with 80% of that torque already
+       there at 2,500 — which is the number Ferrari led on and the one that
+       matters, because a 6.3 twelve that only works above six thousand would
+       be undriveable with gears this short. It is not a peaky engine. It is a
+       very large engine that also happens to rev to 8,900. */
+    curve: [[0, 180], [1000, 390], [2500, 560], [4000, 635], [5500, 675], [6750, 690],
+            [7500, 678], [8500, 630], [8900, 592], [9400, 400]],
+    /* THE SHORT GEARS ARE THE CAR.
+
+       Ferrari's own headline for the tdf was six per cent — every ratio six
+       per cent shorter than an F12berlinetta's, upshifts thirty per cent
+       quicker, downshifts forty. Six per cent sounds like a rounding error
+       and it is not: it is the difference between a gear that runs out where
+       you expected and one that runs out before you are ready, over and over,
+       all the way up the box. The car feels frantic because it IS frantic —
+       nothing about the engine changed, the steps just got smaller.
+
+       Top gear is the exception, for the same reason it is on the SF90: a top
+       ratio is not part of a close stack, it is the one that has to reach the
+       number on the brochure. It stays at 0.85 and does 340. Everything below
+       it is squeezed. */
+    ratios: { R: -3.55, 1: 3.82, 2: 2.30, 3: 1.68, 4: 1.30, 5: 1.05, 6: 0.85 },
+    shiftLag: 0.032,              // 7-speed twin-clutch, 30% quicker than the F12's. The fastest road box here.
+    mass: 1520, finalDrive: 3.62, clutchCap: 1050, cdA: 0.66, brakeMax: 16000, grip: 1.9,
+    /* Rear drive, 780 cv, and 315-section rears — but also a car whose rear
+       axle steers, which does nothing at all for a standing start. 1.08g is
+       what two contact patches and a helpful weight transfer are worth, and
+       it is why this runs 2.9 to 100 rather than the 2.5 an all-wheel-drive
+       hybrid does with less power. See launchG in stepPhysics(). */
+    launchG: 1.08,
+    /* Carpet out, boot lining out, most of the underbody deadening out, and
+       the door cards replaced with a strap and a bin. Not a stripped race car
+       — it still has glass and a roof — but the engine reaches you through
+       noticeably less car than it does in an 812, and so does the road. */
+    rawCabin: 0.45, tire: 1.25,
+    asp: "na", pops: 2.6, tachMax: 10, redK: 8.9, kmhMax: 340, mphMax: 211,
+    dial: "ferrari", dash: { accent: "#f5c518", face: "ferrari" },
+    shiftLights: true,
+    sound: {
+      /* WHY THIS IS NOT THE 812 WITH A DIFFERENT BADGE.
+
+         Same engine family, two hundred cc smaller, and almost everything
+         that makes a tdf sound like a tdf was SUBTRACTED rather than added.
+         The carpet, the boot lining, most of the underbody felt and a large
+         part of the exhaust's silencing volume all came out, and what is left
+         is an engine you hear through a thin car instead of a thick one.
+
+         That has a specific spectral signature, and the signature is not
+         "louder everywhere". Mass law barely touches 100Hz — thirty kilos of
+         felt does almost nothing to a V12's fundamental, which is already
+         coming through the floor and the glass and the seat. What felt and
+         carpet actually absorb is a kilohertz and up: the induction, the
+         valvetrain, the third and fourth orders, the ring of the pipe. So a
+         tdf is the 812's voice with the TOP HALF turned up and the bottom
+         left exactly where it was, and that is why it reads as harder and
+         angrier rather than as bigger. Turn the bottom up too and you get an
+         812 played loud, which is the wrong car.
+
+         THE SILKY LAYERS ARE THE FIRST THING TO GO.
+         The 812 carries triangles at 3.5 and 4.5 that are doing one job:
+         making it sound expensive. A triangle at an exact half-order fuses
+         into the note and the ear hears smoothness. That is a genuine and
+         deliberate quality of an 812 and it is precisely what this car does
+         not have. They are gone, and in their place the fourth order is a
+         fraction sharp — 4.04, not 4.00 — so it cannot fuse and has to be
+         heard as a separate thing happening on top. That is the difference
+         between a V12 singing and a V12 being operated near the limit of what
+         it will take, and it is the entire tdf.
+
+         AND IT IS SMALLER, SO IT SITS HIGHER.
+         6.3 against 6.5, shorter rods, less rotating mass. f0Mul goes from
+         0.95 to 0.98 — a third of a semitone, which sounds like nothing
+         written down and is audible immediately when the two are back to
+         back, because it moves the whole harmonic stack with it. */
+      f0Mul: 0.98, air: 2.6, jitter: 1.25,
+      layers: [
+        ["sine",     0.25,  0.13, 0.02],   // half-order swell under the idle, thinner than the 812's
+        ["sine",     0.5,   0.44, 0.13],   // sub burble — still a twelve, still has a chest
+        ["square",   0.5,   0.26, 0.08],   // low-rev muscle
+        ["sine",     1,     0.16, 0.22],   // fundamental — less of it than the 812 has
+        ["sawtooth", 0.996, 0.20, 0.30],   // unison low…
+        ["sawtooth", 1,     0.44, 0.56],   // …centre voice…
+        ["sawtooth", 1.007, 0.26, 0.38],   // …unison high — a wider chorus, less polished
+        ["sawtooth", 1.5,   0.12, 0.30],   // half-order — audible now that nothing is soaking it
+        ["sawtooth", 2.01,  0.16, 0.46],   // exhaust bite, harder than the 812's through the middle
+        ["sawtooth", 3.02,  0.06, 0.48],   // induction — the layer the carpet used to eat
+        ["sawtooth", 4.04,  0.0,  0.34],   // ← a fraction sharp. valvetrain, not harmony.
+        ["sawtooth", 5.06,  0.0,  0.20],   // ← ditto. the searing edge above eight.
+        ["sine",     6.02,  0.0,  0.09],   // what little air is left over the top of that
+      ],
+      /* A shorter, less silenced system rings HIGHER, not lower — the low
+         band comes up from the 812's 110Hz because there is less muffler
+         volume behind it to sustain the long wavelengths, and the top band
+         goes up to 4,100 at Q8, narrow and hard, which is the metallic ring
+         of a hot thin-wall pipe with nothing packed around it. That top
+         formant is the single most recognisable thing about this car from
+         outside and it is why a tdf sounds like it is being torn rather than
+         played. */
+      formants: [[128, 0.85, 4], [520, 1.5, 5], [1350, 2.1, 6], [4100, 2.7, 8]],
+      loadDrive: 0.6,
+      noiseMul: 1.35, volTrim: 1.45, scream: 4400,
+      drive: 0.78, pulseDepth: 0.17, pulseDiv: 1, raspMul: 1.7,
+    },
+  },
+  {
     id: "fiorano599", name: "Maranello 599 GTB", tag: "the last analogue V12 · F1 single-clutch", layout: "V12 · 6.0L NA",
     indicator: "luxury",     // mid-2000s front-engined GT
     crackle: "dry",          // no cats' worth of muffling, no turbos to soak it up
@@ -862,6 +980,133 @@ const CARS = [
       formants: [[88, 0.8, 8], [400, 1.3, 5.5], [1150, 1.9, 4.5], [3400, 2.5, 7]],
       loadDrive: 0.7, noiseMul: 1.4, volTrim: 1.7, scream: 2600,
       drive: 0.92, pulseDepth: 0.32, raspMul: 2.0, hunt: 1.25,
+    },
+  },
+  {
+    id: "temerario", name: "Sant'Agata Temerario", tag: "flat-plane biturbo hybrid · 10,000 rpm", layout: "V8 · 4.0L biturbo + 3 e-motors",
+    crackle: "hard",   // turbines in the exhaust stream and a map tuned for drama
+    firing: "flat",    // a flat-plane V8 out of Sant'Agata, which has never happened before
+    cyl: 8, idle: 900, max: 10000, cut: 10250, shiftLights: true, awd: true,
+    /* A 180° crank needs no counterweights to balance its primaries, so there
+       is less steel spinning here than in any turbo V8 ever built for a road
+       car. That is not a detail — it is the reason a 4.0 twin-turbo can get to
+       ten thousand at all, and it is what you feel every time you blip it in
+       neutral. It picks up like something a third of its size. */
+    inertia: 0.13,
+    bootRich: true,          // full supercar dash boot on the key
+    startCap: true,          // the red flip-up cover, like everything else from Sant'Agata
+    start: { rpm: 300, dur: 0.45, fires: 3, flare: 0.95, flareT: 0.7 },
+    /* 800 cv from the engine alone, and Lamborghini quote it as a PLATEAU:
+       flat from 9,000 to 9,750, which is the part worth modelling. 730Nm from
+       4,000 to 7,000 underneath it, and then torque falls away at exactly the
+       rate that keeps power constant while the crank keeps going. Almost
+       nothing else here does that — a turbo motor normally signs off two
+       thousand rpm before its limiter because there is no reason to keep
+       spinning it. This one keeps spinning because that is the entire pitch. */
+    curve: [[0, 210], [1500, 470], [2500, 620], [4000, 730], [7000, 730], [8000, 702],
+            [9000, 624], [9750, 576], [10000, 545], [10600, 380]],
+    /* Six ratios standing in for the real car's eight, on the same reasoning
+       the SF90 entry sets out: the stack below top keeps its spacing and top
+       is let out to reach the number. 0.86 on a 4.0 final puts the limiter in
+       sixth at 342, which is where the real car stops. */
+    ratios: { R: -3.5, 1: 3.60, 2: 2.35, 3: 1.70, 4: 1.32, 5: 1.06, 6: 0.86 },
+    shiftLag: 0.038,              // 8-speed twin-clutch with a motor inside it
+    mass: 1720, finalDrive: 4.0, clutchCap: 1650, cdA: 0.62, brakeMax: 17000, grip: 2.25,
+    asp: "turbo", pops: 1.6, boostMax: 0.78, spool: 2500, spoolRate: 3.0, psiMax: 26,
+    twin: 0.9,                    // two of them, a foot behind the bulkhead, and nothing in the way
+    whistleMul: 0.8, whistleFreqMul: 1.15, turboBreath: 1.2, breathHz: 1700,
+    tachMax: 11, redK: 10, kmhMax: 342, mphMax: 212,
+    /* Plug-in hybrid, and the button on the tunnel is a POWER button rather
+       than a starter: it wakes the car in silence on the two front axial-flux
+       motors and leaves it there. Lighting the V8 is a separate, deliberate
+       press of eDrive — same arrangement as the Revuelto, same bus chime. */
+    edrive: true, evCapKmh: 120, evForce: 8000, badge: "V8-H", fireLbl: "FIRE V8",
+    evBoot: "lambo",
+    /* The third motor is the interesting one. It lives between the engine and
+       the eight-speed, which means its torque goes through the gearbox and is
+       multiplied by whatever ratio is selected — so it is not a launch trick
+       like the front pair, it is a hole-filler, and the hole it fills is the
+       one two turbochargers leave under three thousand rpm. That is why this
+       car can be geared as short as it is and still not feel laggy: the motor
+       covers exactly the window the turbines cannot. */
+    eAssist: 5200, ePower: 110000,
+    /* Four driven wheels, 920 cv of system output, and a launch control that
+       uses all of it. 1.25g and 2.7 to 100 — two tenths behind an SF90, which
+       has half again as much electric torque at the front axle and is eighty
+       kilos lighter, and comfortably ahead of anything rear-driven here. See
+       launchG in stepPhysics(). */
+    launchG: 1.25,
+    dash: { accent: "#3fb8e0" },
+    sound: {
+      /* IT IS A BIT FLAT, AND THAT IS THE HONEST ANSWER.
+
+         This is the first car in the garage where the correct thing to
+         synthesise is a disappointment, and pretending otherwise would be the
+         one dishonest entry here. Everyone who has driven a Temerario says
+         some version of the same thing: it is astonishing at the top and
+         curiously ordinary in the middle, and the reason is not that
+         Lamborghini stopped caring. It is three pieces of physics stacked on
+         top of each other, and all three are worth writing down because
+         together they ARE the voice.
+
+         A FLAT-PLANE CRANK MAKES A NARROW SPECTRUM.
+         A 180° V8 fires left-right-left-right in perfect alternation — two
+         inline-fours in lockstep — so the second order owns everything and
+         the half-order, which is where a cross-plane V8's burble and a V10's
+         limp both live, has almost nothing in it. That evenness is exactly
+         what makes a 458 scream, and it is also what makes an engine sound
+         thin when there is nothing else going on. The V10 this car replaces
+         had a 72° crank in a 90° vee that could not fire evenly if it wanted
+         to, and that permanent stumble is most of why people loved it. Even
+         fire is cleaner and it is emptier.
+
+         TWO TURBINES SIT BETWEEN THE ENGINE AND YOU.
+         A turbo in the exhaust stream is a low-pass filter that cannot be
+         switched off, and what it removes is the third and fourth orders —
+         the metallic edge that is the other half of a flat-plane's character.
+         The 458 keeps them. The SF90 loses some. This loses more, because it
+         is smaller and boosted harder.
+
+         SO THE MIDDLE IS WHERE BOTH LOSSES LAND AT ONCE.
+         Three to six thousand is the window where the turbines are fully in
+         and the revs are not yet high enough for the intake to take over, and
+         it is genuinely the emptiest part of this engine. The three-zone
+         layer gains exist for exactly this: the centre voice DIPS at gMid
+         rather than climbing, the half-order stays near zero throughout, and
+         the third order is deliberately held back until the top. Nothing here
+         is a synthesis compromise — the dip is the car.
+
+         AND THEN THERE IS THE LAST TWO THOUSAND RPM.
+         Which is why the car exists. Past eight thousand the exhaust gas
+         velocity is high enough that the turbines stop mattering acoustically,
+         the resonance tube Lamborghini ran into the cabin comes alive, and the
+         third and fourth orders arrive all at once. The step from gMid to gHi
+         on those two layers is the biggest in the garage, deliberately, and it
+         happens over about fifteen hundred rpm. That is the whole reward and
+         you have to go and get it. */
+      f0Mul: 1.0, air: 0.4, jitter: 0.95,
+      layers: [
+        ["sine",     0.5,   0.24, 0.16, 0.06],   // boosted chest, gone by the top
+        ["square",   0.5,   0.20, 0.10, 0.03],   // hot-vee gravel at idle
+        ["sawtooth", 0.996, 0.20, 0.22, 0.28],   // unison low…
+        ["sawtooth", 1,     0.46, 0.42, 0.50],   // …centre — and note that it DIPS in the middle
+        ["sawtooth", 1.004, 0.22, 0.24, 0.30],   // …unison high — a tight chorus, as a flat-plane should be
+        ["sawtooth", 1.5,   0.04, 0.05, 0.07],   // even fire: there is no between-note here at all
+        ["sawtooth", 2.01,  0.20, 0.36, 0.60],   // THE flat-plane order — the only thing holding the middle up
+        ["sawtooth", 3.02,  0.05, 0.12, 0.46],   // induction — held back, then let go past eight
+        ["sawtooth", 4.03,  0.0,  0.02, 0.32],   // the metallic edge, and only at the very end
+        ["triangle", 5.04,  0.0,  0.0,  0.20],   // ten thousand rpm of shimmer
+        ["sine",     6.02,  0.0,  0.0,  0.11],   // air over the top of it
+      ],
+      /* Turbine-damped, so the top band is lower and wider than a 458's — but
+         the middle one is the car's own: Lamborghini ran a resonance tube from
+         the plenum into the bulkhead, and 1,100Hz at Q4.5 is what arrives
+         through it. It is the reason the induction is the loudest single thing
+         in this cabin above eight thousand, and it is why noiseMul is high on
+         a car with two turbochargers muffling everything else. */
+      formants: [[235, 1.0, 4], [1100, 1.9, 4.5], [3500, 2.6, 6.5]],
+      loadDrive: 0.55, noiseMul: 1.45, volTrim: 1.22, scream: 5000,
+      drive: 0.68, pulseDepth: 0.14, raspMul: 1.25,
     },
   },
   {
