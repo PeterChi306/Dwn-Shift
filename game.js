@@ -883,10 +883,52 @@ const CARS = [
        these. */
     curve: [[0, 200], [1000, 400], [3000, 562], [5000, 656], [6750, 740], [8000, 730],
             [9250, 672], [9800, 430]],
+    /* ---------------- THE ONLY REAL EIGHT-SPEED IN THE GARAGE ----------------
+       Everything else here runs six ratios, including the cars that are
+       really eights — see the SF90 entry for why, and it is a good reason:
+       six is the gate everyone can read, and a top gear let out to reach the
+       brochure number gets you most of the way to the right feel.
+
+       This car had neither. It had no `ratios` line at all, so it was falling
+       through to DEFAULT_RATIOS — the generic 3.6/2.15/1.56/1.21/0.99/0.85
+       six-speed that the city hatch uses — on a 3.4 final. Two things follow
+       from that and both of them are the complaint:
+
+         FIRST GEAR RAN TO 89 KM/H. On a car whose real first is worth about
+         sixty. So the launch never ends, the first upshift arrives when you
+         are already travelling, and the whole bottom of the car feels like it
+         is slipping rather than gripping.
+
+         AND TOP GEAR RAN TO 376. Which is thirty over what the car is sold on
+         and well past what 0.60 of cdA will let 1,800kg do, so eighth — sixth
+         — was simply unreachable. You could not top the car out. It ran out
+         of air in a gear that still had two thousand rpm left in it, which is
+         the specific sensation of a car that has been geared by nobody.
+
+       So it gets the box it is actually sold with. Eight ratios, progressive
+       rather than geometric — wide at the bottom where the steps have to
+       cover the traction limit, tightening all the way up, which is how every
+       real multi-speed box is cut and is why the top three feel like one long
+       gear with commas in it.
+
+       The number that was chosen and the numbers that fell out of it: eighth
+       is set so the limiter lands at 351 km/h and the rev cut at 360, which
+       is the car's real top speed and the number already on its own gauge.
+       Everything below is spaced so that every upshift drops the engine into
+       6,150–7,900 rpm — peak torque is 740 at 6,750 and it still holds 730 at
+       8,000, so the V12 never once lands outside its own power. That is what
+       an eight-speed is FOR, and with six it is not possible: the steps are
+       too big and every shift dumps you two thousand rpm below the good bit.
+
+       The gate, the shift lights, the paddle map and the transmission swap
+       are all written off CAR.top already, so a five-column gate needs no
+       special case — see buildGateLayout(). */
+    ratios: { R: -3.6, 1: 4.18, 2: 2.78, 3: 2.05, 4: 1.62,
+              5: 1.32, 6: 1.09, 7: 0.91, 8: 0.775 },
     shiftLag: 0.04,               // 8-speed twin-clutch, quickest of the lot
     // the cats, the muffler and the valves all leave together: about 20kg of
     // it, hung off the very back of the car where it counts double
-    mass: 1800, finalDrive: 3.4, clutchCap: 1400, cdA: 0.60, brakeMax: 16000, grip: 2.1,
+    mass: 1800, finalDrive: 4.0, clutchCap: 1400, cdA: 0.60, brakeMax: 16000, grip: 2.1,
     asp: "na", pops: 3.4, tachMax: 10, redK: 9.25, kmhMax: 360, mphMax: 220,
     startCap: true,
     // 296-style hybrid: silent EV creep on the front axle motors up to ~130km/h,
@@ -2870,6 +2912,54 @@ const STOCK = {
   chuff: 0.7,
   air: -5.5,       // and one more shelf off the top
   harm: 0.9,       // how hard the muffler cancels the upper orders, 0..1
+  /* THIRD PASS — THE WIND.
+
+     Everything above turns down the parts of the engine that have a PITCH:
+     the oscillator stack, the saturation, the rasp, the pops. None of it
+     touched the two layers that are pure broadband noise — the gas leaving
+     the tailpipe (AU.gasG) and the air falling down the intake (AU.nGain,
+     and the rig's own intake and breath chains) — because those hang off the
+     machinery bus rather than off the engine voice, and the mask never
+     reached them.
+
+     So flipping the switch pulled the note down by half and left the hiss
+     exactly where it was, and the thing that had been sitting politely
+     underneath a loud engine became the loudest thing in the car. It reads
+     as WIND, because a broadband roar with no note in it is what wind is.
+     That is a mixing accident, not a factory car.
+
+     It is also wrong twice over on the physics. A stock system is not a hole
+     that the same rush comes out of more quietly: the gas goes through cats,
+     a resonator and a muffler's worth of chambers first, so it arrives slow,
+     cool and broken up, and what is left is a fraction of the roar at the
+     tip of a straight pipe. And the induction side is the same story with a
+     lid on it — a sealed airbox with a paper filter and a snorkel pointing
+     into a wheelarch exists specifically to stop you hearing the engine
+     breathe.
+
+     FOURTH PASS: these go to ZERO, not "near the bottom".
+
+     Turning them down was still the wrong shape of fix, because the problem
+     is not that these layers are loud, it is that they are BRIGHT and the
+     rest of the car is not. Every tonal part of the voice runs through AU.lp,
+     and in stock mode that filter is sitting at 38% of its usual corner — so
+     the note is dark by construction. These three do not go through it at
+     all; they hang off the machinery bus and reach the ear with their full
+     top end intact. Attenuate them and you do not remove the hiss, you just
+     get a quieter hiss over a dark engine, which is the same complaint at a
+     lower volume — and that is exactly what happened.
+
+     The physics agrees with the blunt answer anyway. Induction roar through
+     a sealed airbox and gas rush through a full silencer are not quiet
+     versions of the open-pipe sounds; they are, from the driver's seat, not
+     there. What you hear in a stock car is the note. So this is zero, and
+     the texture that is genuinely still present — the combustion pulses —
+     comes through the chuff, which does run through the muffler filter and
+     is therefore already the right colour. */
+  gas: 0,          // the rush out of the pipe: through cats, resonator and
+                   // muffler, what reaches the tip is not a rush any more
+  intake: 0,       // airbox lid on. THIS was the wind.
+  breath: 0,       // charge-air, recirculated and under the bonnet
 };
 /* ================================================================
    THE REGISTER CHANGE
@@ -5704,7 +5794,8 @@ function audioTick() {
 
   // induction noise: the thing you're standing in front of over the bonnet,
   // and the thing you cannot hear at all from the tailpipe
-  const nMul = (VC.sound.noiseMul || 1) * P.intake * dirIntake;
+  const nMul = (VC.sound.noiseMul || 1) * P.intake * dirIntake
+             * (stockOn() ? STOCK.intake : 1);
   // …and on a rig car this is zero, because the rig has a proper intake layer
   // of its own and stacking a second one on top just makes mud
   /* ---- the gas leaving the pipe ----
@@ -5722,14 +5813,16 @@ function audioTick() {
   if (AU.gasG) {
     const flow = rFrac * (0.22 + 0.78 * load) * (running ? 1 : 0);
     AU.gasG.gain.setTargetAtTime(
-      Math.pow(flow, 1.25) * 0.5 * gasEar * (VC.sound.volTrim || 1), t, 0.07);
+      Math.pow(flow, 1.25) * 0.5 * gasEar * (VC.sound.volTrim || 1)
+        * (stockOn() ? STOCK.gas : 1), t, 0.07);
     AU.gasLp.frequency.setTargetAtTime(420 + flow * 2600, t, 0.09);
     // a big lazy pipe rumbles lower than a thin race one — the body highpass
     // the car already declares is the best single measure of which it has
     AU.gasHp.frequency.setTargetAtTime(clamp((VC.sound.hp || 60) * 0.8, 45, 220), t, 0.2);
   }
 
-  const boostHiss = CC.asp === "turbo" && !CC.turboRig ? S.boost * 0.09 * P.turbo : 0;
+  const boostHiss = CC.asp === "turbo" && !CC.turboRig
+    ? S.boost * 0.09 * P.turbo * (stockOn() ? STOCK.breath : 1) : 0;
   // On a naturally aspirated engine with open trumpets there is no turbo to
   // whoosh, and induction roar takes its place — but it does not track revs
   // the way a whistle tracks boost. It tracks THE THROTTLE, because it is
@@ -5920,7 +6013,7 @@ function audioTick() {
   AU.wChop.frequency.setTargetAtTime(chopHz, t, k);
   AU.wChopG.gain.setTargetAtTime(chopG * hT * stW, t, 0.05);
   AU.tbBp.frequency.setTargetAtTime(tbF, t, k);
-  AU.tbG.gain.setTargetAtTime(tbG * hT * (stockOn() ? 0.55 : 1), t, 0.05);
+  AU.tbG.gain.setTargetAtTime(tbG * hT * (stockOn() ? STOCK.breath : 1), t, 0.05);
   for (const s of AU.scOscs)
     s.o.frequency.setTargetAtTime(Math.min(12000, wf * s.mult), t, k);
   AU.blowG.gain.setTargetAtTime(scg * hT * stW, t, 0.05);
@@ -5939,6 +6032,8 @@ function audioTick() {
   turboRigTick(t, k, {
     running, mute, load, dop, flyLp,
     hT, stW,
+    stIn: stockOn() ? STOCK.intake : 1,
+    stBr: stockOn() ? STOCK.breath : 1,
     hIn: hE * P.intake * dirIntake,
   });
 
@@ -6014,6 +6109,52 @@ function audioTick() {
   const spray = S.rain && !S.tunnel ? Math.min(0.15, Math.abs(S.v) * 0.0032) : 0;
   AU.sprayG.gain.setTargetAtTime(spray, t, 0.15);
 }
+
+/* ---------------- WHAT IS ACTUALLY LOUD ----------------
+   Run dsLevels() in the console while the car is making the noise you are
+   trying to find, and it prints every layer that is currently above silence,
+   loudest first, with a note of whether that layer is filtered by the muffler
+   or arrives raw.
+
+   This exists because "there is a wind noise" is a description of a MIX, and
+   a mix cannot be debugged by reading the code that writes to it — every one
+   of these numbers is set by a different rule, and which one is winning
+   depends on revs, load, road speed, listening position and the mode switch
+   all at once. Guessing at it from the source cost two passes. Reading it
+   costs one line. */
+function dsLevels() {
+  if (!AU.ready) return "audio is not running yet — start the car first";
+  const g = n => (n && n.gain ? n.gain.value : 0);
+  const rig = AU.rig;
+  const rows = [
+    ["engine voice",   g(AU.engGain), "through the muffler filter"],
+    ["chuff (pulses)", g(AU.chuffG) * (AU.pulseNode
+        ? AU.pulseNode.parameters.get("level").value : 0), "through the muffler filter"],
+    ["exhaust rasp",   g(AU.raspG),  "through the muffler filter"],
+    ["intake roar",    g(AU.nGain),  "RAW — bypasses the muffler"],
+    ["tailpipe gas",   g(AU.gasG),   "RAW — bypasses the muffler"],
+    ["turbo whistle",  g(AU.whineG), "RAW"],
+    ["charge-air",     g(AU.tbG),    "RAW"],
+    ["gearbox whine",  g(AU.boxG),   "RAW"],
+    ["road wind (low)",  g(AU.wGain), "RAW — road speed, not the engine"],
+    ["road wind (rush)", g(AU.rushG), "RAW — road speed, not the engine"],
+    ["tyres",          g(AU.scG),    "RAW"],
+  ];
+  if (rig) rows.push(
+    ["rig whine",   g(rig.whG), "RAW"],
+    ["rig intake",  g(rig.inG), "RAW — bypasses the muffler"],
+    ["rig breath",  g(rig.brG), "RAW — bypasses the muffler"],
+    ["rig hiss",    g(rig.hsG), "RAW"]);
+  const live = rows.filter(r => r[1] > 0.0005).sort((a, b) => b[1] - a[1]);
+  const w = Math.max(...live.map(r => r[0].length));
+  console.log(
+    `${CC.name} · ${S.stock ? "STOCK" : "SPORT"} · ${Math.round(S.rpm)}rpm · ` +
+    `${Math.round(Math.abs(S.v) * 3.6)}km/h · throttle ${Math.round(S.throttle * 100)}%` +
+    ` · listening from ${ear().name}\n` +
+    live.map(r => `  ${r[0].padEnd(w)}  ${r[1].toFixed(4)}   ${r[2]}`).join("\n"));
+  return live.length + " layers above silence";
+}
+window.dsLevels = dsLevels;
 
 /* a traffic car sweeping past: slow lazy whoosh when parked,
    sharp "husss" when we're the one doing the passing */
@@ -8895,6 +9036,11 @@ function turboRigTick(t, k, env) {
   const spd = clamp(S.tSpd || 0, 0, 1.15);
   const boost = clamp(S.boost || 0, 0, 1.1);
   const load = env.load;
+  /* The factory mask, split three ways rather than shared. Each of these
+     layers is silenced by a different piece of hardware — the whine by the
+     bonnet, the intake by the airbox lid, the breath by the recirc plumbing —
+     and by very different amounts, so one number for all three would only be
+     right for one of them. See STOCK. */
   const dop = env.dop, hT = env.hT, stW = env.stW, flyLp = env.flyLp;
   // distance eats the top of everything before it touches the bottom, so the
   // whine and the hiss are attenuated by it and the low rush very nearly
@@ -8950,7 +9096,8 @@ function turboRigTick(t, k, env) {
   R.inBp.frequency.setTargetAtTime((I.hz + revs * 620 + load * 220) * dop, t, k);
   R.inBp.Q.setTargetAtTime(I.q, t, 0.2);
   R.inLp.frequency.setTargetAtTime((1400 + revs * 2600) * (0.4 + 0.6 * near), t, 0.1);
-  R.inG.gain.setTargetAtTime(clamp(inLvl, 0, 2.5) * I.level * env.hIn * cab, t, 0.05);
+  R.inG.gain.setTargetAtTime(
+    clamp(inLvl, 0, 2.5) * I.level * env.hIn * cab * env.stIn, t, 0.05);
 
   // --- breath: shaft speed moving air, coloured by how much of it is
   //     actually being compressed into the engine right now ---
@@ -8983,7 +9130,7 @@ function turboRigTick(t, k, env) {
                          S.tRise * (B.rise === undefined ? 0 : B.rise));
   R.brG.gain.setTargetAtTime(
     (Math.pow(spd, 1.15) * (0.35 + load * 0.65) + S.tRelease * 0.55 + bRise)
-      * B.level * hT * cab,
+      * B.level * hT * cab * env.stBr,
     t, 0.05);
 
   // --- hiss ---
