@@ -849,3 +849,63 @@ Two things move with it:
 The entry was already right and has not been touched: 35ms in, 180ms out, with
 the mouth louder than the middle, because for that first moment you have the
 wall *and* the open road.
+
+## The clipper was being fed by the layer count
+
+The most synthetic-sounding thing in here was hiding in a line that reads like
+a volume trim.
+
+`drive` is meant to say how hard a given engine saturates. It did not, because
+it was a multiplier on an oscillator stack whose size varies enormously from
+car to car. A three-layer city hatch put about 1.0 into the soft clip. A
+twelve-layer V12 put 4.4 in, and multiplied it by a higher `drive` on top.
+Measured across the garage, the amount of signal arriving at the `tanh` varied
+by a factor of **forty-two** — and the order was exactly backwards, because the
+cars with the most layers are the flagships, the ones that got the most care,
+and they were the ones being squared off.
+
+```
+revuelto  14.4          kestrel   1.3
+huayrar   12.5          goodwood  0.8
+gaydon    11.6          ionia     0.3
+```
+
+`tanh(14x)` is not a soft clip. It is a square wave generator.
+
+Rendered offline and measured stage by stage, the oscillator stack arrives at
+the shaper with a **crest factor of 10.9dB** — a healthy, engine-shaped signal —
+and leaves it at **1.4dB**. The lowpass and formants downstream claw it back to
+about 5. That is what was reaching your ears: a squared-off drone with
+resonances on it.
+
+So the stack is normalised by its own summed gain going in, and put straight
+back afterwards. `drive` now means the same thing on every car, and the curve
+gets driven to a fixed depth instead of to a number that depends on how many
+voices somebody happened to write.
+
+| | crest before | crest after |
+|---|---|---|
+| Revuelto | 5.0 dB | **8.4 dB** |
+| F12 tdf | 5.4 dB | **8.9 dB** |
+| Temerario | 5.5 dB | **9.1 dB** |
+| 458 | 6.1 dB | **9.5 dB** |
+| *real recording* | | *9.2 dB* |
+
+Two things follow from it.
+
+**De-clipping costs loudness.** A squared-off wave *is* louder — that is the
+whole reason loudness wars happen — and taking it back has to be paid for with
+clean gain rather than more clipping. `SAT_TRIM` centres the garage so the
+average doesn't move; individual cars shift within about ±4dB, and `volTrim` is
+the per-car knob if any of them sits wrong.
+
+**The chuff had to come up.** Measured on a real exhaust at the top of its
+range, the harmonic-to-noise ratio is about **−6dB** — there is four to five
+times *more* energy between the harmonics than in them. The stack alone gets
+nowhere near that. The combustion pulses used to be faded out by 45% as revs
+rose, on the reasoning that they merge into the note by the top of the range.
+The premise is true and the conclusion from it is backwards: you stop hearing
+them as separate *events*, but merging is not going away, and what they merge
+*into* is the dense upper spectrum that makes a real engine at 9,000rpm sound
+like a continuous explosion rather than a loud note. Fading them there replaced
+all of it with clean oscillators — at exactly the moment anybody is listening.

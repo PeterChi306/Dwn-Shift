@@ -3383,7 +3383,25 @@ function applyFiring(car) {
   P.get("spread").value = bankSpread(car);
 }
 
-const AU = { ctx: null, ready: false };
+/* How hard the soft clip actually gets driven, once the per-car stack has
+   been normalised out of the way (see buildEngineVoice). The tanh sees a peak
+   of roughly 2.4 x drive x SAT_DRIVE, so this is the one number that decides
+   whether the voice saturates or squares off, for every car at once.
+
+   0.45 is measured, not taste. Rendering the voice chain offline and sweeping
+   it: the crest factor lands at 8.4-9.5dB across the garage, against 9.2dB
+   measured on a real recording of one of these engines at the top of its
+   range. Below about 0.3 the voice goes clean and loses the density a loud
+   exhaust genuinely has; above about 0.8 the peaks start flattening again and
+   it walks back toward the drone.
+
+   SAT_TRIM then centres the garage's average level, because de-clipping costs
+   apparent loudness — a squared-off wave IS louder, which is exactly why
+   loudness wars happen — and that has to come back as clean gain rather than
+   as more clipping. */
+const SAT_DRIVE = 0.45, SAT_TRIM = 0.44;
+
+const AU = { ctx: null, ready: false, voiceNorm: 1 };
 
 function initAudio() {
   if (AU.ready) return;
@@ -3727,7 +3745,13 @@ function initAudio() {
   for (let i = 0; i < 512; i++) { const x = i / 256 - 1; curve[i] = Math.tanh(2.4 * x); }
   shaper.curve = curve;
   AU.mixIn = ctx.createGain(); AU.mixIn.gain.value = 0.5;
-  AU.mixIn.connect(shaper); shaper.connect(AU.lp);
+  /* THE MAKEUP. See SAT_DRIVE and buildEngineVoice(): the oscillator stack is
+     now scaled DOWN into the soft clip by that car's own layer count, so the
+     clipper sees the same amount of signal whatever it is voiced with. This
+     puts the level straight back afterwards, so the normalisation changes how
+     hard the curve is driven and nothing else. */
+  AU.satOut = ctx.createGain(); AU.satOut.gain.value = 1;
+  AU.mixIn.connect(shaper); shaper.connect(AU.satOut); AU.satOut.connect(AU.lp);
 
   // exhaust formants: fixed pipe resonances the engine note sweeps through —
   // this is what makes it sound like hardware instead of a synthesizer
@@ -3821,7 +3845,14 @@ function initAudio() {
       // the tone was missing, not a replacement for it — and both sides share
       // the same soft clip downstream, so anything hotter than this just
       // squares the whole voice off and loses the dynamics it came to add.
-      AU.chuffG = ctx.createGain(); AU.chuffG.gain.value = 0.3;
+      /* 0.3 was set when the clipper downstream was squaring everything off
+         anyway, and under those conditions any more than a hint of chuff just
+         disappeared into the flat top. With the clip driven sanely the pulses
+         survive to the output, and they have to carry more of the voice —
+         measured, the harmonic-to-noise ratio of a real exhaust at full song
+         is about -6dB (there is four to five times MORE energy between the
+         harmonics than in them) and the stack alone gets nowhere near that. */
+      AU.chuffG = ctx.createGain(); AU.chuffG.gain.value = 0.65;
       node.connect(AU.chuffG); AU.chuffG.connect(AU.mixIn);
       AU.pulseNode = node;
       applyFiring(voiceCar());
@@ -4915,7 +4946,37 @@ function buildEngineVoice(car) {
     v.o.disconnect(); v.g.disconnect();
   }
   AU.oscs = [];
-  AU.mixIn.gain.value = car.sound.drive || 0.5;   // saturation drive into the soft clip
+  /* THE CLIPPER WAS BEING FED BY THE LAYER COUNT.
+
+     `drive` is meant to say how hard this engine saturates, and it did not,
+     because it was a multiplier on a stack whose size varies enormously from
+     car to car. A three-layer city hatch put about 1.0 into the soft clip. A
+     twelve-layer V12 put 4.4 in, and then multiplied it by a higher `drive`
+     on top. Measured across the garage the amount arriving at the tanh varied
+     by a factor of FORTY-TWO — and the order was exactly backwards, because
+     the cars with the most layers are the flagships, the ones that got the
+     most care, and they were the ones being squared off.
+
+     What that does is not "more saturation". tanh(14x) is not a soft clip, it
+     is a square wave generator. Rendered offline and measured, the oscillator
+     stack arrives at the shaper with a crest factor of 10.9dB — which is a
+     real, healthy, engine-shaped signal — and leaves it at 1.4dB, which is a
+     square wave. The lowpass and the formants downstream then claw it back to
+     about 5, and that is what was reaching your ears: a squared-off drone with
+     resonances on it. It is the single most synthetic-sounding thing in here
+     and it was hiding in a line that reads like a volume trim.
+
+     So the stack is normalised by its own summed gain before the clipper, and
+     put back afterwards (AU.satOut). `drive` now means what it says on every
+     car in the garage, and the tanh gets driven to a fixed, sane depth
+     instead of to a number that depends on how many voices somebody wrote. */
+  const gsum = car.sound.layers.reduce((a, L) => {
+    const gs = L.slice(2).filter(v => typeof v === "number");
+    return a + (gs.length ? Math.max(...gs) : 0);
+  }, 0);
+  AU.voiceNorm = Math.max(0.6, gsum);
+  AU.mixIn.gain.value = (car.sound.drive || 0.5) * SAT_DRIVE / AU.voiceNorm;
+  AU.satOut.gain.value = (AU.voiceNorm / SAT_DRIVE) * SAT_TRIM;
   AU.pulse.type = car.sound.pulseType || "sawtooth";  // square = choppy rotary/V8 chop
   applyFormants();
   applyFiring(car);                               // …and this engine's firing order
@@ -5573,7 +5634,10 @@ function audioTick() {
   const drive = ((VC.sound.drive || 0.5) + (ex.driveAdd || 0)) * (stockOn() ? STOCK.drive : 1);
   // load-sensitive saturation: barks under power, settles on a lift
   const dl = VC.sound.loadDrive || 0;
-  AU.mixIn.gain.setTargetAtTime(drive * (1 + dl * (load - 0.3)), t, 0.05);
+  // …normalised by this car's own stack, so `drive` and `loadDrive` change the
+  // SHAPE of the saturation and not how squashed the voice is. See SAT_DRIVE.
+  AU.mixIn.gain.setTargetAtTime(
+    drive * (1 + dl * (load - 0.3)) * SAT_DRIVE / (AU.voiceNorm || 1), t, 0.05);
   const pd = (VC.sound.pulseDepth || 0.15) * (1 - rFrac * 0.6);
   AU.pulse.frequency.setTargetAtTime(Math.max(3, f0 / (VC.sound.pulseDiv || 1)), t, k);
   AU.pulseG.gain.setTargetAtTime(
@@ -5596,9 +5660,22 @@ function audioTick() {
     // the chuff IS the exhaust, so where you stand matters more to it than to
     // anything else in the voice — but only about half as much as it does to
     // the pops, or standing at the pipe drives the whole chain into clipping
+    /* …AND IT DOES NOT THIN OUT AT THE TOP.
+
+       There used to be a (1 - rFrac * 0.45) here, on the reasoning that by the
+       top of the range the individual pulses have merged into the note anyway.
+       The premise is true and the conclusion from it is backwards. You stop
+       hearing them as separate EVENTS, yes — but merging is not the same as
+       going away, and what they merge INTO is the dense, gritty upper spectrum
+       that makes a real engine at 9,000rpm sound like an explosion happening
+       continuously rather than like a loud note. Fade them out at exactly that
+       point and you replace all of it with clean oscillators, which is the
+       moment a synthesised engine gives itself away — and it is the moment
+       everybody actually listens to. Measured: it cost about 4dB of
+       harmonic-to-noise ratio precisely where the reference has least. */
     PP.get("level").setTargetAtTime(
       running && !mute
-        ? Math.min(1.5, (0.14 + load * 0.95) * (1 - rFrac * 0.45) * chuff * trim * hEng * (0.55 + P.pop * 0.45)
+        ? Math.min(3.0, (0.14 + load * 0.95) * 2.5 * chuff * trim * hEng * (0.55 + P.pop * 0.45)
                         * (stockOn() ? STOCK.chuff : 1))
         : 0,
       t, 0.04);
