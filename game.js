@@ -3048,6 +3048,7 @@ const S = {
   /* --- the jolt --- what the change does to the car, and to the camera. */
   joltT: 0, joltDur: 0, joltAmp: 0, joltDir: 1, joltRot: 0,
   tunnel: false, flyby: false, flyX: -620, cabin: false, stock: false, mods: {},
+  tunnelKind: "concrete",             // WHICH tunnel — see TUNNELS
   space: "open",                     // where you're driving — see SPACES
   listen: "driver",                    // which microphone — see LISTEN
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
@@ -3885,6 +3886,7 @@ function initAudio() {
   AU.turboOut.connect(AU.postCab);
 
   AU.conv = ctx.createConvolver(); AU.conv.buffer = makeTunnelIR(ctx);
+  AU._tunBuilt = S.tunnelKind;
   AU.wet = ctx.createGain(); AU.wet.gain.value = 0;
   // the tube's own voice, on the wet path only: concrete has an axial mode
   // down around 100Hz that everything booms into, and it has swallowed the
@@ -4749,34 +4751,99 @@ function applyCabin() {
    into a tunnel is a fast whoomp — 100ms and the walls are simply there.
    Coming out, the tail spills out behind you over half a second. Symmetric
    fades are the single most common tell. See applyTunnel(). */
-function makeTunnelIR(ctx) {
-  const sr = ctx.sampleRate, len = Math.floor(sr * 3.0);
+/* ================================================================
+   TUNNELS — a tunnel is not one sound
+   ================================================================
+   This used to build one impulse response from one set of hard-coded
+   numbers: a 7-metre round trip, 145 bounces at 0.93, and three far-end
+   returns. That is A tunnel. It is a good one, and it is also the only one,
+   which is wrong in the way that having one engine would be wrong — because
+   the acoustics of a tube are almost entirely GEOMETRY, and there is more
+   difference between a narrow ribbed canyon bore and a twelve-metre motorway
+   box than there is between two different cars inside either of them.
+
+   Four numbers decide what a tunnel sounds like, and all four are things you
+   can see by looking at it:
+
+     HOW WIDE     The distance to the wall sets the flutter period, and the
+                  flutter comb is the VOICE of a tube. The comb repeats once
+                  per round trip, so it rings at 343/bore and its multiples —
+                  measured off the generated response with everything else
+                  switched off, a 4.2m round trip puts peaks at 82, 166 and
+                  248Hz. A 7m tube rings at 49, an 11m bore at 31, and a 24m
+                  motorway box at 14Hz, which is below hearing: a wide tunnel
+                  has no pitch at all and you get discrete slaps instead.
+                  That single number is most of why a small tunnel sings and
+                  a big one just booms.
+
+                  (The alternating polarity puts a null at DC, which is what
+                  stops the comb reading as a click train — it does NOT halve
+                  the ring frequency. That was the first thing written here
+                  and measuring the response is what corrected it.)
+     HOW LONG     Sets the far-end returns. A 60m canyon bore gives you one
+                  quiet answer from the mouth; an alpine bore gives you two
+                  enormous ones, a second and a half apart, and they are the
+                  most impressive thing about being in it.
+     WHAT LINING  Smooth concrete returns a hard, intact copy. Corrugated
+                  steel — the ribbed arch you see on canyon roads — scatters
+                  every bounce off a periodic surface, which adds a second,
+                  much faster comb on top of the first and is exactly why
+                  those tunnels ZING instead of booming.
+     HOW LEAKY    An underpass with both ends thirty metres away and open sky
+                  above the approach loses most of its energy immediately. A
+                  bored tunnel loses almost none. This is the per-bounce decay
+                  and it sets the tail length.
+
+   The reference for CANYON BORE is measured rather than guessed — see the
+   notes on that preset. */
+
+/* Modal ring: a room mode IS a decaying sinusoid, so it goes straight into
+   the impulse response rather than into a filter bank. Cheaper, and it means
+   a tunnel's modes decay on their own schedule instead of being a static EQ
+   sitting on top of everything. */
+function addMode(d, sr, hz, rt60, amp, phase) {
+  const tau = rt60 / 6.908;                   // -60dB = e^(-t/tau) at 6.908 tau
+  const w = 2 * Math.PI * hz / sr;
+  const n = Math.min(d.length, Math.floor(rt60 * sr));
+  for (let i = 0; i < n; i++)
+    d[i] += Math.sin(w * i + phase) * Math.exp(-i / sr / tau) * amp;
+}
+
+function makeTunnelIR(ctx, T) {
+  T = T || curTunnel();
+  const sr = ctx.sampleRate;
+  const len = Math.floor(sr * (T.tail || 3.0));
   const buf = ctx.createBuffer(2, len, sr);
-  const FLUT = 0.0204;                  // 7m of concrete, there and back
+  const FLUT = (T.bore || 7) / 343;           // round trip, in seconds
   for (let ch = 0; ch < 2; ch++) {
     const d = buf.getChannelData(ch);
     // the two ears are not the same distance from either wall, so their
     // flutters sit a few percent apart and beat against each other
     const wob = ch ? 1.041 : 1;
 
-    // --- the diffuse bed: dense noise, low-passed as it decays so the tail
-    //     darkens on the way out the way concrete makes it. This is the
-    //     WASH, and it has to sit well under the flutter — a tunnel that is
-    //     mostly wash is a car park.
+    /* --- the diffuse bed: dense noise, low-passed as it decays so the tail
+           darkens on the way out the way concrete makes it. This is the
+           WASH, and in a tube it has to sit well under the flutter — a
+           tunnel that is mostly wash is a car park. Which is also why the
+           car park preset is mostly wash. */
+    const wl = T.wash === undefined ? 0.22 : T.wash;
+    const wd = T.washDecay || 2.0;
     let lp = 0;
     for (let i = 0; i < len; i++) {
-      lp += ((Math.random() * 2 - 1) - lp) * (0.34 - 0.26 * (i / len));
-      d[i] = lp * Math.exp(-(i / sr) * 2.0) * 0.22;
+      lp += ((Math.random() * 2 - 1) - lp) * (T.washTone || 0.34) * (1 - 0.76 * (i / len));
+      d[i] = lp * Math.exp(-(i / sr) * wd) * wl;
     }
 
-    // --- the flutter comb: the sound of the tunnel.
-    //     Every bounce has to be the SAME SHAPE as the last one. Fill each
-    //     tap with its own fresh noise and there is no repetition, just extra
-    //     noise at regular intervals — which is the difference between a
-    //     tunnel and a hiss. So the strike is deterministic and identical
-    //     every time round, and only the smear behind it is random.
-    let g = 0.9;
-    for (let n = 1; n < 145; n++) {
+    /* --- the flutter comb: the sound of the tunnel.
+           Every bounce has to be the SAME SHAPE as the last one. Fill each
+           tap with its own fresh noise and there is no repetition, just extra
+           noise at regular intervals — which is the difference between a
+           tunnel and a hiss. So the strike is deterministic and identical
+           every time round, and only the smear behind it is random. */
+    let g = T.g0 === undefined ? 0.9 : T.g0;
+    const dec = T.decay || 0.93;
+    const taps = T.taps || 145;
+    for (let n = 1; n < taps; n++) {
       const at = Math.floor(FLUT * wob * n * sr);
       if (at >= len) break;
       const sgn = (n & 1) ? -1 : 1;      // alternating polarity — the hollow ring
@@ -4784,27 +4851,193 @@ function makeTunnelIR(ctx) {
         d[at + j] += sgn * g * (1 - j / 5) * (j ? -0.4 : 1);
       // …plus what the wall adds each time round. It grows with every bounce,
       // and it's what eventually turns the ring back into a wash.
-      const w = Math.min(600, 20 + n * 9);
+      const w = Math.min(T.smearMax || 600, (T.smear0 || 20) + n * (T.smearK || 9));
       let s = 0;
       for (let j = 0; j < w && at + j < len; j++) {
-        s += ((Math.random() * 2 - 1) - s) * 0.35;
-        d[at + j] += sgn * g * 0.45 * s * (1 - j / w);
+        s += ((Math.random() * 2 - 1) - s) * (T.smearTone || 0.35);
+        d[at + j] += sgn * g * (T.smearAmt || 0.45) * s * (1 - j / w);
       }
-      g *= 0.93;
+      g *= dec;
+    }
+
+    /* --- THE RIBS.
+           A corrugated lining is a periodic scatterer, and a periodic
+           scatterer is a comb. Every time the wavefront crosses a rib it
+           throws a small copy back, so the surface returns a fast, bright,
+           tightly-spaced train on top of the slow wall-to-wall flutter. It is
+           quiet — these are shallow corrugations, not walls — but it sits an
+           octave or three above the main ring, which is precisely where the
+           ear notices it, and it is the whole reason a ribbed steel arch
+           sounds nothing like a poured concrete tube. */
+    if (T.rib) {
+      const rp = T.rib.period, rg = T.rib.gain, rt = T.rib.taps || 40;
+      let rgn = rg;
+      for (let n = 1; n < rt; n++) {
+        const at = Math.floor(rp * wob * n * sr);
+        if (at >= len) break;
+        for (let j = 0; j < 3 && at + j < len; j++)
+          d[at + j] += ((n & 1) ? -1 : 1) * rgn * (1 - j / 3) * (Math.random() * 0.5 + 0.75);
+        rgn *= T.rib.decay || 0.88;
+      }
     }
 
     // --- the far end, and the end behind you
-    for (const [tm, gain, w] of [[0.186, 0.42, 1400], [0.372, 0.24, 2200], [0.61, 0.11, 3000]]) {
+    for (const [tm, gain, w] of (T.ends || [])) {
       const at = Math.floor(tm * sr * wob);
+      if (at >= len) continue;
       let s = 0;
       for (let j = 0; j < w && at + j < len; j++) {
         s += ((Math.random() * 2 - 1) - s) * 0.22;      // arrives dull, it's been a long way
         d[at + j] += s * gain * (1 - j / w);
       }
     }
+
+    // --- and the modes the geometry actually has. See addMode().
+    for (const [hz, rt60, amp] of (T.modes || []))
+      addMode(d, sr, hz * (ch ? 1.006 : 1), rt60, amp, ch ? 1.1 : 0);
   }
   return buf;
 }
+
+/* ---------------------------------------------------------------
+   THE TUNNELS
+   ---------------------------------------------------------------
+   `bore` is the ROUND TRIP in metres — wall to wall and back — because that
+   is what sets the flutter period, and quoting it as the round trip keeps the
+   arithmetic honest: ring fundamental = 343 / (2 · bore). */
+const TUNNELS = {
+  /* The reference, and the only one here with measurements behind it rather
+     than judgement. Taken off an onboard of a V12 through a twin-bore ribbed
+     arch cut into a canyon hillside — a narrow single-lane tube with a
+     corrugated steel lining and a string of lamps along the crown.
+
+     What the recording actually says, and what each number here comes from:
+
+       a strong low ladder at 41 / 82 / 123 Hz, evenly spaced
+            → an evenly spaced ladder from 41Hz is the transverse mode of the
+              bore and its harmonics. It is placed here EXPLICITLY, in
+              `modes`, because that is the one mechanism in this generator
+              that lands exactly where it is told: the three modes measure
+              back at 40.8 / 81.6 / 122.8Hz. The 4.2m bore then puts the
+              flutter comb's own ladder at 82 / 166 / 248, which reinforces
+              the second rung rather than fighting it. Two metres from the
+              driver's ear to the wall, which is what a single-lane bore
+              looks like.
+       a large isolated peak at 515Hz, 15dB proud of everything near it
+            → far too high to be a room mode of anything this size, and far
+              too stable to be the engine, which is sweeping. It is read here
+              as the rib comb: a 0.97ms round trip across the corrugations —
+              ribs about 17cm apart — which puts its fundamental at 515Hz and
+              its next teeth at 1546 and 2575. Verified at 515 on the
+              generated response.
+       decay: about 850ms at 45-90Hz, about 430-490ms from 355-710Hz
+            → the bass rings roughly twice as long as the mids, so the tail
+              is set from the low figure: the finished IR measures 845ms.
+              The mid figure is softer evidence than the bass one — the clip
+              never actually stops making noise, so every "decay" in it is a
+              throttle lift with the engine still running underneath, and the
+              bass reading is the trustworthy one because the bass drop is
+              dominated by the exhaust pulses stopping.
+       almost nothing above 1.25kHz
+            → that one is NOT reproduced, and deliberately. See the note in
+              applyTunnel(): that is a GoPro's microphone and its automatic
+              gain, not a property of the tunnel, and building a camera's
+              limitations into the room would make every car in the garage
+              sound like it was recorded on a phone. */
+  canyon: {
+    name: "CANYON BORE",
+    desc: "A single-lane ribbed steel arch cut into a hillside, two metres from your ear to the wall. A 41Hz ladder off the bore, 82 and 166 off the walls, and a 515Hz zing off the corrugations on top of all of it. The small, mean one.",
+    bore: 4.2, tail: 2.2, decay: 0.905, taps: 190, g0: 0.95,
+    smear0: 14, smearK: 6, smearMax: 380, smearTone: 0.42, smearAmt: 0.4,
+    rib: { period: 0.00097, gain: 0.2, taps: 130, decay: 0.968 },  // 515Hz and its odd multiples
+    wash: 0.15, washDecay: 9.0, washTone: 0.42,
+    ends: [[0.35, 0.2, 1600], [0.7, 0.08, 2400]],
+    modes: [[40.8, 0.85, 0.075], [81.7, 0.62, 0.055], [122.5, 0.5, 0.032]],
+    wet: 1.15, mouth: 1.5, slap: 0.102, fb: 0.5, lp: 11500, boom: 3.5,
+  },
+
+  /* The original, preserved exactly as it was tuned — same 7m round trip,
+     same 0.93, same three far-end returns, same everything. A poured concrete
+     road tunnel of ordinary size: wide enough that the ring drops to 24Hz and
+     reads as body rather than as pitch, smooth enough that the reflections
+     come back hard. */
+  concrete: {
+    name: "CONCRETE TUBE",
+    desc: "The one this simulator has always had. Poured concrete, seven metres there and back, so it rings at 49Hz — low enough to read as size rather than pitch. Smooth walls give you the sound again almost intact. Booms rather than sings.",
+    bore: 7.0, tail: 3.0, decay: 0.93, taps: 145, g0: 0.9,
+    smear0: 20, smearK: 9, smearMax: 600, smearTone: 0.35, smearAmt: 0.45,
+    wash: 0.22, washDecay: 2.0, washTone: 0.34,
+    ends: [[0.186, 0.42, 1400], [0.372, 0.24, 2200], [0.61, 0.11, 3000]],
+    wet: 1.05, mouth: 1.45, slap: 0.186, fb: 0.58, lp: 10500, boom: 4,
+  },
+
+  /* Wide enough that the flutter goes below hearing. 24m round trip rings at
+     7Hz, which is not a pitch — it is a flap — so what you get instead is a
+     handful of discrete slaps and an enormous low wash off a great deal of
+     concrete. This is the tunnel that sounds BIG rather than loud, and the
+     difference is that you can hear the size of it. */
+  motorway: {
+    name: "MOTORWAY BOX",
+    desc: "Three lanes, a flat slab lid and twelve metres of air to the far wall. Twenty-four metres of round trip rings at 14Hz, which is below hearing — so it doesn't sing at all. It just gets very large and very low, and the slaps arrive one at a time.",
+    bore: 24.0, tail: 3.6, decay: 0.86, taps: 60, g0: 0.78,
+    smear0: 90, smearK: 34, smearMax: 1600, smearTone: 0.2, smearAmt: 0.8,
+    wash: 0.42, washDecay: 2.4, washTone: 0.22,
+    ends: [[0.42, 0.3, 3200], [0.95, 0.16, 4800], [1.6, 0.07, 6000]],
+    modes: [[14.3, 1.5, 0.05], [28.6, 1.1, 0.04], [43, 0.9, 0.025]],
+    wet: 1.0, mouth: 1.3, slap: 0.29, fb: 0.62, lp: 8200, boom: 6,
+  },
+
+  /* The long one. A bored tunnel through a mountain is acoustically almost
+     lossless — smooth lining, no openings, nowhere for the energy to go — so
+     the tail runs for seconds and the far end answers from most of a
+     kilometre away. The returns are the whole point of this preset: they come
+     back dark, enormous and late, and they are the thing people mean when
+     they say a tunnel is "good". */
+  alpine: {
+    name: "ALPINE BORE",
+    desc: "Kilometres of smooth bored rock with no openings and nothing to absorb anything. The tail runs for seconds and the far end answers a second and a half later, dark and enormous. Lift off and listen to it come back.",
+    bore: 11.0, tail: 5.0, decay: 0.952, taps: 220, g0: 0.72,
+    smear0: 60, smearK: 22, smearMax: 1800, smearTone: 0.17, smearAmt: 0.7,
+    wash: 0.3, washDecay: 1.55, washTone: 0.2,
+    ends: [[0.75, 0.26, 5200], [1.55, 0.17, 7000], [2.6, 0.09, 9000]],
+    modes: [[15.6, 1.8, 0.045], [31.2, 1.4, 0.03]],
+    wet: 1.1, mouth: 1.25, slap: 0.42, fb: 0.7, lp: 7200, boom: 5,
+  },
+
+  /* Barely a tunnel: a road bridge you are under for a second and a half.
+     Both ends are close and the approach is open sky, so almost everything
+     escapes immediately — two hard bright slaps, no tail worth the name, and
+     it is over. Which is its own effect, and a completely different one: an
+     underpass PUNCTUATES rather than swells. */
+  underpass: {
+    name: "UNDERPASS",
+    desc: "A bridge deck you are under for about a second. Both ends wide open, so nothing hangs around — two hard bright slaps and you're out the other side. Best with the throttle already buried.",
+    bore: 5.4, tail: 0.9, decay: 0.66, taps: 40, g0: 0.98,
+    smear0: 10, smearK: 4, smearMax: 200, smearTone: 0.5, smearAmt: 0.3,
+    wash: 0.09, washDecay: 26.0, washTone: 0.5,
+    ends: [[0.13, 0.3, 900]],
+    wet: 0.9, mouth: 1.7, slap: 0.072, fb: 0.3, lp: 13000, boom: 2,
+  },
+
+  /* Not a tunnel at all, and included because it is the other thing people
+     drive into to make a noise. A parking structure has a low slab ceiling,
+     a forest of columns and no straight run of anything — so there is no
+     flutter to speak of (the columns break it up before it can repeat) and
+     almost all of what comes back is scatter. Dense, close, dead and dark:
+     the anti-tunnel. */
+  garage: {
+    name: "CAR PARK",
+    desc: "A low slab ceiling and a forest of columns, which break the reflections up before they can repeat. No ring at all — just dense, close, dark scatter off concrete a few metres away in every direction. Ugly, and completely real.",
+    bore: 6.2, tail: 1.6, decay: 0.8, taps: 34, g0: 0.42,
+    smear0: 240, smearK: 60, smearMax: 2400, smearTone: 0.16, smearAmt: 1.5,
+    wash: 0.5, washDecay: 6.3, washTone: 0.2,
+    ends: [[0.09, 0.22, 1400], [0.17, 0.15, 2000]],
+    modes: [[55, 0.42, 0.05], [92, 0.3, 0.03]],
+    wet: 0.95, mouth: 1.2, slap: 0.055, fb: 0.36, lp: 6000, boom: 5,
+  },
+};
+
+function curTunnel() { return TUNNELS[S.tunnelKind] || TUNNELS.concrete; }
 
 /* ================================================================
    THE SPACE AROUND YOU
@@ -5181,6 +5414,13 @@ function applyFormants() {
 function applyTunnel() {
   if (!AU.ready) return;
   const t = AU.ctx.currentTime, on = S.tunnel;
+  const T = curTunnel();
+  // the buffer is only rebuilt when the tunnel actually changes — it is a
+  // few hundred thousand samples of generated noise and it is not free
+  if (AU._tunBuilt !== S.tunnelKind) {
+    AU.conv.buffer = makeTunnelIR(AU.ctx, T);
+    AU._tunBuilt = S.tunnelKind;
+  }
   // ASYMMETRIC. Going in, the walls arrive all at once — a hundred
   // milliseconds and you are inside. Coming out, the tail keeps ringing in
   // the tube behind you for half a second after the light hits the
@@ -5193,15 +5433,15 @@ function applyTunnel() {
     // the whoomp: the mouth of a tunnel is louder than the middle of it,
     // because for that first moment you get the wall AND the open road
     AU.wet.gain.cancelScheduledValues(t);
-    AU.wet.gain.setTargetAtTime(1.45, t, IN);
-    AU.wet.gain.setTargetAtTime(1.05, t + 0.16, 0.22);
+    AU.wet.gain.setTargetAtTime(T.mouth === undefined ? 1.45 : T.mouth, t, IN);
+    AU.wet.gain.setTargetAtTime(T.wet === undefined ? 1.05 : T.wet, t + 0.16, 0.22);
   } else {
     AU.wet.gain.cancelScheduledValues(t);
     AU.wet.gain.setTargetAtTime(0.14, t, OUT);
   }
   // the slap runs the length of the tube rather than round a room
-  AU.echo.delayTime.setTargetAtTime(on ? 0.186 : 0.24, t, 0.2);
-  AU.echoFb.gain.setTargetAtTime(on ? 0.58 : 0.46, t, 0.2);
+  AU.echo.delayTime.setTargetAtTime(on ? (T.slap || 0.186) : 0.24, t, 0.2);
+  AU.echoFb.gain.setTargetAtTime(on ? (T.fb === undefined ? 0.58 : T.fb) : 0.46, t, 0.2);
   AU.echoWet.gain.setTargetAtTime(on ? 0.5 : 0, t, tc);
   // The pops used to get a hot private send into both the reverb AND the
   // slap, on top of the level they already reach the room at. In a tunnel
@@ -5249,9 +5489,38 @@ function applyTunnel() {
      been carrying the entire effect on its own. With everything above 4.6k
      gone it was the only evidence left that anything had changed, so it was
      turned up to compensate. Give the top back and +6 is just mud. */
-  AU.tunLo.gain.setTargetAtTime(on ? 4 : 0, t, tc);
-  AU.tunPres.gain.setTargetAtTime(on ? 5.5 : 0, t, tc);
-  AU.tunLp.frequency.setTargetAtTime(on ? 10500 : 9000, t, tc);
+  AU.tunLo.gain.setTargetAtTime(on ? (T.boom === undefined ? 4 : T.boom) : 0, t, tc);
+  AU.tunPres.gain.setTargetAtTime(on ? (T.pres === undefined ? 5.5 : T.pres) : 0, t, tc);
+  AU.tunLp.frequency.setTargetAtTime(on ? (T.lp || 10500) : 9000, t, tc);
+}
+
+/* ---------------- picking a tunnel ---------------- */
+function setTunnel(id) {
+  if (!TUNNELS[id] || id === S.tunnelKind) return;
+  S.tunnelKind = id;
+  initAudio();
+  if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+  applyTunnel();
+  refreshTunnelUi();
+  save();
+}
+
+/* What each one is doing to the sound, rather than what it looks like — the
+   cards already say what it looks like. Mirrors SPACE_NOTES. */
+const TUNNEL_NOTES = {
+  canyon: "A 41 / 82 / 123Hz ladder and a 515Hz zing off the corrugations, both read off a real onboard through one of these rather than chosen. The 4.2m bore adds its own 82 / 166 / 248 on top. Tail measures 845ms, which is the bass figure from the recording — and the bass is the half of it worth trusting.",
+  concrete: "Seven metres there and back puts the ring at 49Hz — low enough that you stop hearing it as a pitch and start hearing it as the size of the tube. Smooth walls, so the reflections come back hard and the engine arrives twice. Tail 2.9s, exactly as it always was.",
+  motorway: "Twenty-four metres of round trip rings at 14Hz, which is not a pitch, it is a flap. So there is no ring at all — just discrete slaps you can count and a very large amount of low end off a very large amount of concrete. Tail 3.2s.",
+  alpine: "The tail measures 4.5 seconds and the far end answers at 0.75, 1.55 and 2.6. Lift off at speed and everything you just did comes back at you from a kilometre away, dark and enormous. This is the one to use the flyby with.",
+  underpass: "Both ends are open sky, so nothing is retained — the tail measures 259ms, against 2.9 seconds for the concrete tube. Two hard bright slaps and it is finished. It punctuates instead of swelling, which is why it wants the throttle already buried before you go under.",
+  garage: "The columns break the reflections up before they can repeat, so there is almost no flutter to ring — nearly all of what comes back is scatter off concrete a few metres away, gone in a second. Dense, dark and dead. Deliberately the least impressive one here.",
+};
+
+function refreshTunnelUi() {
+  document.querySelectorAll("#wsTunnel .ws-card").forEach(b =>
+    b.classList.toggle("on", b.dataset.tunnel === S.tunnelKind));
+  const note = $("wsTunnelNote");
+  if (note) note.textContent = TUNNEL_NOTES[S.tunnelKind] || TUNNEL_NOTES.concrete;
 }
 
 /* swap the oscillator stack to the selected car's sound profile.
@@ -15615,6 +15884,8 @@ function buildWorkshop() {
     b.addEventListener("click", () => setListen(b.dataset.listen)));
   document.querySelectorAll("#wsSpace .ws-card").forEach(b =>
     b.addEventListener("click", () => setSpace(b.dataset.space)));
+  document.querySelectorAll("#wsTunnel .ws-card").forEach(b =>
+    b.addEventListener("click", () => setTunnel(b.dataset.tunnel)));
   $("wsShare").addEventListener("click", openSpecCard);
   $("scClose").addEventListener("click", closeSpecCard);
   $("scCopy").addEventListener("click", copySpecLink);
@@ -16651,7 +16922,7 @@ function save() {
       theme: document.body.dataset.theme, units: S.units, mode: S.mode, muted: S.muted,
       voice: S.voice,
       car: CC.id, tunnel: S.tunnel, flyby: S.flyby, cabin: S.cabin, stock: S.stock, mods: S.mods,
-      listen: S.listen, space: S.space,
+      listen: S.listen, space: S.space, tunnelKind: S.tunnelKind,
       traffic: S.traffic, rain: S.rain, wind: S.wind, lt: S.ltTgt, ltBest: LT.best,
       dmgOn: S.dmgOn, softLim: S.softLim, evV8: S.evV8, batt: S.batt, fuel: S.fuel,
       night: S.night, station: S.station,
@@ -16872,6 +17143,7 @@ function initInput() {
     applyTunnel();
     applySpace();                    // …and the world outside it steps back
     refreshSpaceUi();
+    refreshTunnelUi();
     save();
   });
 
@@ -17391,6 +17663,8 @@ function slideUi() {
   refreshListenUi();
   if (SPACES[saved.space]) S.space = saved.space;
   refreshSpaceUi();
+  if (TUNNELS[saved.tunnelKind]) S.tunnelKind = saved.tunnelKind;
+  refreshTunnelUi();
   S.traffic = !!saved.traffic;
   $("trafBtn").classList.toggle("on", S.traffic);
   S.rain = !!saved.rain;
