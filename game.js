@@ -3557,23 +3557,31 @@ const AU = { ctx: null, ready: false, voiceNorm: 1 };
 
    MEASURED, on a synthesized V8 at 6500rpm with a pop in it, before → after:
 
-       RMS      -17.1  →  -12.1 dBFS      +5.1 dB
-       peak      -4.9  →   -1.2 dBFS      still under the ceiling
-       crest     12.3  →   10.8 dB        1.4 dB of transient lost, no more
+       RMS      -17.1  →  -12.6 dBFS      +4.5 dB
+       peak      -4.9  →   -2.3 dBFS      still under the ceiling
+       crest     12.3  →   10.3 dB        2 dB of transient, and no more
 
-   and the tilt, quoted RELATIVE to that overall +5.1 so it reads as shape
+   and the tilt, quoted RELATIVE to that overall +4.5 so it reads as shape
    rather than level:
 
        40-110 Hz    +3.6      the part a laptop cannot make, made anyway
        110-300      +2.5      body
        300 Hz-1 kHz -4.3      the note itself, deliberately left alone
-       2-5 kHz      +0.2      presence, already the loudest thing to the ear
-       7-14 kHz      0.0      air
+       2-5 kHz      -0.4      presence
+       7-14 kHz     -0.7      air
 
-   Five decibels of apparent level for one and a half of crest factor is the
+   Four and a half decibels of apparent level for two of crest factor is the
    whole trade, and the mid staying put is what stops it from being a loudness
    war: the engine's actual voice is not being pushed at you, everything
-   AROUND it is being brought up to meet it. */
+   AROUND it is being brought up to meet it.
+
+   The presence and air figures used to be +3.4 and +2.4 rather than +2.6 and
+   +1.2, and they came down against a measurement. A reference recording of a
+   V12 in a concrete tube averages 12.7dB down at 4k and 18.8dB down at 8k
+   relative to the 500Hz band it peaks in — a big engine in a hard space is a
+   MID-forward sound, not a bright one. Lifting the top of this mix was
+   pushing against that, so it lifts less now. See applyTunnel(), which was
+   voiced against the same measurement and moved further. */
 
 /* the psychoacoustic bass shaper: asymmetric, so it throws BOTH the second
    harmonic (the asymmetry) and the third and fifth (the saturation). An
@@ -3625,9 +3633,9 @@ function buildLoudStage(ctx) {
      broadband gain, and unlike gain it costs no headroom. */
   AU.bigPres = ctx.createBiquadFilter();
   AU.bigPres.type = "peaking"; AU.bigPres.frequency.value = 2900;
-  AU.bigPres.Q.value = 0.72; AU.bigPres.gain.value = 3.4;
+  AU.bigPres.Q.value = 0.72; AU.bigPres.gain.value = 2.6;
   AU.bigAir = ctx.createBiquadFilter();
-  AU.bigAir.type = "highshelf"; AU.bigAir.frequency.value = 8200; AU.bigAir.gain.value = 2.4;
+  AU.bigAir.type = "highshelf"; AU.bigAir.frequency.value = 8200; AU.bigAir.gain.value = 1.2;
 
   AU.bigTone = ctx.createGain(); AU.bigTone.gain.value = 1;
   AU.comp.connect(AU.bigIn);
@@ -3699,7 +3707,7 @@ function buildLoudStage(ctx) {
      underneath them rides at a level it never used to reach. The clipper
      after it rounds whatever the limiter's 1ms attack was too slow for, and
      the trim sets the whole thing back to a sensible ceiling. */
-  AU.bigDrive = ctx.createGain(); AU.bigDrive.gain.value = 1.42;
+  AU.bigDrive = ctx.createGain(); AU.bigDrive.gain.value = 1.30;
   AU.bigSum.connect(AU.bigDrive); AU.bigDrive.connect(AU.limiter);
   AU.bigCeil = ctx.createWaveShaper();
   AU.bigCeil.curve = makeCeilCurve(); AU.bigCeil.oversample = "2x";
@@ -4953,7 +4961,7 @@ const TUNNELS = {
     wash: 0.15, washDecay: 9.0, washTone: 0.42,
     ends: [[0.35, 0.2, 1600], [0.7, 0.08, 2400]],
     modes: [[40.8, 0.85, 0.075], [81.7, 0.62, 0.055], [122.5, 0.5, 0.032]],
-    wet: 1.15, mouth: 1.5, slap: 0.102, fb: 0.5, lp: 11500, boom: 3.5,
+    wet: 1.15, mouth: 1.5, slap: 0.102, fb: 0.5, lp: 8600, boom: 3.5,
   },
 
   /* The original, preserved exactly as it was tuned — same 7m round trip,
@@ -4968,7 +4976,7 @@ const TUNNELS = {
     smear0: 20, smearK: 9, smearMax: 600, smearTone: 0.35, smearAmt: 0.45,
     wash: 0.22, washDecay: 2.0, washTone: 0.34,
     ends: [[0.186, 0.42, 1400], [0.372, 0.24, 2200], [0.61, 0.11, 3000]],
-    wet: 1.05, mouth: 1.45, slap: 0.186, fb: 0.58, lp: 10500, boom: 4,
+    wet: 1.05, mouth: 1.45, slap: 0.186, fb: 0.58, lp: 7800, boom: 4,
   },
 
   /* Wide enough that the flutter goes below hearing. 24m round trip rings at
@@ -4984,7 +4992,7 @@ const TUNNELS = {
     wash: 0.42, washDecay: 2.4, washTone: 0.22,
     ends: [[0.42, 0.3, 3200], [0.95, 0.16, 4800], [1.6, 0.07, 6000]],
     modes: [[14.3, 1.5, 0.05], [28.6, 1.1, 0.04], [43, 0.9, 0.025]],
-    wet: 1.0, mouth: 1.3, slap: 0.29, fb: 0.62, lp: 8200, boom: 6,
+    wet: 1.0, mouth: 1.3, slap: 0.29, fb: 0.62, lp: 6400, boom: 6,
   },
 
   /* The long one. A bored tunnel through a mountain is acoustically almost
@@ -5490,8 +5498,36 @@ function applyTunnel() {
      gone it was the only evidence left that anything had changed, so it was
      turned up to compensate. Give the top back and +6 is just mud. */
   AU.tunLo.gain.setTargetAtTime(on ? (T.boom === undefined ? 4 : T.boom) : 0, t, tc);
-  AU.tunPres.gain.setTargetAtTime(on ? (T.pres === undefined ? 5.5 : T.pres) : 0, t, tc);
-  AU.tunLp.frequency.setTargetAtTime(on ? (T.lp || 10500) : 9000, t, tc);
+  /* --- HOW BRIGHT A TUNNEL IS, MEASURED ---
+     The reference is 8.6 seconds of a V12 in a concrete tube, and its
+     long-term average spectrum is not what this was voiced toward. Octave
+     bands, relative to the 500Hz band it peaks in:
+
+         500Hz    0.0        the note, and the loudest thing in the recording
+         1k      -2.1
+         2k      -7.7
+         4k     -12.7
+         8k     -18.8
+
+     That is a dark, mid-forward sound, and it makes sense the moment you
+     think about what a tunnel physically is: concrete absorbs almost nothing
+     below 1kHz and a great deal above it, so every reflection that comes back
+     to you has been low-passed once more than the one before. Twenty
+     reflections in and there is nothing left up top at all. What a tunnel
+     does is not "add brightness", it is add SIZE and take the top away.
+
+     This was adding +5.5dB at 3.1kHz, which is the opposite instruction, and
+     it is why the tunnel read as a bright effect over the car rather than as
+     concrete around it. Now +1.8 — the presence peak still exists, because
+     the tube does have a hard early slap that needs to cut, but it no longer
+     fights the measurement.
+
+     Deliberately not matched all the way to the numbers above: that recording
+     came off an action camera with its own wind filtering and through a lossy
+     codec, both of which eat top end that the tunnel did not. The direction
+     is measured; the amount is halfway. */
+  AU.tunPres.gain.setTargetAtTime(on ? (T.pres === undefined ? 1.8 : T.pres) : 0, t, tc);
+  AU.tunLp.frequency.setTargetAtTime(on ? (T.lp || 7800) : 9000, t, tc);
 }
 
 /* ---------------- picking a tunnel ---------------- */
@@ -6215,7 +6251,32 @@ function audioTick() {
   // in it, the top end is the part that survives the trip to your ears intact
   AU.engAir.gain.setTargetAtTime(
     -4 + (VC.sound.air || 0) + (stockOn() ? STOCK.air : 0) + cabinAirAdd(), t, 0.1);
-  AU.engGain.gain.setTargetAtTime(vol, t, 0.05);
+  /* --- HOW FAST THE VOICE IS ALLOWED TO MOVE ---
+     This was one number, 50ms, for every situation the engine is ever in, and
+     it is the reason a shift sounded like a dip rather than like a cut.
+
+     setTargetAtTime is an exponential approach: a 50ms time constant is 63%
+     of the way there in 50ms and needs about 150 to arrive. The `load` term
+     is 0.30 of a voice that totals about 0.53 at full throttle, so an
+     ignition cut is a ~7dB drop — which is roughly what a real one measures
+     — but spread over a seventh of a second it is not a cut, it is a fade.
+     Nothing in the sound has an EDGE on it, and the edge is the whole event.
+
+     A real cut has no fade in it at all. The ECU stops the injectors and the
+     next firing simply does not happen: on a V12 at 8,000rpm the gap between
+     one cylinder and the next is 1.25ms, so the note stops inside a couple of
+     milliseconds. Eight is still far slower than the truth and it is enough —
+     past about 12ms the ear stops hearing a stop and starts hearing a fade.
+
+     Coming back is NOT the same number, and that asymmetry is the point. The
+     drive returns over the hand-over (see SHIFT FEEL) with the throttle
+     ramping 42% to 100% behind it, and 18ms is quick enough to track that
+     ramp honestly while still being a swell rather than a step. Everywhere
+     else the old 50ms stands: it is right for a pedal, and a pedal is what it
+     was chosen for. */
+  const cutting = S.shiftCut > 0 || S.cutTimer > 0;
+  AU.engGain.gain.setTargetAtTime(vol, t,
+    cutting ? 0.008 : (S.hoT > 0 ? 0.018 : 0.05));
 
   // combustion throb — strong at idle, smooths out with revs
   const drive = ((VC.sound.drive || 0.5) + (ex.driveAdd || 0)) * (stockOn() ? STOCK.drive : 1);
