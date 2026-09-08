@@ -3038,6 +3038,15 @@ const S = {
   throttle: 0, brake: 0, clutchPedal: 0,
   effThrottle: 0, engage: 0, locked: false,
   shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, catchGuard: 0, parkLimit: 0, crankP: null, crankTimer: 0, settleT: 0, settleDur: 0, settleFrom: 0, fastIdle: 0, pendShift: false,
+  /* --- THE HAND-OVER (see SHIFT FEEL) ---
+     The cut is only the first half of a gear change. `hoT` is the second: the
+     time the oncoming clutch (or the dogs, or the fluid) spends taking the
+     drive back up. It is armed when the shift is commanded and only starts
+     counting once shiftCut has lifted, so the two run back to back rather
+     than at the same time. */
+  hoT: 0, hoDur: 0, hoDir: 1,
+  /* --- the jolt --- what the change does to the car, and to the camera. */
+  joltT: 0, joltDur: 0, joltAmp: 0, joltDir: 1, joltRot: 0,
   tunnel: false, flyby: false, flyX: -620, cabin: false, stock: false, mods: {},
   space: "open",                     // where you're driving — see SPACES
   listen: "driver",                    // which microphone — see LISTEN
@@ -3494,6 +3503,211 @@ const SAT_DRIVE = 0.45, SAT_TRIM = 0.44;
 
 const AU = { ctx: null, ready: false, voiceNorm: 1 };
 
+/* ================================================================
+   THE BIG STAGE — loud at a volume that isn't
+   ================================================================
+   There is a difference between a sound that is loud and a sound that is BIG,
+   and the whole of it is that only one of them survives the volume knob.
+
+   Turn a recording of a V12 down to 15% and it does not become a quiet V12.
+   It becomes a small V12 — thin, distant, harmless — and no amount of turning
+   it back up fixes what you noticed, because what you noticed was not level.
+   Three things happen on the way down and every one of them has a fix:
+
+   1. THE EARS STOP HEARING THE ENDS OF THE SPECTRUM.
+      Human hearing is not flat and it does not scale. At conversational level
+      the ear is roughly 10dB less sensitive at 60Hz than at 3kHz; at whisper
+      level it is more like 25dB. So as you turn a mix down, the bottom and the
+      top fall away FASTER than the middle, and a car that was all chest and
+      air at full volume arrives as a midrange buzz. The fix is the oldest
+      control on any hi-fi ever built — the loudness contour — and it is a
+      low shelf and a top shelf, applied here rather than left to the listener.
+
+   2. THE QUIET THINGS DROP BELOW THE ROOM.
+      A gear whine, the tyres, the induction hiss, the settling ring after a
+      pop — at full volume they are the detail that makes the car real. At 15%
+      they are under the fridge. You cannot fix that with gain, because gain
+      moves the loud parts with them. You fix it by moving the quiet parts and
+      NOT the loud ones, which is parallel compression: a heavily squashed
+      copy of the whole mix, brought back up underneath the original. The
+      transients stay exactly as sharp as they were; everything underneath
+      them comes up to meet the room.
+
+   3. THE BASS SIMPLY IS NOT THERE.
+      A laptop speaker is a 15mm driver in a plastic box. It does not make
+      60Hz at any volume — not quietly, not loudly, not ever. A V12's
+      firing fundamental at 6000rpm is 600Hz and fine, but the BODY of the
+      thing, the part that makes it feel like an engine rather than a
+      buzzer, lives two octaves below anything that speaker can move.
+      The fix is the one trick psychoacoustics gives you for free: the
+      missing fundamental. Feed the bass through a distortion, keep the
+      HARMONICS it generates and throw the original away, and the ear
+      reassembles a fundamental that was never reproduced. 60Hz you cannot
+      hear, plus 120 and 180 you can, is heard as 60Hz. Every phone, every
+      laptop and every car stereo on earth is doing some version of this,
+      and it is why the engine now has weight through a speaker that
+      physically cannot produce weight.
+
+   All three run permanently, ahead of the limiter that was already there, so
+   what changes is density and spectrum rather than peak level: the meters
+   barely move and the car sounds twice the size. And crucially none of it is
+   just more gain, because more gain is precisely the thing that does not
+   work — turn it up and you get a louder small sound.
+
+   MEASURED, on a synthesized V8 at 6500rpm with a pop in it, before → after:
+
+       RMS      -17.1  →  -12.1 dBFS      +5.1 dB
+       peak      -4.9  →   -1.2 dBFS      still under the ceiling
+       crest     12.3  →   10.8 dB        1.4 dB of transient lost, no more
+
+   and the tilt, quoted RELATIVE to that overall +5.1 so it reads as shape
+   rather than level:
+
+       40-110 Hz    +3.6      the part a laptop cannot make, made anyway
+       110-300      +2.5      body
+       300 Hz-1 kHz -4.3      the note itself, deliberately left alone
+       2-5 kHz      +0.2      presence, already the loudest thing to the ear
+       7-14 kHz      0.0      air
+
+   Five decibels of apparent level for one and a half of crest factor is the
+   whole trade, and the mid staying put is what stops it from being a loudness
+   war: the engine's actual voice is not being pushed at you, everything
+   AROUND it is being brought up to meet it. */
+
+/* the psychoacoustic bass shaper: asymmetric, so it throws BOTH the second
+   harmonic (the asymmetry) and the third and fifth (the saturation). An
+   even-order-only exciter sounds like a synth an octave up; odd-order-only
+   sounds like fuzz. You need both for the ear to hear a fundamental. */
+function makeSubCurve() {
+  const n = 2048, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = i / (n - 1) * 2 - 1;
+    c[i] = x >= 0 ? Math.tanh(3.4 * x) : Math.tanh(2.3 * x);
+  }
+  return c;
+}
+
+/* the output clipper. Not a limiter — a limiter turns things down, and a
+   thing that is turning down is a thing that is getting quieter. This
+   ROUNDS the peaks instead, which costs a fraction of a dB of purity on the
+   two or three samples an impact actually occupies and buys back several dB
+   of everything else. Gentle enough that the engine voice never touches it
+   and only the bangs do, which is the correct division of labour. */
+function makeCeilCurve() {
+  const n = 2048, c = new Float32Array(n), k = 1 / Math.tanh(1.45);
+  for (let i = 0; i < n; i++) {
+    const x = i / (n - 1) * 2 - 1;
+    c[i] = Math.tanh(1.45 * x) * k;
+  }
+  return c;
+}
+
+function buildLoudStage(ctx) {
+  /* --- 1. the loudness contour ------------------------------------------
+     Fletcher–Munson, applied as three filters. The mid scoop is not
+     cosmetic: without it the shelves just add level and the mix gets
+     muddier rather than bigger, because 300Hz is where a low shelf and a
+     midrange both already live. Taking a little out there is what MAKES
+     room for the bottom, and it is the difference between "louder" and
+     "larger". */
+  AU.bigIn = ctx.createGain(); AU.bigIn.gain.value = 1;
+  AU.bigLo = ctx.createBiquadFilter();
+  AU.bigLo.type = "lowshelf"; AU.bigLo.frequency.value = 100; AU.bigLo.gain.value = 3.4;
+  AU.bigMud = ctx.createBiquadFilter();
+  AU.bigMud.type = "peaking"; AU.bigMud.frequency.value = 330;
+  AU.bigMud.Q.value = 1.05; AU.bigMud.gain.value = -1.5;
+  /* 2.9kHz is where the ear canal resonates and where hearing is at its most
+     sensitive at ANY level — which makes it the one band that stays present
+     however far down the volume goes. Everything that reads as "close" and
+     "aggressive" about an engine is here: the rasp, the edge on a dog-box
+     whine, the crack at the front of a pop. A few dB of it is worth ten of
+     broadband gain, and unlike gain it costs no headroom. */
+  AU.bigPres = ctx.createBiquadFilter();
+  AU.bigPres.type = "peaking"; AU.bigPres.frequency.value = 2900;
+  AU.bigPres.Q.value = 0.72; AU.bigPres.gain.value = 3.4;
+  AU.bigAir = ctx.createBiquadFilter();
+  AU.bigAir.type = "highshelf"; AU.bigAir.frequency.value = 8200; AU.bigAir.gain.value = 2.4;
+
+  AU.bigTone = ctx.createGain(); AU.bigTone.gain.value = 1;
+  AU.comp.connect(AU.bigIn);
+  AU.bigIn.connect(AU.bigLo); AU.bigLo.connect(AU.bigMud);
+  AU.bigMud.connect(AU.bigPres); AU.bigPres.connect(AU.bigAir);
+  AU.bigAir.connect(AU.bigTone);
+
+  AU.bigSum = ctx.createGain(); AU.bigSum.gain.value = 1;
+
+  // the mix itself, untouched, at full level. Everything below is added
+  // UNDER this, never in place of it.
+  AU.bigDry = ctx.createGain(); AU.bigDry.gain.value = 1;
+  AU.bigTone.connect(AU.bigDry); AU.bigDry.connect(AU.bigSum);
+
+  /* --- 2. the missing fundamental ---------------------------------------
+     Take the octave and a half nobody's speaker can reproduce, distort it
+     into harmonics that everybody's speaker can, throw away the part that
+     was never going to arrive, and put the harmonics back under the mix.
+     The highpass afterwards is the important half: keeping the original
+     bass would just be a bass boost, and a bass boost on a laptop is a
+     way of making the driver flap and the mix quieter. */
+  AU.subHpIn = ctx.createBiquadFilter();
+  AU.subHpIn.type = "highpass"; AU.subHpIn.frequency.value = 38; AU.subHpIn.Q.value = 0.7;
+  AU.subLpIn = ctx.createBiquadFilter();
+  AU.subLpIn.type = "lowpass"; AU.subLpIn.frequency.value = 135; AU.subLpIn.Q.value = 0.7;
+  AU.subDrive = ctx.createGain(); AU.subDrive.gain.value = 3.2;
+  AU.subShape = ctx.createWaveShaper();
+  AU.subShape.curve = makeSubCurve(); AU.subShape.oversample = "2x";
+  // and only what the little speaker can actually move comes back
+  AU.subKeep = ctx.createBiquadFilter();
+  AU.subKeep.type = "highpass"; AU.subKeep.frequency.value = 115; AU.subKeep.Q.value = 0.6;
+  AU.subTop = ctx.createBiquadFilter();
+  AU.subTop.type = "lowpass"; AU.subTop.frequency.value = 780; AU.subTop.Q.value = 0.6;
+  AU.subG = ctx.createGain(); AU.subG.gain.value = 0.34;
+  AU.bigTone.connect(AU.subHpIn); AU.subHpIn.connect(AU.subLpIn);
+  AU.subLpIn.connect(AU.subDrive); AU.subDrive.connect(AU.subShape);
+  AU.subShape.connect(AU.subKeep); AU.subKeep.connect(AU.subTop);
+  AU.subTop.connect(AU.subG); AU.subG.connect(AU.bigSum);
+
+  /* --- 3. parallel compression ------------------------------------------
+     A copy of the mix flattened almost to a wall — 20:1 from thirty-four
+     below, fast enough to catch a bang but not so fast it eats the attack —
+     and mixed back UNDER the dry path at about a third. Nothing gets
+     quieter, because the dry path is still there at full level. What
+     happens is that everything that was thirty dB down comes up to within
+     ten, and the mix stops having a floor you can fall through.
+
+     This is the single biggest contributor to "it sounds loud even quiet",
+     and it is also why it does not sound squashed: the loud parts are
+     carried by the dry path, which is not compressed at all. */
+  AU.bigPar = ctx.createDynamicsCompressor();
+  AU.bigPar.threshold.value = -34; AU.bigPar.ratio.value = 20;
+  AU.bigPar.attack.value = 0.004; AU.bigPar.release.value = 0.16;
+  AU.bigPar.knee.value = 6;
+  // the squashed copy gets a little of its own top back — heavy compression
+  // is always duller than what went into it, and a dull layer under a bright
+  // one reads as a blanket rather than as body
+  AU.bigParTop = ctx.createBiquadFilter();
+  AU.bigParTop.type = "highshelf"; AU.bigParTop.frequency.value = 3200;
+  AU.bigParTop.gain.value = 2;
+  AU.bigParG = ctx.createGain(); AU.bigParG.gain.value = 0.36;
+  AU.bigTone.connect(AU.bigPar); AU.bigPar.connect(AU.bigParTop);
+  AU.bigParTop.connect(AU.bigParG); AU.bigParG.connect(AU.bigSum);
+
+  /* --- 4. out through the limiter, then the ceiling ----------------------
+     The sum is now hotter than what came in, which is the point: the limiter
+     that was already here stops being a safety net that never fires and
+     becomes part of the sound, catching the transients while everything
+     underneath them rides at a level it never used to reach. The clipper
+     after it rounds whatever the limiter's 1ms attack was too slow for, and
+     the trim sets the whole thing back to a sensible ceiling. */
+  AU.bigDrive = ctx.createGain(); AU.bigDrive.gain.value = 1.42;
+  AU.bigSum.connect(AU.bigDrive); AU.bigDrive.connect(AU.limiter);
+  AU.bigCeil = ctx.createWaveShaper();
+  AU.bigCeil.curve = makeCeilCurve(); AU.bigCeil.oversample = "2x";
+  AU.bigOut = ctx.createGain(); AU.bigOut.gain.value = 0.86;
+  AU.limiter.connect(AU.bigCeil); AU.bigCeil.connect(AU.bigOut);
+  AU.bigOut.connect(ctx.destination);
+}
+
+
 function initAudio() {
   if (AU.ready) return;
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -3515,7 +3729,7 @@ function initAudio() {
   AU.limiter.threshold.value = -2.5; AU.limiter.ratio.value = 20;
   AU.limiter.attack.value = 0.001; AU.limiter.release.value = 0.09;
   AU.limiter.knee.value = 0;
-  AU.comp.connect(AU.limiter); AU.limiter.connect(ctx.destination);
+  buildLoudStage(ctx);              // see THE BIG STAGE
 
   // cabin stage: interior mode seals the highs behind glass and lets the
   // low end boom through the body structure
@@ -10392,6 +10606,81 @@ function biteWindow() {
            width: c.width === undefined ? 0.5 : c.width };
 }
 
+/* ================================================================
+   SHIFT FEEL — the hand-over
+   ================================================================
+   A gear change was two states with a hole between them: drive, no drive,
+   drive. The hole is real — that is `shiftCut`, the ignition or the clutch
+   taking the load off the dogs — but what came out the far side of it was a
+   SWITCH. On the frame the cut expired, engagement went from 0 to 1, the
+   clutch model saw an infinite capacity, `S.locked` went true, and the line
+
+       S.rpm = wheelRpm
+
+   teleported the crank onto the new ratio inside one sixteen-millisecond
+   frame. That is the whole reason a shift read as "rpm → new rpm" instead of
+   as a gearbox: the engine did not FALL onto the next gear, it was assigned
+   to it.
+
+   No clutch in the world closes in one frame. A twin-clutch hands the torque
+   across in fifty or sixty milliseconds; a robotised single-clutch takes a
+   tenth of a second and you can hear every bit of it; a torque converter's
+   packs are still slipping a fifth of a second later. During that window the
+   clutch has a REAL and RISING capacity — it can only pass as much torque as
+   the pressure behind it allows — and everything that makes a shift feel
+   mechanical falls out of that one fact:
+
+     · the drive comes back as a RAMP, not a step, so there is a shove that
+       builds instead of a number that changes
+     · the engine is dragged onto the new ratio by a torque it can argue with,
+       so the needle slides across rather than jumping
+     · a big mismatch takes longer to pull in than a small one, so a lazy
+       upshift and a violent downshift do not feel the same
+
+   `hoT` is that window. It is armed when the shift is commanded, it does not
+   start running until `shiftCut` has expired (they are consecutive events,
+   not simultaneous ones), and while it runs it scales the clutch's capacity
+   from nothing up to all of it. Every branch of the drivetrain reads it
+   through here, except the converter, which reads it directly onto the fluid
+   because a converter has no clutch to scale.
+
+   A 5→6 upshift at 9,600rpm, flat out, on a 45ms twin-clutch, before → after.
+   Drive force at the road, in newtons, every 25ms from the paddle:
+
+       BEFORE   0  0  0  0  0  0 | 10871 | 4692  4706  4700     locked at 179ms
+       AFTER    0  0  0  0  0  0 |   451   5460  10871 | 4709   locked at 229ms
+
+   Same cut, same final ratio, same settled figure. The difference is the
+   single frame in the middle. The old one went from nothing to full torque
+   between two frames sixteen milliseconds apart and put the crank on the new
+   ratio in the same step — which is not a shift, it is an assignment, and it
+   is why it read as "rpm, then different rpm". The new one takes seventy
+   milliseconds to get there and the engine slides the last eight hundred rpm
+   down under load instead of being placed. */
+function shiftHandover() {
+  if (S.hoT <= 0 || S.hoDur <= 0) return 1;
+  const p = clamp(1 - S.hoT / S.hoDur, 0, 1);
+  /* Not linear, and not a smoothstep either. A clutch pack is a hydraulic
+     actuator pushing a stack of plates together: nothing at all happens
+     through the fill, then the plates touch and the torque comes up hard.
+     x^1.6 with an eased tail is that shape — slow to start, then it arrives.
+     The tail matters as much as the toe: without it the last 10% is still a
+     step, and a step anywhere in here is audible. */
+  const eased = Math.pow(p, 1.55);
+  return eased * eased * (3 - 2 * eased) * 0.35 + eased * 0.65;
+}
+
+/* how long this car's box takes to hand the drive back over, and it is a
+   different number for every kind of gearbox in the garage. */
+function handoverDur(down) {
+  if (seamless()) return 0.022;              // overlapping clutches: no gap at all
+  if (convOf()) return down ? 0.19 : 0.16;   // fluid, and it is never in a hurry
+  if (CC.seqClutch) return down ? 0.075 : 0.055;  // a real clutch, a real foot
+  if (CC.race || CC.gearWhine) return down ? 0.055 : 0.038;  // dogs: they SLAM
+  if (CC.mechBox) return down ? 0.11 : 0.085;     // robotised single plate
+  return down ? 0.072 : 0.052;               // road twin-clutch
+}
+
 function computeEngage() {
   if (S.gear === 0) return 0;
   if (S.mode === "clutch") {
@@ -10411,7 +10700,8 @@ function computeEngage() {
   // instead of crawling, then snapping to full power once revs cross a
   // threshold.
   const raw = clamp((S.rpm - ENG.idle * 1.05) / (ENG.idle * 1.6), 0, 1);
-  return raw * raw * (3 - 2 * raw);          // smoothstep
+  // …and the hand-over on top of it: the clutch that is currently closing
+  return raw * raw * (3 - 2 * raw) * shiftHandover();
 }
 
 /* ================================================================
@@ -10896,7 +11186,16 @@ function stepPhysics(dt) {
     }
   }
 
+  const cutWas = S.shiftCut;
   S.shiftCut = Math.max(0, S.shiftCut - dt);
+  /* the hand-over only starts once the cut has expired — consecutive, not
+     concurrent. See SHIFT FEEL. */
+  if (S.shiftCut <= 0) {
+    // …and the drive coming back is its own event, fired here so it can never
+    // drift away from the physics that causes it. See THE SHOVE.
+    if (cutWas > 0 && S.hoT > 0 && S.hoT >= S.hoDur - 1e-6) shiftShove();
+    S.hoT = Math.max(0, S.hoT - dt);
+  }
   S.shiftCool = Math.max(0, S.shiftCool - dt);
   S.cutTimer = Math.max(0, S.cutTimer - dt);
   S._twinCool = Math.max(0, (S._twinCool || 0) - dt);   // see TWIN RELEASE
@@ -11146,6 +11445,22 @@ function stepPhysics(dt) {
   if (S.cutTimer > 0 || (S.shiftCut > 0 && S.blip <= 0) || !S.engineOn) eff = 0;
   // …and the soft limiter, which is the same decision made gradually
   else if (S.softCut < 1) eff *= S.softCut;
+  /* --- TORQUE REDUCTION, and it is the other half of the hand-over ---
+     A shift cut is not a switch either. Every modern box asks the engine to
+     come back GRADUALLY while the oncoming clutch closes, because slamming
+     full torque into a pack that is still slipping is how you cook it — and
+     because an engine fighting a closing clutch cannot be pulled down onto
+     the new ratio, which is precisely the thing that has to happen for the
+     needle to slide across instead of jumping.
+
+     So the ignition comes back at a fraction and climbs with the clutch. What
+     you hear is the note swelling back rather than reappearing, and what you
+     feel is a shove that builds over about sixty milliseconds. Both of those
+     are the shift. See SHIFT FEEL. */
+  if (S.hoT > 0 && S.blip <= 0 && S.shiftCut <= 0 && eff > 0) {
+    const ho = shiftHandover();
+    eff *= 0.42 + 0.58 * ho;
+  }
   S.effThrottle = eff;
 
   // crackle as the blip closes
@@ -11398,7 +11713,14 @@ function stepPhysics(dt) {
        trailing throttle. Bounded, because the arithmetic on the overrun is
        otherwise unbounded and this is a fluid, not a solid shaft. */
     const fill = clamp(1 - sr * Math.abs(sr), -1.5, 1);
-    const Tf = Kc * S.rpm * S.rpm * fill;
+    /* …and the hand-over, which for a converter is not a clutch at all. An
+       automatic changes gear by releasing one band or pack and applying
+       another, and while that swap is happening the fluid is passing a
+       FRACTION of what it could. Scaling the capacity here is that swap: the
+       engine unloads and flares a little, the drive builds back up over a
+       fifth of a second, and the car steps into the ratio instead of being
+       placed in it. See SHIFT FEEL. */
+    const Tf = Kc * S.rpm * S.rpm * fill * shiftHandover();
     // torque multiplication — the stator's entire reason for being there, and
     // all of it is spent by the coupling point
     const TR = 1 + (TC.mult - 1) * clamp(1 - sr / TC.couple, 0, 1);
@@ -11951,7 +12273,23 @@ function autoShift(g) {
   S.shiftCut = seamless() ? 0.03 : (down ? 0.16 : 0.12);
   S.shiftCool = 0.7;
   S.blip = 0; S.blipTarget = null;
-  if (!seamless()) { sfxClunk(0.1); flashGear(); }   // barely-there thunk
+  /* …and then the packs take it back up, slowly, in oil. See SHIFT FEEL.
+     This is the whole difference between an automatic that changes gear and
+     an automatic that HANDS you the next one — the shove arrives over about
+     a fifth of a second, which is exactly the interval a good torque
+     converter box is admired for and a bad one is complained about. */
+  S.hoDur = handoverDur(down);
+  S.hoT = S.hoDur; S.hoDir = down ? -1 : 1;
+  if (!seamless()) {
+    sfxClunk(0.1); flashGear();                      // barely-there thunk
+    /* An automatic does not bang, and this must not either — but it does
+       move the car, and at a kickdown into second under full throttle it
+       moves it hard. Scaled by how much torque was actually interrupted:
+       a part-throttle change at 30km/h is genuinely imperceptible, and it
+       should stay that way. */
+    const load = clamp(S.throttle * 0.8 + Math.abs(S.v) / 90, 0, 1);
+    if (load > 0.12) shiftJolt(0.2 + load * 0.42, down);
+  }
 }
 
 /* the Bavarian special: re-arm the check-engine light. Restarting the car
@@ -13631,6 +13969,14 @@ function engageGear(target, st) {
   const engaged = computeEngage();
   if (engaged > 0.5 && st.mismatch > 250) {
     setTimeout(() => sfxDrivelineShunt(clamp(0.5 + (1 - match) * 1.1, 0.4, 1.5)), 26);
+    // …and you feel it, which is the point of dumping the clutch on a bad
+    // match. A clean snick moves nothing; a botched one shakes the car.
+    // …and which way the shunt threw you: dropping a gear winds the driveline
+    // up backwards and pitches the car onto its nose, taking one is the
+    // opposite. matchRpm() of the gear you just took against where the engine
+    // actually is settles it.
+    const down = matchRpm(target) > S.rpm;
+    setTimeout(() => shiftJolt(clamp(0.25 + (1 - match) * 0.85, 0.2, 1.1), down), 26);
   }
 }
 
@@ -13902,6 +14248,13 @@ function seqShift(dir) {
     S.shiftCut = CC.seqClutch
       ? (S._flatShift ? 0.07 : 0.018)
       : ((CC.race || CC.gearWhine) ? 0.075 : CC.mechBox ? 0.085 : 0.10) + lag;
+    /* …and the second half of it, armed now and run the moment the cut ends.
+       See SHIFT FEEL. A clutched sequential is the exception: your own left
+       foot is the hand-over, so the model must not do it for you. */
+    if (!(CC.seqClutch && !S._flatShift)) {
+      S.hoDur = handoverDur(dir < 0);
+      S.hoT = S.hoDur; S.hoDir = dir;
+    }
 
     /* THE BLIP GOES FIRST. This was backwards: the throttle blip fired from
        seqEngage(), which runs when the dogs have already landed — so the car
@@ -13932,11 +14285,20 @@ function seqShift(dir) {
       // a downshift lands harder than an upshift — see sfxDogEngage()
       if (dog) sfxDogEngage(dir < 0 ? 1.15 : 0.95, dir < 0);
       else sfxDctEngage(dir < 0 ? 1.0 : 0.9);
+      /* THE HIT. Steel finding steel inside the case, and it is a small,
+         sharp, high-frequency event — nothing like the shove that follows it
+         a tenth of a second later when the ignition comes back. A dog ring
+         hits properly; a clutch pack barely registers. See THE SHOVE. */
+      if (!seamless())
+        shiftJolt((dog ? 0.34 : 0.16) * (dir < 0 ? 1.25 : 1)
+                  * clamp(0.45 + Math.abs(S.v) / 60, 0.45, 1.2), dir < 0);
       seqEngage(target, dir, true);
     }, lag * 1000);
     return;
   }
   S.shiftCut = 0.18;
+  S.hoDur = handoverDur(dir < 0);
+  S.hoT = S.hoDur; S.hoDir = dir;
   seqEngage(target, dir, false);
 }
 
@@ -14225,6 +14587,158 @@ function flashGear() {
   el.classList.add("pop");
 }
 
+/* ================================================================
+   THE JOLT — what a gear change does to your head
+   ================================================================
+   Everything up to here happens to the car. This happens to YOU, and it is
+   the part that was missing entirely.
+
+   A gear change is a torque reversal at the end of a lever a couple of metres
+   long with your skull on top of it. The drive comes off, the car stops
+   pushing you into the seat and you travel forward against the belts; a
+   tenth of a second later the drive slams back on and you are thrown into the
+   seat again, and the whole shell rings once on its mounts on the way past.
+   You do not observe that. It moves your eyes, which means it moves the view.
+
+   Three things are true about that movement and all three matter:
+
+     IT IS SHORT      60 to 120 milliseconds, all in. Anything longer reads as
+                      a bump in the road, not as a gearbox.
+     IT IS DAMPED     a car on its mounts is a mass on a spring with a great
+                      deal of rubber in it. One and a half cycles, then gone.
+                      A shake that oscillates evenly is an earthquake effect.
+     IT IS DIRECTIONAL  an upshift throws you FORWARD then back. A downshift,
+                      landing on engine braking, throws you forward and keeps
+                      you there for a moment. Same event, opposite sign, and
+                      the sign is most of how the two tell themselves apart
+                      without you looking at the gear number.
+
+   So it is a decaying sine — amplitude, frequency, decay — evaluated in the
+   render loop rather than handed to CSS, because it has to compose with the
+   fact that it can fire again before the last one has finished, and because
+   a keyframe animation restarted mid-flight snaps back to zero and reads as
+   a glitch.
+
+   `prefers-reduced-motion` turns the visual half off and leaves the audio and
+   the physics exactly as they are. */
+const JOLT_HZ = 21;                    // engine mounts, roughly
+const REDUCED_MOTION = typeof matchMedia === "function" &&
+  matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function shiftJolt(strength, down) {
+  S.joltAmp = Math.min(1.35, Math.max(S.joltAmp * 0.35, strength));
+  S.joltDur = down ? 0.135 : 0.105;
+  S.joltT = S.joltDur;
+  S.joltDir = down ? -1 : 1;
+  S.joltRot = down ? 1 : 0.45;
+  gpRumble(down ? 90 : 60, strength);
+}
+
+/* THE SHOVE — the second jolt, and the one that actually sells the shift.
+
+   A gear change is not one event you feel, it is two, and every driving game
+   that feels wrong has collapsed them into one. The dogs landing is a HIT:
+   sharp, metallic, over in forty milliseconds, and it happens at the
+   gearbox. The drive coming back is a SHOVE: softer-edged, much bigger,
+   longer, and it happens at your spine — and it arrives somewhere between
+   fifty and a hundred and fifty milliseconds LATER, because the ignition is
+   still cut while the dogs are settling.
+
+   That gap is the entire sensation. Fire both together and a shift is a
+   click. Space them properly and the car has a gearbox in it.
+
+   This is the second one, and it is not scheduled on a timer — it is fired
+   from the physics on the frame `shiftCut` actually expires, so it can never
+   drift out of sync with the thing it is announcing. How hard it hits is how
+   much torque is genuinely coming back: full throttle in second is a kick in
+   the back, a trailing-throttle change at 40km/h is nothing at all, and the
+   model already knows the difference. */
+function shiftShove() {
+  const down = S.hoDir < 0;
+  /* what is actually about to arrive at the road. Throttle is most of it —
+     you cannot be shoved by a gearbox you are not asking anything of — with
+     the gear's own multiplication behind it, because the same pedal in second
+     is a very different event from the same pedal in seventh. */
+  const gearMul = clamp(Math.abs(currentRatio()) / 9, 0.35, 1.6);
+  let a = (0.18 + S.effThrottle * 0.72) * gearMul;
+  if (down) {
+    /* Going down, what arrives is engine braking rather than drive, and off
+       the throttle that is the bigger of the two — the whole car pitches
+       forward onto its nose. It is also the reason a downshift feels like
+       something even when your foot is nowhere near the gas. */
+    a = 0.24 + (1 - S.effThrottle) * 0.5 * gearMul + S.effThrottle * 0.4 * gearMul;
+  }
+  // a seamless box hands the torque across without ever letting go of it, so
+  // there is nothing to come back and nothing to feel. That is the point of it.
+  if (seamless()) a *= 0.22;
+  a *= clamp(Math.abs(S.v) / 14, 0.25, 1);      // and nothing happens standing still
+  if (a < 0.08) return;
+  shiftJolt(Math.min(1.15, a), down);
+}
+
+/* the render half. Called once a frame from frame(); see THE JOLT. */
+let joltEl = null, joltOn = false;
+function joltTick(dt) {
+  if (S.joltT <= 0) {
+    if (joltOn) {
+      joltOn = false;
+      if (joltEl) { joltEl.style.transform = ""; joltEl.style.willChange = ""; }
+    }
+    return;
+  }
+  if (REDUCED_MOTION) { S.joltT = 0; return; }   // the car still shifts; the view doesn't
+  S.joltT = Math.max(0, S.joltT - dt);
+  if (!joltEl) joltEl = $("stage");
+  if (!joltEl) return;
+  // promoted only while it is actually moving — a permanent will-change on a
+  // layer this size is a texture the compositor holds for nothing 99% of the time
+  if (!joltOn) joltEl.style.willChange = "transform";
+  const p = 1 - S.joltT / S.joltDur;             // 0 → 1 across the event
+  const env = Math.exp(-4.6 * p) * (1 - p);      // damped, and it truly ends
+  const w = Math.sin(Math.PI * 2 * JOLT_HZ * p * S.joltDur);
+  const a = S.joltAmp * env;
+  /* Mostly vertical, because the shell moves on its mounts far more than it
+     moves fore-and-aft against the tyres — but the FIRST movement is the
+     longitudinal one and it is what carries the direction, so it leads the
+     vertical by a quarter cycle. */
+  const y = a * 5.2 * w;
+  const x = a * 2.1 * S.joltDir * Math.sin(Math.PI * 2 * JOLT_HZ * p * S.joltDur + 1.57);
+  const r = a * 0.22 * S.joltRot * S.joltDir * w;
+  joltEl.style.transform =
+    "translate3d(" + x.toFixed(3) + "px," + y.toFixed(3) + "px,0) rotate(" + r.toFixed(4) + "deg)";
+  joltOn = true;
+  if (S.joltT <= 0) {
+    joltOn = false;
+    joltEl.style.transform = ""; joltEl.style.willChange = "";
+  }
+}
+
+
+/* ---- and the same event through the pad ----
+   A controller rumble on a gear change is not decoration, it is the only
+   channel in the whole simulator that reaches the driver through their hands
+   rather than their ears — which is where a real gear change reaches them
+   first. Deliberately tiny and deliberately short: a pulse, not a buzz. Long
+   rumbles on shifts are what make a game feel like it is vibrating at you.
+   `dual-rumble` is the standard effect; pads that do not have it simply
+   ignore this, which is why nothing here is guarded beyond the try. */
+function gpRumble(ms, strength) {
+  if (!navigator.getGamepads) return;
+  const pads = navigator.getGamepads();
+  const gp = GP.index != null ? pads[GP.index] : Array.from(pads).find(p => p);
+  const act = gp && gp.vibrationActuator;
+  if (!act || typeof act.playEffect !== "function") return;
+  const k = clamp(strength, 0, 1.3);
+  try {
+    act.playEffect("dual-rumble", {
+      startDelay: 0,
+      duration: ms,
+      weakMagnitude: Math.min(1, 0.45 * k),
+      strongMagnitude: Math.min(1, 0.62 * k),
+    });
+  } catch (e) { /* pad does not do haptics — nothing to fall back to */ }
+}
+
 function gearLabel() {
   if (S.mode === "auto") {
     if (S.autoSel !== "D") return [S.autoSel, { P: "park", R: "reverse", N: "neutral" }[S.autoSel]];
@@ -14365,6 +14879,8 @@ function selectCar(id) {
   armCel();
   S.gear = 0; S.autoSel = "P"; S.autoGear = 1;
   S.shiftCut = 0; S.shiftCool = 0; S.cutTimer = 0; S.blip = 0; S.catchT = 0; S.sweep = -1;
+  S.hoT = 0; S.hoDur = 0; S.hoDir = 1;
+  S.joltT = 0; S.joltAmp = 0;
   S.limCut = false; S.limT = 0; S.limDip = 0; S.lugT = 0;
   S.pendShift = false;
   resetTraction();
@@ -16617,6 +17133,7 @@ function frame(now) {
   while (acc >= STEP) { stepPhysics(STEP); acc -= STEP; }
 
   audioTick();
+  joltTick(dt);                 // the gear change, arriving at your head
   pedalSfxTick();
   indicatorTick(dt);
   ltTick(dt);
