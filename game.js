@@ -3048,7 +3048,6 @@ const S = {
   /* --- the jolt --- what the change does to the car, and to the camera. */
   joltT: 0, joltDur: 0, joltAmp: 0, joltDir: 1, joltRot: 0,
   tunnel: false, flyby: false, flyX: -620, cabin: false, stock: false, mods: {},
-  tunnelKind: "concrete",             // WHICH tunnel — see TUNNELS
   space: "open",                     // where you're driving — see SPACES
   listen: "driver",                    // which microphone — see LISTEN
   ltTgt: { kmh: 100, mph: 60 },          // launch-timer target speed per unit system
@@ -3894,7 +3893,6 @@ function initAudio() {
   AU.turboOut.connect(AU.postCab);
 
   AU.conv = ctx.createConvolver(); AU.conv.buffer = makeTunnelIR(ctx);
-  AU._tunBuilt = S.tunnelKind;
   AU.wet = ctx.createGain(); AU.wet.gain.value = 0;
   // the tube's own voice, on the wet path only: concrete has an axial mode
   // down around 100Hz that everything booms into, and it has swallowed the
@@ -4003,11 +4001,47 @@ function initAudio() {
   // reverb and echo, so gunshot crackle rings down the tunnel harder than
   // the engine note does
   AU.popBus = ctx.createGain(); AU.popBus.gain.value = 1.35;
-  AU.popBus.connect(AU.master);
+
+  /* --- the pop bus tone stage: what a flame is NOT allowed to put into the
+         big stage ---------------------------------------------------------
+     Two filters, and both of them exist because of one node further down the
+     chain: the missing-fundamental generator (see THE BIG STAGE, part 2). It
+     takes everything between 38 and 135Hz, drives it into a shaper, and adds
+     the harmonics back under the mix, which is the right thing to do to a
+     V12 holding a note on a laptop speaker and the wrong thing to do to a
+     gunshot. A pop's low end is not a note, it is a 300-millisecond
+     descending sine, and running that through a harmonic generator is how
+     you turn an exhaust bang into an 808.
+
+     So the highpass takes away the part of the thump that was only ever
+     going to come back as boom — below about 60Hz a pop has no information
+     in it, only weight, and the weight is above that — and the shelf hands
+     back the +3.4dB at 100Hz that the loudness contour adds. The contour is
+     right for the engine and wrong here: the engine's bottom octave is a
+     note that a small speaker cannot make, and a pop's is a transient that
+     every speaker can make far too much of.
+
+     Deliberately NOT here: any presence or air lift. The measurement said
+     one wasn't needed — see the table above POP_VOICES. Taking the thumps
+     down gave the top back on its own, because the top was being eaten by
+     the thump inside the output clipper rather than being missing. Adding
+     EQ on top of that would have overshot the old sound by five decibels at
+     3kHz, which is a different complaint. */
+  AU.popHp = ctx.createBiquadFilter();
+  AU.popHp.type = "highpass"; AU.popHp.frequency.value = 62; AU.popHp.Q.value = 0.7;
+  AU.popTilt = ctx.createBiquadFilter();
+  AU.popTilt.type = "lowshelf"; AU.popTilt.frequency.value = 120;
+  AU.popTilt.gain.value = -3.5;
+  AU.popBus.connect(AU.popHp); AU.popHp.connect(AU.popTilt);
+  // …and everything downstream now takes the pop bus from AU.popTilt, so the
+  // reverb and the echo get the same shaped bang the dry path does
+  const popOut = AU.popTilt;
+
+  popOut.connect(AU.master);
   AU.popRev = ctx.createGain(); AU.popRev.gain.value = 0;
-  AU.popBus.connect(AU.popRev); AU.popRev.connect(AU.conv);
+  popOut.connect(AU.popRev); AU.popRev.connect(AU.conv);
   AU.popEcho = ctx.createGain(); AU.popEcho.gain.value = 0;
-  AU.popBus.connect(AU.popEcho); AU.popEcho.connect(AU.echo);
+  popOut.connect(AU.popEcho); AU.popEcho.connect(AU.echo);
   /* How much of an overrun bang goes into the buildings — and it is NOT the
      same fraction as the engine note, which is what it used to be.
 
@@ -4031,7 +4065,7 @@ function initAudio() {
   // …and they take the distance stage with everything else, so an overrun
   // bang from three hundred metres away arrives as a roll off the buildings
   // rather than as a close crack with the volume turned down
-  AU.popBus.connect(AU.popSp); AU.popSp.connect(AU.spDist);
+  popOut.connect(AU.popSp); AU.popSp.connect(AU.spDist);
 
   /* sfx bus: EVERY one-shot component sound — doors, indicators, wipers,
      starters, clunks, the shifter, the tyres, the rain spray. Dry, always.
@@ -4760,50 +4794,38 @@ function applyCabin() {
    Coming out, the tail spills out behind you over half a second. Symmetric
    fades are the single most common tell. See applyTunnel(). */
 /* ================================================================
-   TUNNELS — a tunnel is not one sound
+   WHAT THE GENERATOR IS BUILDING
    ================================================================
-   This used to build one impulse response from one set of hard-coded
-   numbers: a 7-metre round trip, 145 bounces at 0.93, and three far-end
-   returns. That is A tunnel. It is a good one, and it is also the only one,
-   which is wrong in the way that having one engine would be wrong — because
-   the acoustics of a tube are almost entirely GEOMETRY, and there is more
-   difference between a narrow ribbed canyon bore and a twelve-metre motorway
-   box than there is between two different cars inside either of them.
-
-   Four numbers decide what a tunnel sounds like, and all four are things you
-   can see by looking at it:
+   The impulse response is generated rather than sampled, out of a small set
+   of numbers that are all things you could see by looking at the tunnel.
+   There is only one tunnel here now (see THE TUNNEL below), but the
+   generator is still written against those numbers rather than against
+   hard-coded constants, because that is what makes the thing legible:
 
      HOW WIDE     The distance to the wall sets the flutter period, and the
                   flutter comb is the VOICE of a tube. The comb repeats once
-                  per round trip, so it rings at 343/bore and its multiples —
-                  measured off the generated response with everything else
-                  switched off, a 4.2m round trip puts peaks at 82, 166 and
-                  248Hz. A 7m tube rings at 49, an 11m bore at 31, and a 24m
-                  motorway box at 14Hz, which is below hearing: a wide tunnel
-                  has no pitch at all and you get discrete slaps instead.
-                  That single number is most of why a small tunnel sings and
-                  a big one just booms.
+                  per round trip, so it rings at 343/bore and its multiples.
+                  Seven metres there and back rings at 49Hz — low enough that
+                  you stop hearing it as a pitch and start hearing it as the
+                  size of the tube.
 
                   (The alternating polarity puts a null at DC, which is what
                   stops the comb reading as a click train — it does NOT halve
                   the ring frequency. That was the first thing written here
                   and measuring the response is what corrected it.)
-     HOW LONG     Sets the far-end returns. A 60m canyon bore gives you one
-                  quiet answer from the mouth; an alpine bore gives you two
-                  enormous ones, a second and a half apart, and they are the
-                  most impressive thing about being in it.
-     WHAT LINING  Smooth concrete returns a hard, intact copy. Corrugated
-                  steel — the ribbed arch you see on canyon roads — scatters
-                  every bounce off a periodic surface, which adds a second,
-                  much faster comb on top of the first and is exactly why
-                  those tunnels ZING instead of booming.
-     HOW LEAKY    An underpass with both ends thirty metres away and open sky
-                  above the approach loses most of its energy immediately. A
-                  bored tunnel loses almost none. This is the per-bounce decay
-                  and it sets the tail length.
+     HOW LONG     Sets the far-end returns — the three `ends` entries, at
+                  186, 372 and 610ms, which are the mouth answering you.
+     WHAT LINING  Smooth concrete returns a hard, intact copy, so `decay` is
+                  high and `smearAmt` is modest. A ribbed lining would scatter
+                  every bounce off a periodic surface and add a second, much
+                  faster comb on top of the first; there isn't one here.
+     HOW LEAKY    The per-bounce decay, which sets the tail length. 145
+                  bounces at 0.93 measures out at 2.9 seconds.
 
-   The reference for CANYON BORE is measured rather than guessed — see the
-   notes on that preset. */
+   `rib` and `modes` are read by the generator and unused by this tunnel.
+   They are left in because they are the two mechanisms that would be needed
+   to build a different one, and taking them out would leave the generator
+   describing a tunnel instead of describing tunnels. */
 
 /* Modal ring: a room mode IS a decaying sinusoid, so it goes straight into
    the impulse response rather than into a filter bank. Cheaper, and it means
@@ -4832,8 +4854,8 @@ function makeTunnelIR(ctx, T) {
     /* --- the diffuse bed: dense noise, low-passed as it decays so the tail
            darkens on the way out the way concrete makes it. This is the
            WASH, and in a tube it has to sit well under the flutter — a
-           tunnel that is mostly wash is a car park. Which is also why the
-           car park preset is mostly wash. */
+           tunnel that is mostly wash is a car park, not a tunnel. 0.22
+           against a flutter starting at 0.9 is the ratio that keeps it one. */
     const wl = T.wash === undefined ? 0.22 : T.wash;
     const wd = T.washDecay || 2.0;
     let lp = 0;
@@ -4908,144 +4930,41 @@ function makeTunnelIR(ctx, T) {
 }
 
 /* ---------------------------------------------------------------
-   THE TUNNELS
+   THE TUNNEL
    ---------------------------------------------------------------
-   `bore` is the ROUND TRIP in metres — wall to wall and back — because that
-   is what sets the flutter period, and quoting it as the round trip keeps the
-   arithmetic honest: ring fundamental = 343 / (2 · bore). */
-const TUNNELS = {
-  /* The reference, and the only one here with measurements behind it rather
-     than judgement. Taken off an onboard of a V12 through a twin-bore ribbed
-     arch cut into a canyon hillside — a narrow single-lane tube with a
-     corrugated steel lining and a string of lamps along the crown.
+   There was briefly a rack of six of these — a ribbed canyon bore, a
+   motorway box, an alpine bore, an underpass, a car park — on the argument
+   that the acoustics of a tube are geometry, and that there is more
+   difference between a narrow ribbed bore and a twelve-metre box than there
+   is between two cars inside either one. That argument is true and it was
+   still the wrong thing to build. A tunnel in this simulator is not a
+   setting, it is THE place you press T to go into, and six of them made it a
+   menu. The one that was always here is the one worth having.
 
-     What the recording actually says, and what each number here comes from:
+   So this is the original, at its original voicing: a poured concrete road
+   tunnel, seven metres wall to wall and back, 145 bounces at 0.93, three
+   far-end returns. Wide enough that the ring drops to 49Hz and reads as size
+   rather than as pitch; smooth enough that the reflections come back almost
+   intact.
 
-       a strong low ladder at 41 / 82 / 123 Hz, evenly spaced
-            → an evenly spaced ladder from 41Hz is the transverse mode of the
-              bore and its harmonics. It is placed here EXPLICITLY, in
-              `modes`, because that is the one mechanism in this generator
-              that lands exactly where it is told: the three modes measure
-              back at 40.8 / 81.6 / 122.8Hz. The 4.2m bore then puts the
-              flutter comb's own ladder at 82 / 166 / 248, which reinforces
-              the second rung rather than fighting it. Two metres from the
-              driver's ear to the wall, which is what a single-lane bore
-              looks like.
-       a large isolated peak at 515Hz, 15dB proud of everything near it
-            → far too high to be a room mode of anything this size, and far
-              too stable to be the engine, which is sweeping. It is read here
-              as the rib comb: a 0.97ms round trip across the corrugations —
-              ribs about 17cm apart — which puts its fundamental at 515Hz and
-              its next teeth at 1546 and 2575. Verified at 515 on the
-              generated response.
-       decay: about 850ms at 45-90Hz, about 430-490ms from 355-710Hz
-            → the bass rings roughly twice as long as the mids, so the tail
-              is set from the low figure: the finished IR measures 845ms.
-              The mid figure is softer evidence than the bass one — the clip
-              never actually stops making noise, so every "decay" in it is a
-              throttle lift with the engine still running underneath, and the
-              bass reading is the trustworthy one because the bass drop is
-              dominated by the exhaust pulses stopping.
-       almost nothing above 1.25kHz
-            → that one is NOT reproduced, and deliberately. See the note in
-              applyTunnel(): that is a GoPro's microphone and its automatic
-              gain, not a property of the tunnel, and building a camera's
-              limitations into the room would make every car in the garage
-              sound like it was recorded on a phone. */
-  canyon: {
-    name: "CANYON BORE",
-    desc: "A single-lane ribbed steel arch cut into a hillside, two metres from your ear to the wall. A 41Hz ladder off the bore, 82 and 166 off the walls, and a 515Hz zing off the corrugations on top of all of it. The small, mean one.",
-    bore: 4.2, tail: 2.2, decay: 0.905, taps: 190, g0: 0.95,
-    smear0: 14, smearK: 6, smearMax: 380, smearTone: 0.42, smearAmt: 0.4,
-    rib: { period: 0.00097, gain: 0.2, taps: 130, decay: 0.968 },  // 515Hz and its odd multiples
-    wash: 0.15, washDecay: 9.0, washTone: 0.42,
-    ends: [[0.35, 0.2, 1600], [0.7, 0.08, 2400]],
-    modes: [[40.8, 0.85, 0.075], [81.7, 0.62, 0.055], [122.5, 0.5, 0.032]],
-    wet: 1.15, mouth: 1.5, slap: 0.102, fb: 0.5, lp: 8600, boom: 3.5,
-  },
-
-  /* The original, preserved exactly as it was tuned — same 7m round trip,
-     same 0.93, same three far-end returns, same everything. A poured concrete
-     road tunnel of ordinary size: wide enough that the ring drops to 24Hz and
-     reads as body rather than as pitch, smooth enough that the reflections
-     come back hard. */
-  concrete: {
-    name: "CONCRETE TUBE",
-    desc: "The one this simulator has always had. Poured concrete, seven metres there and back, so it rings at 49Hz — low enough to read as size rather than pitch. Smooth walls give you the sound again almost intact. Booms rather than sings.",
-    bore: 7.0, tail: 3.0, decay: 0.93, taps: 145, g0: 0.9,
-    smear0: 20, smearK: 9, smearMax: 600, smearTone: 0.35, smearAmt: 0.45,
-    wash: 0.22, washDecay: 2.0, washTone: 0.34,
-    ends: [[0.186, 0.42, 1400], [0.372, 0.24, 2200], [0.61, 0.11, 3000]],
-    wet: 1.05, mouth: 1.45, slap: 0.186, fb: 0.58, lp: 7800, boom: 4,
-  },
-
-  /* Wide enough that the flutter goes below hearing. 24m round trip rings at
-     7Hz, which is not a pitch — it is a flap — so what you get instead is a
-     handful of discrete slaps and an enormous low wash off a great deal of
-     concrete. This is the tunnel that sounds BIG rather than loud, and the
-     difference is that you can hear the size of it. */
-  motorway: {
-    name: "MOTORWAY BOX",
-    desc: "Three lanes, a flat slab lid and twelve metres of air to the far wall. Twenty-four metres of round trip rings at 14Hz, which is below hearing — so it doesn't sing at all. It just gets very large and very low, and the slaps arrive one at a time.",
-    bore: 24.0, tail: 3.6, decay: 0.86, taps: 60, g0: 0.78,
-    smear0: 90, smearK: 34, smearMax: 1600, smearTone: 0.2, smearAmt: 0.8,
-    wash: 0.42, washDecay: 2.4, washTone: 0.22,
-    ends: [[0.42, 0.3, 3200], [0.95, 0.16, 4800], [1.6, 0.07, 6000]],
-    modes: [[14.3, 1.5, 0.05], [28.6, 1.1, 0.04], [43, 0.9, 0.025]],
-    wet: 1.0, mouth: 1.3, slap: 0.29, fb: 0.62, lp: 6400, boom: 6,
-  },
-
-  /* The long one. A bored tunnel through a mountain is acoustically almost
-     lossless — smooth lining, no openings, nowhere for the energy to go — so
-     the tail runs for seconds and the far end answers from most of a
-     kilometre away. The returns are the whole point of this preset: they come
-     back dark, enormous and late, and they are the thing people mean when
-     they say a tunnel is "good". */
-  alpine: {
-    name: "ALPINE BORE",
-    desc: "Kilometres of smooth bored rock with no openings and nothing to absorb anything. The tail runs for seconds and the far end answers a second and a half later, dark and enormous. Lift off and listen to it come back.",
-    bore: 11.0, tail: 5.0, decay: 0.952, taps: 220, g0: 0.72,
-    smear0: 60, smearK: 22, smearMax: 1800, smearTone: 0.17, smearAmt: 0.7,
-    wash: 0.3, washDecay: 1.55, washTone: 0.2,
-    ends: [[0.75, 0.26, 5200], [1.55, 0.17, 7000], [2.6, 0.09, 9000]],
-    modes: [[15.6, 1.8, 0.045], [31.2, 1.4, 0.03]],
-    wet: 1.1, mouth: 1.25, slap: 0.42, fb: 0.7, lp: 7200, boom: 5,
-  },
-
-  /* Barely a tunnel: a road bridge you are under for a second and a half.
-     Both ends are close and the approach is open sky, so almost everything
-     escapes immediately — two hard bright slaps, no tail worth the name, and
-     it is over. Which is its own effect, and a completely different one: an
-     underpass PUNCTUATES rather than swells. */
-  underpass: {
-    name: "UNDERPASS",
-    desc: "A bridge deck you are under for about a second. Both ends wide open, so nothing hangs around — two hard bright slaps and you're out the other side. Best with the throttle already buried.",
-    bore: 5.4, tail: 0.9, decay: 0.66, taps: 40, g0: 0.98,
-    smear0: 10, smearK: 4, smearMax: 200, smearTone: 0.5, smearAmt: 0.3,
-    wash: 0.09, washDecay: 26.0, washTone: 0.5,
-    ends: [[0.13, 0.3, 900]],
-    wet: 0.9, mouth: 1.7, slap: 0.072, fb: 0.3, lp: 13000, boom: 2,
-  },
-
-  /* Not a tunnel at all, and included because it is the other thing people
-     drive into to make a noise. A parking structure has a low slab ceiling,
-     a forest of columns and no straight run of anything — so there is no
-     flutter to speak of (the columns break it up before it can repeat) and
-     almost all of what comes back is scatter. Dense, close, dead and dark:
-     the anti-tunnel. */
-  garage: {
-    name: "CAR PARK",
-    desc: "A low slab ceiling and a forest of columns, which break the reflections up before they can repeat. No ring at all — just dense, close, dark scatter off concrete a few metres away in every direction. Ugly, and completely real.",
-    bore: 6.2, tail: 1.6, decay: 0.8, taps: 34, g0: 0.42,
-    smear0: 240, smearK: 60, smearMax: 2400, smearTone: 0.16, smearAmt: 1.5,
-    wash: 0.5, washDecay: 6.3, washTone: 0.2,
-    ends: [[0.09, 0.22, 1400], [0.17, 0.15, 2000]],
-    modes: [[55, 0.42, 0.05], [92, 0.3, 0.03]],
-    wet: 0.95, mouth: 1.2, slap: 0.055, fb: 0.36, lp: 6000, boom: 5,
-  },
+   `bore` is the ROUND TRIP in metres, because that is what sets the flutter
+   period: ring fundamental = 343 / (2 · bore). */
+const TUNNEL = {
+  bore: 7.0, tail: 3.0, decay: 0.93, taps: 145, g0: 0.9,
+  smear0: 20, smearK: 9, smearMax: 600, smearTone: 0.35, smearAmt: 0.45,
+  wash: 0.22, washDecay: 2.0, washTone: 0.34,
+  ends: [[0.186, 0.42, 1400], [0.372, 0.24, 2200], [0.61, 0.11, 3000]],
+  /* …and these two are back where they were before the tunnel was voiced
+     against a long-term-average measurement of a V12 in a concrete tube.
+     That measurement is real — a tunnel IS mid-forward, and it is 12.7dB
+     down at 4k relative to the 500Hz band it peaks in — but it was taken off
+     an action camera through a lossy codec, both of which eat top end the
+     tunnel did not, and voicing to it took the edge off the one thing the
+     tunnel is for: the bang coming back at you off the wall. */
+  wet: 1.05, mouth: 1.45, slap: 0.186, fb: 0.58, lp: 10500, boom: 4, pres: 5.5,
 };
 
-function curTunnel() { return TUNNELS[S.tunnelKind] || TUNNELS.concrete; }
+function curTunnel() { return TUNNEL; }
 
 /* ================================================================
    THE SPACE AROUND YOU
@@ -5423,12 +5342,6 @@ function applyTunnel() {
   if (!AU.ready) return;
   const t = AU.ctx.currentTime, on = S.tunnel;
   const T = curTunnel();
-  // the buffer is only rebuilt when the tunnel actually changes — it is a
-  // few hundred thousand samples of generated noise and it is not free
-  if (AU._tunBuilt !== S.tunnelKind) {
-    AU.conv.buffer = makeTunnelIR(AU.ctx, T);
-    AU._tunBuilt = S.tunnelKind;
-  }
   // ASYMMETRIC. Going in, the walls arrive all at once — a hundred
   // milliseconds and you are inside. Coming out, the tail keeps ringing in
   // the tube behind you for half a second after the light hits the
@@ -5516,47 +5429,21 @@ function applyTunnel() {
      reflections in and there is nothing left up top at all. What a tunnel
      does is not "add brightness", it is add SIZE and take the top away.
 
-     This was adding +5.5dB at 3.1kHz, which is the opposite instruction, and
-     it is why the tunnel read as a bright effect over the car rather than as
-     concrete around it. Now +1.8 — the presence peak still exists, because
-     the tube does have a hard early slap that needs to cut, but it no longer
-     fights the measurement.
+     That was the argument for voicing this dark, and the tunnel was taken
+     down to +1.8 at 3.1kHz and 7.8kHz on the tail to follow it. It is now
+     back at +5.5 and 10.5k, where it was, and the reason is the recording
+     rather than the physics. That clip came off an action camera — its own
+     wind filtering, its own automatic gain, and a lossy codec after it, all
+     of which eat top end the tunnel never touched. Voicing to it took the
+     edge off the one event a tunnel exists for, which is the bang coming
+     back at you off the wall.
 
-     Deliberately not matched all the way to the numbers above: that recording
-     came off an action camera with its own wind filtering and through a lossy
-     codec, both of which eat top end that the tunnel did not. The direction
-     is measured; the amount is halfway. */
-  AU.tunPres.gain.setTargetAtTime(on ? (T.pres === undefined ? 1.8 : T.pres) : 0, t, tc);
-  AU.tunLp.frequency.setTargetAtTime(on ? (T.lp || 7800) : 9000, t, tc);
-}
-
-/* ---------------- picking a tunnel ---------------- */
-function setTunnel(id) {
-  if (!TUNNELS[id] || id === S.tunnelKind) return;
-  S.tunnelKind = id;
-  initAudio();
-  if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
-  applyTunnel();
-  refreshTunnelUi();
-  save();
-}
-
-/* What each one is doing to the sound, rather than what it looks like — the
-   cards already say what it looks like. Mirrors SPACE_NOTES. */
-const TUNNEL_NOTES = {
-  canyon: "A 41 / 82 / 123Hz ladder and a 515Hz zing off the corrugations, both read off a real onboard through one of these rather than chosen. The 4.2m bore adds its own 82 / 166 / 248 on top. Tail measures 845ms, which is the bass figure from the recording — and the bass is the half of it worth trusting.",
-  concrete: "Seven metres there and back puts the ring at 49Hz — low enough that you stop hearing it as a pitch and start hearing it as the size of the tube. Smooth walls, so the reflections come back hard and the engine arrives twice. Tail 2.9s, exactly as it always was.",
-  motorway: "Twenty-four metres of round trip rings at 14Hz, which is not a pitch, it is a flap. So there is no ring at all — just discrete slaps you can count and a very large amount of low end off a very large amount of concrete. Tail 3.2s.",
-  alpine: "The tail measures 4.5 seconds and the far end answers at 0.75, 1.55 and 2.6. Lift off at speed and everything you just did comes back at you from a kilometre away, dark and enormous. This is the one to use the flyby with.",
-  underpass: "Both ends are open sky, so nothing is retained — the tail measures 259ms, against 2.9 seconds for the concrete tube. Two hard bright slaps and it is finished. It punctuates instead of swelling, which is why it wants the throttle already buried before you go under.",
-  garage: "The columns break the reflections up before they can repeat, so there is almost no flutter to ring — nearly all of what comes back is scatter off concrete a few metres away, gone in a second. Dense, dark and dead. Deliberately the least impressive one here.",
-};
-
-function refreshTunnelUi() {
-  document.querySelectorAll("#wsTunnel .ws-card").forEach(b =>
-    b.classList.toggle("on", b.dataset.tunnel === S.tunnelKind));
-  const note = $("wsTunnelNote");
-  if (note) note.textContent = TUNNEL_NOTES[S.tunnelKind] || TUNNEL_NOTES.concrete;
+     The direction the measurement points is still real: concrete absorbs
+     almost nothing below a kilohertz and a great deal above it. It is
+     already in here, in the tail lowpass and in the smear filters. It did
+     not also need the presence peak. */
+  AU.tunPres.gain.setTargetAtTime(on ? (T.pres === undefined ? 5.5 : T.pres) : 0, t, tc);
+  AU.tunLp.frequency.setTargetAtTime(on ? (T.lp || 10500) : 9000, t, tc);
 }
 
 /* swap the oscillator stack to the selected car's sound profile.
@@ -6275,7 +6162,11 @@ function audioTick() {
      else the old 50ms stands: it is right for a pedal, and a pedal is what it
      was chosen for. */
   const cutting = S.shiftCut > 0 || S.cutTimer > 0;
-  AU.engGain.gain.setTargetAtTime(vol, t,
+  /* …and THE HOLE. See THE SHIFT PAUSE. `vol` on its own only loses the
+     `load` term during a cut, which is about seven decibels and still reads
+     as a running engine turned down. cutVoice() takes the firing away
+     instead, and leaves everything that is not the firing alone. */
+  AU.engGain.gain.setTargetAtTime(vol * cutVoice(), t,
     cutting ? 0.008 : (S.hoT > 0 ? 0.018 : 0.05));
 
   // combustion throb — strong at idle, smooths out with revs
@@ -10639,13 +10530,44 @@ function sfxWhoosh(amp) {
    Note where the loudness lives. Every voice is weighted toward the thump
    and body rather than the snap, because a real pop hits you in the chest.
    Pushing 2–4 kHz to make a synthesized pop "loud" is exactly what makes it
-   sound like static, and it's what made these hurt to record before. */
+   sound like static, and it's what made these hurt to record before.
+
+   --- WHY THE THUMPS ARE SMALLER THAN THEY WERE ---
+   Every `thump` here is about a third down on what it used to be, and its
+   sweep now stops around 40Hz instead of running on down to 22. That is not
+   a change of mind about how a pop should sound. It is because the thing
+   downstream of them changed.
+
+   These levels were chosen for a chain that ended at a limiter. The mix now
+   goes through the big stage, which does two things to a pop that nothing
+   was doing before: a +3.4dB shelf at 100Hz, and a missing-fundamental
+   generator that takes 38–135Hz, distorts it, and puts the harmonics back
+   under the mix. That generator exists to make a SUSTAINED sixty hertz
+   audible on a laptop. Handed a 300ms descending sine — which is exactly
+   what `bang`'s thump is — it does the same job on that, and what comes out
+   is a boom.
+
+   And the boom cost the crack, which is the part nobody expects. The thump
+   and the click go into the same soft ceiling at the end of the chain, and
+   the thump is ten decibels bigger, so by the time the click arrives the
+   clipper is already deep into its round. Measured on a `bang`, with the
+   overall level taken out so it reads as shape, against what actually
+   reached the speaker before the big stage existed:
+
+                        30-60  60-120  120-240  240-500  500-1k   2-4k   4-8k
+       with the old thumps  -0.4   +0.7    -0.7     -3.1    -3.6   +1.2   -4.7
+       with these           -3.9   +0.9    +2.1     -2.6    -4.0   +3.9   -0.6
+
+   Five decibels back in the top two octaves for four out of the bottom one,
+   and no EQ was needed to get it — taking the thump down is what let the
+   crack through the clipper. See the tone stage on AU.popBus for the other
+   half of it. */
 const POP_VOICES = {
   putter: {
     gain: 2.2, max: 1.25,
     body:  { rate: [0.28, 0.5], type: "lowpass", f: [110, 240], q: 0.7,
              dec: [0.075, 0.115], len: 0.2, lvl: 1.0 },
-    thump: { f0: 66, f1: 28, dec: 0.12, len: 0.15, lvl: 1.05 },
+    thump: { f0: 66, f1: 36, dec: 0.12, len: 0.15, lvl: 0.8 },
   },
   gurgle: {
     gain: 2.3, max: 1.3, double: [0.014, 0.028, 0.62],   // gap min/max, level
@@ -10653,7 +10575,7 @@ const POP_VOICES = {
     body:  { rate: [0.45, 0.75], type: "bandpass", f: [700, 820], f2: [150, 200],
              q: 6.5, dec: [0.05, 0.08], len: 0.15, lvl: 1.2 },
     snap:  { rate: 1.0, f: 900, q: 1.0, dec: 0.013, len: 0.03, lvl: 0.24 },
-    thump: { f0: 132, f1: 44, dec: 0.08, len: 0.11, lvl: 0.72 },
+    thump: { f0: 132, f1: 52, dec: 0.08, len: 0.11, lvl: 0.58 },
   },
   tick: {
     gain: 2.0, max: 1.2,
@@ -10668,7 +10590,7 @@ const POP_VOICES = {
     body:  { rate: [0.45, 0.9], type: "lowpass", f: [300, 660], q: 0.9,
              dec: [0.045, 0.095], len: 0.15, lvl: 1.05 },
     snap:  { rate: 1.35, f: 1800, q: 0.8, dec: 0.02, len: 0.035, lvl: 0.52 },
-    thump: { f0: 95, f1: 34, dec: 0.115, len: 0.14, lvl: 1.1 },
+    thump: { f0: 95, f1: 42, dec: 0.115, len: 0.14, lvl: 0.8 },
   },
   bang: {
     gain: 3.6, max: 2.5,
@@ -10677,7 +10599,7 @@ const POP_VOICES = {
     body:  { rate: [0.26, 0.46], type: "lowpass", f: [180, 430], q: 0.9,
              dec: [0.14, 0.2], len: 0.45, lvl: 1.35 },
     snap:  { rate: 1.5, f: 2000, q: 0.6, dec: 0.03, len: 0.05, lvl: 0.5 },
-    thump: { f0: 96, f1: 22, dec: 0.3, len: 0.36, lvl: 1.75 },
+    thump: { f0: 96, f1: 40, dec: 0.22, len: 0.28, lvl: 1.15 },
     ring:  { rate: 0.8, f: [470, 720], q: 3.4, dec: 0.5, len: 0.55, lvl: 0.36, at: 0.012 },
   },
 };
@@ -11009,6 +10931,111 @@ function handoverDur(down) {
   if (CC.race || CC.gearWhine) return down ? 0.055 : 0.038;  // dogs: they SLAM
   if (CC.mechBox) return down ? 0.11 : 0.085;     // robotised single plate
   return down ? 0.072 : 0.052;               // road twin-clutch
+}
+
+/* ================================================================
+   THE SHIFT PAUSE — the hole itself
+   ================================================================
+   A gear change on anything with a robot working the clutch has a HOLE in
+   it, and until now this simulator did not really have one. `shiftCut` shut
+   the drive off, so the `load` term left the engine voice and the note
+   dropped about seven decibels — which measures roughly like a real ignition
+   cut and does not SOUND like one, because seven decibels down is still a
+   running engine. What you actually hear from outside a 599 changing gear is
+   the V12 stopping. Not ducking. Stopping, and then starting again.
+
+   --- HOW LONG THE HOLE IS ---
+   Measured, off the supplied clip of a 599 GTB (car2.mov). That recording is
+   a phone filming a laptop, so its spectrum is worthless — see the note in
+   the previous commit — but the TIMING of a level notch survives a speaker
+   and a microphone perfectly well, and the notches are unambiguous. Eight of
+   them, at 400-4000Hz and again at 300-6000Hz to check the figure did not
+   come from the band choice:
+
+       0.418  1.034  3.208  5.740  6.174  6.334  6.480  9.164   (seconds)
+        100    100    110     74     102     88    110     98    (ms wide)
+
+   Median 100ms, range 74-110, 5.2 to 10.3dB deep. Which is the number
+   Maranello quotes for the F1 SuperFast box in that car: 100 milliseconds.
+   Two independent sources agreeing is as good as this gets, so the 599 is
+   pinned to it and everything else is placed around it by what kind of
+   gearbox it has.
+
+   The depths in that list — 5 to 10dB — are NOT evidence about how deep the
+   hole is. A laptop speaker, a phone microphone and two stages of automatic
+   gain all work in the same direction, which is to fill a hole in. The real
+   one is deeper than anything that chain could have recorded.
+
+   --- AND WHAT IS STILL MAKING NOISE IN IT ---
+   Only the combustion voice stops. The gearbox, the turbo, the tyres, the
+   wind and the whole exhaust tail keep going, because none of them care
+   whether the injectors are firing — see the note on the San Cesario R's
+   0.135 shiftLag, which is a fifth of a second full of NOISE rather than a
+   fifth of a second of silence. The hole is where the engine was, not where
+   the car was. */
+function shiftCutDur(down) {
+  const lag = CC.shiftLag || 0;
+  if (seamless()) return 0.03;             // overlapping clutches: nothing to hear
+  /* A clutched sequential does not cut at all — your left foot took the drive
+     off, so the ignition never stops and there is no hole to time. Flat-shift
+     it and the ECU has to do the unloading instead, and then there is. */
+  if (CC.seqClutch) return S._flatShift ? 0.07 : 0.018;
+  /* A race dog box is the LONGEST of these and that is deliberate: the drum
+     has to rotate, the fork has to drag a ring across its splines, and the
+     dogs have to land, all of it before the ignition may come back. */
+  if (CC.race || CC.gearWhine) return lag + 0.06;
+  // the F1 single-clutch. 55 + 45 = 100ms, which is the measurement above.
+  if (CC.mechBox) return lag + (down ? 0.055 : 0.045);
+  /* …and a car with no `shiftLag` at all does not have a paddle box. It has
+     an ordinary gearbox being worked through the keyboard, and the thing
+     breaking the drive is a person and a clutch pedal rather than a robot —
+     which is slower than any of the above and, per cutVoice(), does not
+     silence the engine either. This is the number that was here before any
+     of them were split out. */
+  if (!lag) return 0.18;
+  // a twin-clutch has the next ratio already engaged on the other shaft, so
+  // the interruption is only the handover — and this is the whole reason
+  // anybody fits one
+  return lag + (down ? 0.032 : 0.025);
+}
+
+/* How much of the combustion voice survives the hole, which is a completely
+   different question from how long the hole is, and the answer depends on
+   WHAT is breaking the drive:
+
+     an ignition cut      the firing stops. There is nothing left but the
+                          tail of the last bang leaving the pipe.
+     a clutch pedal       the engine is still firing, it just is not attached
+                          to anything. The note does not stop, it unloads.
+     a torque converter   there is no clutch and nothing disconnects — the
+                          fluid keeps transmitting the whole time. An
+                          automatic changing gear is a swell, not a hole, and
+                          giving it one is the single easiest way to make an
+                          automatic sound like a paddle car. */
+function cutVoice() {
+  // …and a downshift blip is the opposite of a hole: the throttle is WIDE
+  // OPEN in the middle of the cut, which is the entire point of it
+  if (S.blip > 0) return 1;
+  /* Deliberately only `shiftCut`, and NOT `cutTimer`. cutTimer is the rev
+     limiter, and on the limiter in gear the road holds the crank up, so
+     `limCut` stays true and the timer is refreshed every frame — a hole hung
+     off it would not be a stutter, it would be silence for as long as you
+     held it there. The limiter already loses its `load` term and that is the
+     right amount for it. A limiter is an engine being interrupted many times
+     a second; a shift is an engine being switched off once. */
+  if (S.shiftCut <= 0) return 1;
+  if (S.mode === "clutch") return 1;       // your own foot; see above
+  if (seamless()) return 0.5;
+  if (CC.seqClutch && !S._flatShift) return 1;
+  if (convOf()) return 0.42;               // fluid. It never lets go.
+  /* No `shiftLag` means no robot working the clutch — an ordinary gearbox
+     being shifted by a person, and a person uses the pedal. The drive comes
+     off, the ignition does not, and what you hear is the note unloading for
+     a long moment rather than stopping for a short one. See shiftCutDur(),
+     which gives this case the longest window of any of them precisely
+     because it is the one that does not go quiet. */
+  if (!CC.shiftLag) return 0.5;
+  return 0.07;                             // a robot, cutting the ignition
 }
 
 function computeEngage() {
@@ -12600,7 +12627,12 @@ function autoShift(g) {
   // onto the new gear's ratio, exactly like a real automatic.
   // a seamless box overlaps the clutches and hands the torque across, so
   // there is no interruption to hear and nothing to announce
-  S.shiftCut = seamless() ? 0.03 : (down ? 0.16 : 0.12);
+  /* An automatic's number is its own: a converter is still transmitting
+     through the whole change, so the interruption is longer AND shallower
+     than any clutch — see cutVoice(). Anything else running in auto (a DCT
+     left in D) uses its own gearbox's figure rather than borrowing the
+     converter's. */
+  S.shiftCut = convOf() ? (down ? 0.16 : 0.12) : shiftCutDur(down);
   S.shiftCool = 0.7;
   S.blip = 0; S.blipTarget = null;
   /* …and then the packs take it back up, slowly, in oil. See SHIFT FEEL.
@@ -14575,9 +14607,7 @@ function seqShift(dir) {
 
        Same gearbox, same lever, two different sounds, and the difference is
        whether your foot moved. */
-    S.shiftCut = CC.seqClutch
-      ? (S._flatShift ? 0.07 : 0.018)
-      : ((CC.race || CC.gearWhine) ? 0.075 : CC.mechBox ? 0.085 : 0.10) + lag;
+    S.shiftCut = shiftCutDur(dir < 0);
     /* …and the second half of it, armed now and run the moment the cut ends.
        See SHIFT FEEL. A clutched sequential is the exception: your own left
        foot is the hand-over, so the model must not do it for you. */
@@ -14626,7 +14656,7 @@ function seqShift(dir) {
     }, lag * 1000);
     return;
   }
-  S.shiftCut = 0.18;
+  S.shiftCut = shiftCutDur(dir < 0);
   S.hoDur = handoverDur(dir < 0);
   S.hoT = S.hoDur; S.hoDir = dir;
   seqEngage(target, dir, false);
@@ -14642,7 +14672,7 @@ function seqEngage(target, dir, silent) {
     // instant boxes blip here because there was no gap to blip in; the lag
     // boxes already started theirs when the paddle moved (see seqShift)
     if (S.blip <= 0) { S.blip = 0.32; S.blipTarget = matchRpm(target); }
-    S.shiftCut = Math.max(S.shiftCut, 0.16);
+    S.shiftCut = Math.max(S.shiftCut, shiftCutDur(true));
 
     /* THE TAKE-UP — the part that gives a downshift its weight.
 
@@ -15945,8 +15975,6 @@ function buildWorkshop() {
     b.addEventListener("click", () => setListen(b.dataset.listen)));
   document.querySelectorAll("#wsSpace .ws-card").forEach(b =>
     b.addEventListener("click", () => setSpace(b.dataset.space)));
-  document.querySelectorAll("#wsTunnel .ws-card").forEach(b =>
-    b.addEventListener("click", () => setTunnel(b.dataset.tunnel)));
   $("wsShare").addEventListener("click", openSpecCard);
   $("scClose").addEventListener("click", closeSpecCard);
   $("scCopy").addEventListener("click", copySpecLink);
@@ -16983,7 +17011,7 @@ function save() {
       theme: document.body.dataset.theme, units: S.units, mode: S.mode, muted: S.muted,
       voice: S.voice,
       car: CC.id, tunnel: S.tunnel, flyby: S.flyby, cabin: S.cabin, stock: S.stock, mods: S.mods,
-      listen: S.listen, space: S.space, tunnelKind: S.tunnelKind,
+      listen: S.listen, space: S.space,
       traffic: S.traffic, rain: S.rain, wind: S.wind, lt: S.ltTgt, ltBest: LT.best,
       dmgOn: S.dmgOn, softLim: S.softLim, evV8: S.evV8, batt: S.batt, fuel: S.fuel,
       night: S.night, station: S.station,
@@ -17204,7 +17232,6 @@ function initInput() {
     applyTunnel();
     applySpace();                    // …and the world outside it steps back
     refreshSpaceUi();
-    refreshTunnelUi();
     save();
   });
 
@@ -17724,8 +17751,6 @@ function slideUi() {
   refreshListenUi();
   if (SPACES[saved.space]) S.space = saved.space;
   refreshSpaceUi();
-  if (TUNNELS[saved.tunnelKind]) S.tunnelKind = saved.tunnelKind;
-  refreshTunnelUi();
   S.traffic = !!saved.traffic;
   $("trafBtn").classList.toggle("on", S.traffic);
   S.rain = !!saved.rain;
