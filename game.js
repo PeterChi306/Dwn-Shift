@@ -62,6 +62,8 @@ function moddedRatios(c, m) {
 const CARS = [
   {
     id: "kestrel", name: "Kestrel 100", tag: "city hatch", layout: "I3",
+    revHang: 0.55,      // a modern small car, and this is the thing everyone hates about them
+    throwRate: 0.78, clutch: { start: 0.3, width: 0.48, judder: 0.35, effort: 0.7 },
     cyl: 3, idle: 900, max: 6600, cut: 6750, inertia: 0.22,
     curve: [[0, 55], [900, 86], [2200, 112], [3800, 121], [5200, 117], [6000, 104], [6900, 72]],
     mass: 1040, finalDrive: 4.2, clutchCap: 190, cdA: 0.62, brakeMax: 9000,
@@ -90,6 +92,7 @@ const CARS = [
   },
   {
     id: "shirakawa", name: "Shirakawa 9R", tag: "high-rev screamer · cam switch", layout: "I4",
+    throwRate: 1.15,    // short-throw cable shifter, and the whole car is built round it
     cyl: 4, idle: 950, max: 9000, cut: 9200, inertia: 0.24, camAt: 6600,
     curve: [[0, 70], [1000, 118], [3000, 162], [5000, 178], [6400, 172], [6600, 208],
             [8200, 204], [9000, 186], [9600, 120]],
@@ -102,6 +105,7 @@ const CARS = [
   },
   {
     id: "strada", name: "Strada Corsa V10", tag: "formula screamer", layout: "V10",
+    intakeLag: 0.018,   // twelve trumpets, one per cylinder, and no plenum at all
     race: true,   // formula car: no lights, no road registration
     cyl: 10, idle: 1400, max: 12200, cut: 12500, inertia: 0.16,
     bootRich: true,          // full supercar dash boot on the key
@@ -126,6 +130,7 @@ const CARS = [
   },
   {
     id: "t50", name: "Dunsfold T.50", tag: "12,100 rpm V12 · ground-effect fan", layout: "V12 · 3.9L NA · 986kg",
+    intakeLag: 0.02,    // Cosworth ITBs, ram airbox, nothing in between
     indicator: "luxury",   // obsessively damped, like the rest of it
     cyl: 12, idle: 1000, max: 11500, cut: 12100, inertia: 0.09,   // lightest crank ever fitted to a road car
     bootRich: true,          // full supercar dash boot on the key
@@ -390,6 +395,7 @@ const CARS = [
   },
   {
     id: "purosangue", name: "Maranello Purosangue", tag: "the V12 that carries four", layout: "V12 · 6.5L NA · AWD",
+    revHang: 0.4,
     indicator: "luxury",   // four doors and a family: the stalk is damped
     cyl: 12, idle: 850, max: 8250, cut: 8350, inertia: 0.30,   // heavier crank than the 812
     bootRich: true,          // full supercar dash boot on the key
@@ -480,6 +486,7 @@ const CARS = [
   },
   {
     id: "huayrar", name: "San Cesario R", tag: "the best-sounding car in the world", layout: "V12 · 6.0L NA · open megaphone",
+    intakeLag: 0.018,   // ITBs — see the note on the flat top end of the curve
     race: true,   // track-only: never had indicators to begin with
     crackle: "dry",   // open megaphones ring rather than thump
     /* 6.0 bespoke race V12, 850hp at 8,250 and a 9,000 redline.
@@ -605,6 +612,7 @@ const CARS = [
   },
   {
     id: "gaydon", name: "Gaydon 6.5 V12", tag: "the highest-revving road car ever built", layout: "V12 · 6.5L NA",
+    intakeLag: 0.02,    // ditto, and it is why 11,100rpm is usable
     crackle: "dry",
     /* 11,100 rpm. In a car with a number plate. There is no other road engine
        within two thousand revs of it, and everything about how this thing
@@ -663,6 +671,7 @@ const CARS = [
   },
   {
     id: "motomachi", name: "Motomachi 4.8 V10", tag: "the needle was too fast for a real tacho", layout: "V10 · 4.8L NA",
+    intakeLag: 0.022,   // ten butterflies on ten runners — the needle was too fast for a tacho
     indicator: "crisp",
     crackle: "dry",
     /* The famous one: the rev needle could sweep 0–9,000 faster than an analog
@@ -724,6 +733,7 @@ const CARS = [
   },
   {
     id: "zonda", name: "San Cesario Zonda", tag: "7.3 AMG V12 · gated six-speed · no paddles", layout: "V12 · 7.3L NA",
+    intakeLag: 0.05,    // one plate and a big plenum — an S-class engine underneath
     indicator: "relay",      // hand-built in 1999 with a real flasher can
     crackle: "hard",
     ignKey: true,
@@ -736,6 +746,7 @@ const CARS = [
        forcedMode(). */
     gatedOnly: true,
     lever: "gate",       // milled out of a billet, exposed, and it rings
+    throwRate: 1.2, clutch: { start: 0.22, width: 0.3, judder: 1.0, effort: 1.4 },
     cyl: 12, idle: 800, max: 7500, cut: 7700, inertia: 0.42,   // 7.3 litres of iron and a big flywheel
     start: { rpm: 220, dur: 0.95, fires: 5, flare: 0.75, flareT: 1.1, grit: 1.3 },
     /* The M120: a 7.3-litre 60° V12 that started life in an S-class and was
@@ -773,6 +784,171 @@ const CARS = [
       formants: [[105, 0.9, 6], [480, 1.3, 5.5], [1400, 1.8, 4.5], [3200, 2.2, 3]],
       loadDrive: 0.5, noiseMul: 1.5, volTrim: 1.35, scream: 2400,
       drive: 0.78, pulseDepth: 0.34, raspMul: 1.6, hunt: 1.4,
+    },
+  },
+  {
+    id: "utopia", name: "San Cesario Utopia", tag: "twin-turbo V12 · seven-speed gated manual", layout: "V12 · 6.0L biturbo · 1,280kg",
+    indicator: "relay",      // still hand-built, still a real flasher can
+    crackle: "hard",
+    ignKey: true,
+    twoStage: true, boot: "space",
+    /* THE WHOLE POINT OF THE CAR.
+
+       Everybody else spent twenty years deleting the third pedal. This one
+       was drawn in 2022 around a seven-speed transverse Xtrac H-pattern and
+       an open gate milled out of billet, because the man who built it decided
+       that a car you drive should be a car you OPERATE. There is an automated
+       version; there is no version of this file where offering it would be
+       anything other than removing the reason the car exists.
+
+       So: gatedOnly, like the Zonda, and for the same reason — except that
+       this one has a pair of turbochargers behind the bulkhead, which makes
+       it the only twin-turbo H-pattern car in the garage and the only place
+       you can lift mid-shift and hear what that costs you. See TURBO RIG. */
+    gatedOnly: true,
+    lever: "gate",       // exposed machined linkage, and it rings like a watch
+    /* --- THE ENGINE ---
+       The AMG M158: 6.0 litres, 60° V12, two turbochargers, and a torque
+       plateau you could land an aircraft on — 1,100Nm from 2,800 to 5,900rpm,
+       which is very nearly the entire usable rev range. That plateau is the
+       car's whole personality and it is the opposite of the Zonda's: the
+       7.3 is a naturally aspirated engine that gives you everything at once
+       and then tapers, this one arrives, holds, and simply does not stop.
+
+       6,700 redline. It is not a screamer and was never meant to be one —
+       there is no reason to rev an engine that has finished making its
+       torque, and the seventh gear is there because the sixth ran out of
+       road, not because the engine ran out of revs.
+
+       Heavy-ish flywheel (0.30) because it is a road V12 with a twin-plate
+       and a transverse box hanging off it. Not the Zonda's iron 0.42; not a
+       race engine's 0.15 either. */
+    cyl: 12, idle: 780, max: 6700, cut: 6900, inertia: 0.30,
+    start: { rpm: 210, dur: 0.88, fires: 5, flare: 0.68, flareT: 1.0, grit: 1.1 },
+    /* base curve, before boost. boostMax 0.78 × full boost takes the 4,000rpm
+       figure of 620 up to the 1,100Nm the brochure claims, and the plateau
+       shape survives the multiplication because the boost curve is flat
+       across the same window. */
+    curve: [[0, 220], [900, 400], [1800, 520], [2800, 615], [4000, 620], [5000, 612],
+            [5900, 580], [6700, 500], [7100, 330]],
+    /* Seven ratios. First is deliberately not short — 1,100Nm through a
+       transverse box into two rear tyres does not want a short first, and the
+       car is geared to be driven on the plateau rather than chased to a
+       redline it does not have. Seventh is a genuine overdrive: it exists to
+       make 350km/h reachable and to make a motorway quiet. */
+    ratios: { R: -3.2, 1: 2.92, 2: 1.98, 3: 1.52, 4: 1.22, 5: 1.0, 6: 0.84, 7: 0.70 },
+    mass: 1280, finalDrive: 3.42, clutchCap: 1500, cdA: 0.62, brakeMax: 15500,
+    grip: 1.7,
+    launchG: 1.05,                // 1,280kg, rear drive, and all of that torque
+    /* --- THE MANUAL, AS A SET OF NUMBERS ---
+       These are the fields THE MANUAL section reads, and between them they
+       are most of what this car feels like through your hands and feet.
+
+       The gate is a milled billet exposed linkage with short rods and no
+       cable anywhere: the throw is SHORT and the detents are hard, so
+       `throwRate` is high and `gateEffort` is low — it moves where you put
+       it, immediately, with a mechanical click at each end.
+
+       The clutch is a road twin-plate rather than a race ceramic: a real
+       bite band you can work in (0.22 wide), not the Carrera GT's centimetre.
+       It is a heavy pedal, though, which is what `pedalRate` says.
+
+       And `revHang` is zero. This engine has a drive-by-wire throttle and it
+       could hang the revs for emissions like every other modern car does —
+       it does not, because the man who signed it off drives it himself. The
+       revs fall the instant you lift, which is the single biggest reason it
+       feels like a 1990s car and not a 2020s one. */
+    clutch: { start: 0.20, width: 0.22, judder: 0.8, effort: 1.35 },
+    throwRate: 1.35, gateEffort: 0.75, synchro: 1.15,
+    revHang: 0,
+    /* Two turbos behind your head and a plenum between them and the ports, so
+       the throttle is not the instant switch an ITB race engine is. 75ms of
+       manifold filling: enough that you feel the engine take a breath before
+       it goes, which is exactly what a big-plenum turbo motor does. */
+    intakeLag: 0.075,
+    /* --- LAUNCH CONTROL ---
+       It has none, and it must not pretend to. There is no clutch actuator on
+       this car and nothing between your left foot and the flywheel, so the
+       only launch control available is a two-step rev limiter — which is
+       exactly what the switch in the workshop gives a gated car. See LAUNCH
+       CONTROL: on an H-pattern it holds the revs and hands you the clutch,
+       because that is the only honest version of the feature. */
+    lcRpm: 3400,
+    asp: "turbo", pops: 2.3, boostMax: 0.78, spool: 1900, spoolRate: 3.0, psiMax: 19,
+    twin: 1,                      // a pair, behind the bulkhead, and you hear them
+    flutter: 0.35, flutterEager: true,   // no bypass worth the name between shifts
+    tachMax: 8, redK: 6.7, kmhMax: 350, mphMax: 217,
+    dial: "classic", dash: { accent: "#b8873a", face: "dark" },
+    rawCabin: 0.55,               // carbo-titanium tub, leather over it, turbos behind
+    cabinVoice: { eng: 0.9, air: 1.5 },
+    hush: 0.25,
+    /* --- THE RIG ---
+       A parallel twin: two identical wheels, one per bank, both fed all the
+       time. So ONE stage rather than two — staging is what a sequential pair
+       does, and describing a parallel pair as two stages would invent a
+       handover the car has not got. The single stage is heavy (0.85) because
+       these are big wheels feeding three litres a side, and the coast is long
+       for the same reason: lift between third and fourth and the shafts are
+       still turning when you get back on it, which on an H-pattern car with a
+       real clutch pedal is something you can actually play with.
+
+       The whistle is deliberately low and mechanical rather than shrill. The
+       turbos sit in the vee behind the bulkhead with a titanium system either
+       side of them, and what reaches the cabin is compressor breath and shaft
+       whine, not the inducer scream a top-mount wastegate car gives you. */
+    turboRig: {
+      spoolUp: 2.6, coast: 0.42, bleed: 8.0, fill: 15, windmill: 0.14,
+      whine:  { level: 0.05, hzMul: 0.85, spread: 0.006, wobble: 0.4, wobbleHz: 5, hp: 340 },
+      intake: { level: 0.11, hz: 300, q: 0.55, load: 0.8, rev: 0.24, rise: 0.3, riseMax: 0.42 },
+      breath: { level: 0.10, q: 0.6, boostHz: 520, sweep: 360, rise: 0.35, riseMax: 0.55 },
+      hiss:   { level: 0.03, hz: 2900, q: 0.5 },
+      whistle: {
+        level: 0.05, load: 0.62, wobble: 8,
+        voices: [
+          { at: 0.00, hz:  420, tone: 0.14, q:  2.4, lvl: 0.09 },
+          { at: 0.32, hz:  980, tone: 0.38, q:  5.0, lvl: 0.32 },
+          { at: 0.64, hz: 1950, tone: 0.58, q:  8.0, lvl: 0.70 },
+          { at: 0.92, hz: 3100, tone: 0.74, q: 11.0, lvl: 0.95 },
+        ],
+        surge: 0.7, rev: 0.14, revLvl: 0.2,
+      },
+      charge: { rate: 0.5, fall: 3.2, pitch: 0.16, level: 0.22 },
+      spool:  { level: 0.03, hz: [1500, 3400], q: 0.9 },
+      release: { level: 1.05, sigh: 1.15, chuff: 0.4, tail: 1.1, psh: 1, chirp: 0.9,
+                 duck: 1, shift: 0.95, shiftAt: 0.22 },
+      cabin: 1.6, cabinCont: 1.3,
+      stages: [{ at: 1100, span: 1800, sat: 3400, share: 1, inertia: 0.85,
+                 whineHz: 1250, whineMul: 1, breathHz: 520 }],
+    },
+    /* --- THE VOICE ---
+       A 60° V12 with even firing, like the Zonda, so the same fundamental
+       chorus — but two turbochargers sit between the ports and the tailpipes
+       and a turbo is a muffler that spins. It takes the top off: the hard
+       upper orders that make the 7.3 bark are damped, the half-order between
+       firings is quieter, and what is left is enormous and SMOOTH, with the
+       weight further down. That is the honest difference between the two
+       cars, and it is why this one sounds like a warship and that one sounds
+       like a fight.
+
+       The quad titanium tips are barely silenced, though, so it is not a
+       polite engine — it is a huge one with the edges rounded off, and when
+       it is working the second order comes back hard. */
+    sound: {
+      f0Mul: 0.72, air: 0.2, jitter: 1.5,
+      layers: [
+        ["square",   0.5,   0.40, 0.13],   // low-order thunder
+        ["sine",     0.5,   0.34, 0.10],   // six litres of chest
+        ["sawtooth", 0.994, 0.26, 0.30],   // unison low…
+        ["sawtooth", 1,     0.52, 0.52],   // …centre voice…
+        ["sawtooth", 1.007, 0.26, 0.30],   // …unison high
+        ["sawtooth", 1.5,   0.13, 0.24],   // half-order — damped by the turbines
+        ["sawtooth", 2.01,  0.15, 0.48],   // hardens hard once it is on boost
+        ["sawtooth", 3.02,  0.05, 0.28],
+        ["square",   4.03,  0.015, 0.12],
+      ],
+      formants: [[98, 0.9, 6.5], [440, 1.3, 5], [1250, 1.6, 4], [2900, 1.9, 2.5]],
+      loadDrive: 0.62, noiseMul: 1.35, volTrim: 1.28, scream: 2100,
+      drive: 0.74, pulseDepth: 0.30, raspMul: 1.35, hunt: 1.2,
     },
   },
   {
@@ -814,6 +990,8 @@ const CARS = [
   },
   {
     id: "urus", name: "Sant'Agata Urus", tag: "2.2 tonnes and a hot-vee V8", layout: "V8 · 4.0L twin turbo",
+    intakeLag: 0.11,
+    revHang: 0.4,
     indicator: "crisp",
     crackle: "hard",   // big cross-plane V8, four fat pipes, and no shame at all
     cyl: 8, idle: 640, max: 6800, cut: 7000, inertia: 0.46,   // heavy crank, big flywheel
@@ -1026,6 +1204,7 @@ const CARS = [
   },
   {
     id: "temerario", name: "Sant'Agata Temerario", tag: "flat-plane biturbo hybrid · 10,000 rpm", layout: "V8 · 4.0L biturbo + 3 e-motors",
+    intakeLag: 0.07,
     crackle: "hard",   // turbines in the exhaust stream and a map tuned for drama
     firing: "flat",    // a flat-plane V8 out of Sant'Agata, which has never happened before
     cyl: 8, idle: 900, max: 10000, cut: 10250, shiftLights: true, awd: true,
@@ -1153,6 +1332,7 @@ const CARS = [
   },
   {
     id: "kaminari", name: "Kaminari 13R", tag: "twin-rotor screamer", layout: "2-rotor · 1.3L",
+    intakeLag: 0.032,   // side ports, short runners, almost no volume
     crackle: "wet",   // rotaries pool fuel and gurgle it out
     cyl: 4, idle: 850, max: 9000, cut: 9300, inertia: 0.13,  // near-zero rotating mass: revs instantly
     start: { rpm: 300, dur: 0.86, fires: 2, flare: 0.85, flareT: 0.7, whine: 1420 },
@@ -1173,6 +1353,9 @@ const CARS = [
   },
   {
     id: "kodiak", name: "Kodiak TD", tag: "workhorse truck", layout: "I4 diesel",
+    intakeLag: 0.14,    // a diesel, and it takes its time about everything
+    revHang: 0.4,
+    throwRate: 0.62, clutch: { start: 0.28, width: 0.46, judder: 0.6, effort: 1.25 },
     indicator: "relay",   // a truck relay you can hear from outside
     crackle: "lazy",   // a diesel workhorse does not crackle
     cyl: 4, idle: 750, max: 4400, cut: 4550, inertia: 0.55, noPop: true,
@@ -1195,6 +1378,9 @@ const CARS = [
   },
   {
     id: "tempest", name: "Tempest MkIV", tag: "single big turbo", layout: "I6",
+    intakeLag: 0.12,
+    revHang: 0.35,
+    throwRate: 0.95,
     crackle: "hard",   // one big single dumping fuel into a hot turbine — it BANGS
     cyl: 6, idle: 850, max: 7600, cut: 7800, inertia: 0.33,
     start: { rpm: 265, dur: 0.7,  fires: 3, flare: 0.85, flareT: 0.8, grit: 1.2 },
@@ -1224,6 +1410,7 @@ const CARS = [
   },
   {
     id: "tempest3k", name: "Tempest 3000R", tag: "3000 hp drag missile", layout: "I6 · 98mm single",
+    intakeLag: 0.17,    // a 98mm wheel and an intercooler the size of a door
     race: true,   // drag car: a battery isolator and a big red button
     crackle: "hard",   // 3000hp and a 98mm single: gunshots, nothing subtle
     cyl: 6, idle: 1100, max: 9800, cut: 10200, inertia: 0.3, shiftLights: true,
@@ -1253,6 +1440,9 @@ const CARS = [
   },
   {
     id: "hellion", name: "Hellion 6.2 SC", tag: "supercharged muscle", layout: "V8",
+    intakeLag: 0.04,    // a blower is a pump bolted to the plenum: no lag to have
+    revHang: 0.3,
+    throwRate: 0.85, clutch: { start: 0.26, width: 0.42, judder: 1.0, effort: 1.15 },
     indicator: "relay",   // muscle car, real flasher can
     crackle: "lazy",   // blown muscle just lopes and putters
     cyl: 8, idle: 680, max: 6400, cut: 6550, inertia: 0.44,
@@ -1272,6 +1462,8 @@ const CARS = [
   },
   {
     id: "vandal", name: "Vandal 4.0 TT", tag: "twin-turbo bruiser", layout: "V8 · twin turbo",
+    intakeLag: 0.10,
+    revHang: 0.35,
     crackle: "hard",   // twin-turbo V8 bruiser
     cyl: 8, idle: 700, max: 7000, cut: 7200, inertia: 0.38,
     curve: [[0, 180], [700, 340], [2000, 520], [3500, 580], [5000, 560], [6200, 520],
@@ -1297,6 +1489,8 @@ const CARS = [
   },
   {
     id: "affalter", name: "Affalterbach 63 S", tag: "hot-vee biturbo brawler", layout: "V8 · biturbo",
+    intakeLag: 0.09,
+    revHang: 0.35,
     indicator: "crisp",
     cyl: 8, idle: 650, max: 7000, cut: 7200, inertia: 0.4,
     curve: [[0, 200], [700, 380], [2000, 700], [3500, 780], [5000, 750], [6200, 690],
@@ -1323,6 +1517,7 @@ const CARS = [
   },
   {
     id: "woking765", name: "Woking 765LT", tag: "longtail savage · flat-plane TT", layout: "V8 · 4.0L twin turbo",
+    intakeLag: 0.075,   // small hot wheels, short pipes — see the note on the turbos
     indicator: "crisp",
     crackle: "dry",   // longtail race system: dry and vicious
     cyl: 8, idle: 800, max: 8100, cut: 8500, inertia: 0.22,   // LT flywheel — throttle like a switch
@@ -1363,6 +1558,7 @@ const CARS = [
   },
   {
     id: "falkner", name: "Falkner S6", tag: "howling straight-six", layout: "I6 NA",
+    revHang: 0.3,
     indicator: "crisp",
     cyl: 6, idle: 850, max: 8000, cut: 8250, inertia: 0.26,
     twoStage: true, ignKey: true,
@@ -1381,6 +1577,8 @@ const CARS = [
   },
   {
     id: "bavaria", name: "Bavaria M58", tag: "twin-turbo six · check engine soon", layout: "I6 · twin turbo",
+    intakeLag: 0.10,
+    revHang: 0.45,
     indicator: "crisp",
     crackle: "wet",   // tuned six on a rich map, gurgling on overrun
     cyl: 6, idle: 750, max: 7200, cut: 7400, inertia: 0.3, cel: true,
@@ -1407,6 +1605,8 @@ const CARS = [
   },
   {
     id: "bavariaxm", name: "Bavaria XM", tag: "653 hp plug-in hybrid · 2.7 tonnes", layout: "V8 · 4.4L biturbo + e-motor",
+    intakeLag: 0.11,
+    revHang: 0.5,
     indicator: "luxury",   // big flagship SUV: soft, expensive clicks
     crackle: "wet",        // an M car with a map that gurgles on the overrun
     cyl: 8, idle: 700, max: 7000, cut: 7200, inertia: 0.46,   // heavy rotating mass
@@ -1461,6 +1661,7 @@ const CARS = [
   },
   {
     id: "ingolstadt", name: "Ingolstadt S1 Quattro", tag: "Group B · anti-lag · clutch sequential",
+    intakeLag: 0.07,    // anti-lag keeps it lit, which is most of the way round the problem
     layout: "I5 · 2.1L turbo",
     indicator: "relay",            // a rally car's dash is a switch panel, not a dashboard
     crackle: "hard",               // no catalyst, no silencer, and fuel going in on the overrun
@@ -1593,6 +1794,7 @@ const CARS = [
   },
   {
     id: "zuffen", name: "Zuffenhausen 4.0 RS", tag: "9k flat-six howl", layout: "F6 · 4.0L NA",
+    intakeLag: 0.025,   // six throttle bodies over a flat-six
     indicator: "crisp",   // the satisfying one — dry, tight, perfect
     crackle: "dry",   // thin race pipes, hot and metallic
     cyl: 6, idle: 900, max: 9000, cut: 9250, inertia: 0.2, shiftLights: true,
@@ -1614,6 +1816,7 @@ const CARS = [
   },
   {
     id: "carreragt", name: "Zuffenhausen GT", tag: "the Le Mans V10 that got out · six speeds and a beech ball",
+    intakeLag: 0.022,   // a Le Mans V10, unchanged: ITBs and a carbon airbox
     layout: "V10 · 5.7L NA · 68°",
     indicator: "crisp",
     crackle: "dry",           // titanium, short, and barely silenced
@@ -1645,7 +1848,12 @@ const CARS = [
        is what a ceramic disc does when you try to slip it: it does not slur,
        it grabs and lets go and grabs, several times a second, and the whole
        car shakes. See BITE and clutchJudder(). */
-    clutch: { start: 0.14, width: 0.15, judder: 1.7 },
+    /* …and the pedal it lives behind. A 169mm ceramic twin-plate is a very
+       heavy clutch to push and a very fast one to release, which is the
+       asymmetry `effort` describes and most of why this car is difficult:
+       getting the pedal down is work, and letting it up happens to you. */
+    clutch: { start: 0.14, width: 0.15, judder: 1.7, effort: 1.7 },
+    throwRate: 1.3,        // a short, hard, beech-topped lever with no cable in it
     lever: "wood",       // the beech-laminate ball, and it sounds like wood
     cyl: 10, idle: 950, max: 8400, cut: 8600, inertia: 0.095,
     start: { rpm: 265, dur: 0.62, fires: 4, flare: 1.0, flareT: 0.85 },
@@ -1713,6 +1921,7 @@ const CARS = [
   },
   {
     id: "hexen", name: "Hexen 5.2 FP", tag: "flat-plane screamer", layout: "V8 NA · flat-plane",
+    intakeLag: 0.03,
     crackle: "dry",   // flat-plane and race-piped: dry ticking
     cyl: 8, idle: 800, max: 8250, cut: 8500, inertia: 0.3,
     bootRich: true,          // full supercar dash boot on the key
@@ -1753,6 +1962,7 @@ const CARS = [
   },
   {
     id: "cavallino", name: "Maranello 296", tag: "hybrid V6 · eDrive", layout: "V6 · twin turbo + e-motor",
+    intakeLag: 0.08,
     cyl: 6, idle: 900, max: 8500, cut: 8700, inertia: 0.19, shiftLights: true,
     bootRich: true,          // full supercar dash boot on the key
     curve: [[0, 260], [1500, 460], [3000, 590], [4500, 650], [6000, 665], [6500, 665],
@@ -1877,6 +2087,7 @@ const CARS = [
   },
   {
     id: "sf90", name: "Maranello SF90", tag: "1000 cv plug-in hybrid · 3 e-motors", layout: "V8 · 4.0L biturbo + 3 e-motors",
+    intakeLag: 0.08,
     crackle: "hard",   // hot-vee turbos in the exhaust stream: it cracks hard
     firing: "flat",    // the F154 is a flat-plane — it screams, it doesn't lope
     cyl: 8, idle: 850, max: 8000, cut: 8200, inertia: 0.16, shiftLights: true, awd: true,
@@ -1971,6 +2182,7 @@ const CARS = [
   },
   {
     id: "lemansh", name: "Circuit LMH-24", tag: "Le Mans hypercar · 3.5 V6 + front e-motor", layout: "V6 · 3.5L turbo + e-axle",
+    intakeLag: 0.085,
     race: true,              // prototype: no indicators, no registration, no arguing
     crackle: "war",          // a race turbo V6 on the overrun is not polite
     cyl: 6, idle: 1300, max: 8800, cut: 9000, inertia: 0.13,   // no flywheel worth the name
@@ -2032,6 +2244,7 @@ const CARS = [
   },
   {
     id: "kaze", name: "Kaze 787", tag: "quad-rotor Le Mans legend", layout: "4-rotor · 2.6L",
+    intakeLag: 0.024,   // peripheral ports and four short trumpets
     race: true,   // Le Mans prototype — master, ignition, pump, GO
     crackle: "wet",   // four rotors, endlessly wet and burbly
     cyl: 8, idle: 1100, max: 9000, cut: 9300, inertia: 0.11,  // R26B: pure response
@@ -2073,6 +2286,8 @@ const CARS = [
   },
   {
     id: "molsheim", name: "Molsheim 16.4", tag: "quad-turbo hypercar", layout: "W16 · quad turbo",
+    intakeLag: 0.15,    // four turbos, two coolers, and pipework you could crawl through
+    revHang: 0.35,
     indicator: "luxury",   // a quad-turbo grand tourer clicks like a bank vault
     awd: true,
     /* inertia is still the physical truth — eight litres, sixteen pistons and
@@ -2400,6 +2615,7 @@ const CARS = [
   },
   {
     id: "goodwood", name: "Goodwood Phantom", tag: "waftability · the quietest car there is", layout: "V12 · 6.75L biturbo",
+    revHang: 0.6,       // it would consider a falling tachometer needle rather common
     indicator: "luxury",   // a bank vault closing, twice a second
     cyl: 12, idle: 600, max: 5300, cut: 5500, inertia: 0.75,   // an enormous, unhurried flywheel
     /* 563 hp, but the number nobody quotes is the one that matters: 900 Nm at
@@ -2463,6 +2679,7 @@ const CARS = [
   },
   {
     id: "absolut", name: "Ängelholm Absolut", tag: "twin-turbo top-speed missile · 0-400-0", layout: "V8 · 5.0L flat-plane twin turbo",
+    intakeLag: 0.10,
     indicator: "luxury",   // hand-built: everything is over-engineered
     crackle: "hard",   // big twins, long plumbing, huge reports
     cyl: 8, idle: 820, max: 8500, cut: 8700, inertia: 0.15,   // flat crank, feathery response
@@ -2761,7 +2978,112 @@ function hexA(hex, a) {
   return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
 }
 
-const RATES = { thrUp: 4.6, thrDn: 5.6, brkUp: 5.2, brkDn: 6.0, cltUp: 9.0, cltDn: 2.0 };
+/* ================================================================
+   THE PEDALS — how fast a foot actually moves
+   ================================================================
+   These are the ramps that turn a key, which is on or off, into a pedal,
+   which is not. They were tuned once, globally, when the only thing they had
+   to do was stop the throttle being a switch — and the number that came out
+   of that (thrUp 4.6, so 217ms from closed to floored) is roughly twice as
+   slow as a real ankle.
+
+   That does not matter much when you are accelerating in a straight line. It
+   matters enormously the moment you try to drive the car like a manual,
+   because every technique that makes a manual worth having is a SHORT
+   throttle movement in the middle of something else:
+
+     a heel-and-toe blip     is 100-150ms of pedal, total, in the gap between
+                             the clutch going down and the lever going across.
+                             At 217ms up and 179ms down the blip cannot finish
+                             before the gear has to go in, so the shift is
+                             always late and always slightly wrong.
+     a lift between gears    ditto, backwards.
+     feathering the bite     the clutch is the one that was already fast.
+
+   So the throttle and the brake are quick now — 105ms and 90ms respectively,
+   which is what a foot on a short-travel pedal does — and the car gets a say
+   in it. A race car has a short, hard pedal and a road saloon has a long
+   soft one, and that difference is real, so `pedalRate` scales the throttle
+   and `clutch.effort` scales the left foot: a heavy twin-plate takes longer
+   to push down and comes back faster than a light single, and that asymmetry
+   is exactly what your leg feels.
+
+   None of this is a difficulty setting. It is the difference between being
+   given a car and being given a picture of one. */
+const RATES = { thrUp: 9.5, thrDn: 11, brkUp: 8.5, brkDn: 10, cltUp: 9.0, cltDn: 2.0 };
+
+/* the four ramps, as this car has them. Everything defaults to 1, so a car
+   that says nothing gets the numbers above unchanged. */
+function pedalRates() {
+  const t = CC.pedalRate || 1;
+  const e = (CC.clutch && CC.clutch.effort) || 1;
+  return {
+    thrUp: RATES.thrUp * t, thrDn: RATES.thrDn * t,
+    brkUp: RATES.brkUp * t, brkDn: RATES.brkDn * t,
+    /* the clutch is the odd one out and it is worth saying why. Pushing a
+       heavy diaphragm down is your leg working against the spring, so effort
+       SLOWS it; letting it back up is the spring working against your leg,
+       so effort SPEEDS it, which is precisely why a race clutch is so easy
+       to dump and so hard to hold. */
+    cltUp: RATES.cltUp * e, cltDn: RATES.cltDn / e,
+  };
+}
+
+/* ================================================================
+   THE CLUTCH, ACROSS THE BITE
+   ================================================================
+   Engagement used to be a straight line across the bite window: half the
+   band, half the torque. A diaphragm clutch has never behaved like that. The
+   spring is a Belleville washer working over centre, and the clamp load it
+   puts on the plates comes up SLOWLY as the fingers first come back and then
+   piles on toward the end of the travel. So the first half of the band is
+   worth about a third of the capacity — which is the whole reason you can
+   hold a car on a hill or ease it off a line at all — and the last third
+   arrives all at once, which is the whole reason you can dump it.
+
+   One function, so every place that asks "how much clutch is there" gets the
+   same answer: the physics, the synchro, the assist, and the judder model.
+   They used to compute it inline, three times, linearly, and they no longer
+   have the option. */
+function clutchEngage(pedal) {
+  const b = biteWindow();
+  const raw = clamp(((1 - pedal) - b.start) / b.width, 0, 1);
+  if (raw <= 0 || raw >= 1) return raw;
+  return raw * raw * (1.72 - 0.72 * raw);   // ~x^1.6, exact at both ends
+}
+
+/* ================================================================
+   ENGINE BRAKING — what a shut throttle is worth
+   ================================================================
+   The drag on a closed engine used to be `16 + rpm × 0.011`: constant plus a
+   term straight-line in rpm. That is friction, and friction is the small half
+   of it. The big half is PUMPING — the engine is a machine for moving air,
+   and with the plate shut it is pulling every one of those cylinders down
+   against a vacuum and pushing it back up again, and the work that costs goes
+   as roughly the SQUARE of engine speed. A 6-litre V12 at seven thousand rpm
+   is a very effective air pump being run backwards.
+
+   Getting that shape wrong is why a lift used to feel like nothing much and
+   why a downshift arrived without weight. With it in:
+
+     · lifting at high revs slows the car properly, which is what makes a
+       trailing throttle a thing you steer with rather than a thing you do
+       between accelerating
+     · a downshift lands the engine somewhere the drag is much bigger, so the
+       car settles onto engine braking instead of merely changing ratio
+     · big engines brake harder than small ones, which is a thing everybody
+       who has driven both already knows
+
+   Anchored so the low-rev end matches the old linear model almost exactly —
+   idle, creeping and the two tiny engines in the garage behave as they did.
+   All of the new behaviour is above about three thousand rpm, which is where
+   all of the driving is. */
+function dragNm(rpm) {
+  const n = Math.max(0, rpm) / 1000;
+  // how much engine there is to pump air through
+  const size = clamp(0.5 + (CC.cyl || 6) * 0.07, 0.6, 1.45);
+  return (16 + 11 * n + n * n * size) * (ENG.fric || 1);
+}
 
 /* Flyby pass speed. This used to multiply everything over 300km/h by 3.6,
    which made a 400km/h car cross the frame at an indicated 660 and turned the
@@ -3036,6 +3358,8 @@ const S = {
   autoSel: "P", autoGear: 1,
   in: { gas: 0, brake: 0, clutch: 0 }, // key/pointer targets
   throttle: 0, brake: 0, clutchPedal: 0,
+  plenum: 0,           // manifold filling — see THE PLENUM
+  hangT: 0,            // …and the ECU holding the plate open on a lift
   effThrottle: 0, engage: 0, locked: false,
   shiftCut: 0, shiftCool: 0, cutTimer: 0, blip: 0, catchT: 0, catchAmt: 0.55, catchPeak: 2800, catchGuard: 0, parkLimit: 0, crankP: null, crankTimer: 0, settleT: 0, settleDur: 0, settleFrom: 0, fastIdle: 0, pendShift: false,
   /* --- THE HAND-OVER (see SHIFT FEEL) ---
@@ -3072,6 +3396,8 @@ const S = {
   night: false, cricketT: 2, lampT: 1.5,
   dmgOn: false,                        // consequences mode — opt-in, see DMG
   softLim: false,                      // soft limiter — opt-in, see THE SOFT LIMITER
+  lcOn: false,                         // launch control — opt-in, see LAUNCH CONTROL
+  lc: { phase: "off", t: 0, drop: 0 },
   softCut: 1,                          // …and how much fuelling it is allowing right now
   fuel: 1,                             // 0..1 in the tank — only moves in consequences
   // --- electric car only (see the EV DASH section) ---
@@ -7594,61 +7920,6 @@ function sfxDogEngage(strength = 1, down = false) {
   }
 }
 
-/* THE TAKE-UP — the depth under a downshift.
-
-   The clack is the gearbox. This is the CAR, and it arrives a beat later.
-
-   The moment a lower gear engages on a closed throttle, the engine becomes
-   the slowest-turning thing in the driveline, and everything between it and
-   the road has to wind up backwards against it: driveshafts twist, the diff
-   loads onto the far side of its teeth, the engine mounts compress, the
-   whole rear of the car squats fractionally. None of that is instant and
-   none of it is silent — it is a big, low, heavily damped shunt that you
-   feel through the seat as much as hear, with a slow wobble on it as the
-   shafts unwind and rewind once before settling.
-
-   Two components. A decaying low sine with a touch of frequency wobble (the
-   wind-up itself, and the wobble is what stops it sounding like a kick
-   drum), and a short band of low noise underneath for the mounts and
-   bushings taking it. Deliberately dark — there is nothing above 200Hz in
-   this event, because everything making it weighs a great deal. */
-function sfxDrivelineShunt(strength = 1) {
-  if (!AU.ready) return;
-  const ctx = AU.ctx, t = ctx.currentTime;
-  // the wind-up: low, slow, and it sags rather than decays cleanly
-  const o = ctx.createOscillator(); o.type = "sine";
-  o.frequency.setValueAtTime(78, t);
-  o.frequency.linearRampToValueAtTime(52, t + 0.09);
-  o.frequency.linearRampToValueAtTime(61, t + 0.17);      // the shafts unwind…
-  o.frequency.linearRampToValueAtTime(44, t + 0.3);       // …and settle
-  const og = ctx.createGain();
-  og.gain.setValueAtTime(0.001, t);
-  og.gain.linearRampToValueAtTime(0.62 * strength, t + 0.018);
-  og.gain.exponentialRampToValueAtTime(0.16 * strength, t + 0.14);
-  og.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
-  o.connect(og); og.connect(AU.sfx); o.start(t); o.stop(t + 0.36);
-  // a second, slightly detuned voice a shade later — a driveline is not one
-  // spring, it is several in series, and they do not all arrive together
-  const o2 = ctx.createOscillator(); o2.type = "triangle";
-  o2.frequency.setValueAtTime(112, t + 0.012);
-  o2.frequency.exponentialRampToValueAtTime(58, t + 0.16);
-  const og2 = ctx.createGain();
-  og2.gain.setValueAtTime(0.001, t + 0.012);
-  og2.gain.linearRampToValueAtTime(0.2 * strength, t + 0.03);
-  og2.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-  o2.connect(og2); og2.connect(AU.sfx); o2.start(t + 0.012); o2.stop(t + 0.24);
-  // mounts and bushings taking the load — dark, short, no transient
-  const n = ctx.createBufferSource(); n.buffer = AU.noiseBuf; n.playbackRate.value = 0.55;
-  const f = ctx.createBiquadFilter(); f.type = "lowpass";
-  f.frequency.setValueAtTime(260, t);
-  f.frequency.linearRampToValueAtTime(120, t + 0.18);
-  const ng = ctx.createGain();
-  ng.gain.setValueAtTime(0.001, t);
-  ng.gain.linearRampToValueAtTime(0.3 * strength, t + 0.025);
-  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
-  n.connect(f); f.connect(ng); ng.connect(AU.sfx); n.start(t); n.stop(t + 0.26);
-}
-
 /* twin-clutch engagement — the ROAD-CAR version of the above, and the whole
    point of it is that it is a SEPARATE EVENT from the paddle.
 
@@ -11038,14 +11309,282 @@ function cutVoice() {
   return 0.07;                             // a robot, cutting the ignition
 }
 
+/* ================================================================
+   LAUNCH CONTROL
+   ================================================================
+   The switch is in the workshop and the sequence is your feet: brake, then
+   throttle, and the car does the rest. It is off by default because it is a
+   thing you arm, not a thing that is always on — every car that has it makes
+   you go and find it in a menu, and half the point of it is the deliberate
+   act of setting the car up to do one thing.
+
+   --- WHAT IT ACTUALLY DOES ---
+   Left to itself, a standing start is a negotiation between three things that
+   all want different numbers: the engine wants revs, the clutch wants to be
+   closed, and the tyres want neither of those to happen too quickly. Launch
+   control is a box that holds all three at once, and it does it in two
+   phases that feel completely different from each other.
+
+     HOLD   Both feet in. The engine is pinned against a SECOND, much lower
+            rev limiter — the "two-step" — and it sits there hammering off it
+            while the clutch is held open behind it. This is the part everyone
+            recognises by ear: an engine bouncing off a limiter that is not
+            its redline, banging out of the pipes, at a standstill. On a
+            turbo car it is doing something as well as making a noise, because
+            air is still going through an engine whose spark keeps being taken
+            away, and that air is spinning the turbochargers. You are building
+            boost against a closed clutch.
+
+     GO     Lift off the brake. The clutch closes over about a quarter of a
+            second — not instantly, because a dumped clutch on a launch is
+            wheelspin and a slipped one is drive — and while it does, the box
+            holds the driven tyres at the peak of their grip curve. Two and a
+            half seconds later it has nothing left to contribute and hands
+            the car back to you.
+
+   --- AND ON A CAR WITH THREE PEDALS ---
+   There is no clutch actuator in a Utopia. There is a pedal, and your foot
+   is on it, and no amount of software can take that over. So on a gated car
+   this is what launch control has always been on a gated car: a two-step rev
+   limiter and nothing else. It holds the revs exactly where you asked while
+   you sit there with the clutch in, and the moment the brake comes off it
+   gets out of the way and the launch is entirely yours. That is not a
+   reduced feature — it is the feature, and pretending a manual car can
+   launch itself would be the same lie as putting paddles on the Zonda. */
+
+const LC = { holdT: 0 };
+
+/* Where the two-step sits. Stated per car where the number is part of the
+   car; otherwise derived, because the right answer is not the same shape for
+   every engine, and it is read straight off the torque curve rather than
+   guessed as a fraction of the rev range — which used to leave it well
+   short. A flat "40% of idle-to-redline" put a lot of this garage's screamers
+   at four thousand rpm on an engine that is still pulling hard at seven, and
+   a launch held that far under its own torque peak has no business calling
+   itself a launch control: floor both pedals and let the ordinary limiter
+   bounce off the REAL redline and you would out-drag it every time, which is
+   backwards for a feature whose only job is to be quick.
+
+     turbo    the torque peak PLUS some margin, because a turbo engine's
+              torque curve is doing two things at once — the mechanical
+              curve and the boost still filling in — and the two-step needs
+              to be spinning the turbines fast enough that boost is already
+              near its ceiling by the time the clutch bites, not just
+              sitting on the torque number the curve shows at idle boost.
+     NA       the torque peak itself. There is nothing to build, so sitting
+              any higher than where the engine actually pulls hardest just
+              buys a longer, hotter slip for no more shove.
+
+   And the workshop's unobtainium tyres change the answer outright, not just
+   how hard the pack is allowed to close. The whole reason a real launch rpm
+   sits at the torque peak rather than the redline is that holding it any
+   higher just lights the tyres up for longer with nothing to show for it —
+   which is a statement about the TYRES, not the engine. Delete the tyres'
+   limit and the trade disappears: a heavier, faster-spinning crank is
+   carrying real stored energy, and every bit of that energy that would
+   normally have gone to smoking rubber goes straight into the car instead.
+   So with the cheat switched on the target simply follows the two-step's
+   own ceiling up near the ordinary redline — which is also, not
+   coincidentally, what flooring both pedals and dropping the clutch by
+   hand already does, and a launch aid that cannot even match the thing a
+   driver can do with no aid at all is not one. */
+function lcTargetRpm() {
+  /* …and a torque converter changes the answer the same way the grip cheat
+     does, for a related but different reason. The whole case for holding
+     the peak-torque number rather than the redline is protecting something
+     that can bog or spin — a clutch that can be dumped too hard, a tyre
+     that can light up. A converter has neither problem: the fluid coupling
+     smooths the take-up on its own regardless of where the crank is sitting
+     when the brake comes off, so there is nothing left for a moderate
+     target to protect. What holding it low DOES cost is real: a big loose
+     drag converter (see e.g. the Tempest 3000R) flashes harder and the
+     turbo carries more boost the higher up it is allowed to sit, so a
+     converter car is left strictly better off following the two-step all
+     the way to redline, same as the grip cheat does. */
+  if (curMod().grip === true || convOf()) return clamp(ENG.cut * 0.9, ENG.idle * 1.7, ENG.cut * 0.94);
+  const c = ENG.curve;
+  let peak = c[0][1], at = c[0][0];
+  for (const [rpm, t] of c) if (t > peak) { peak = t; at = rpm; }
+  const bias = CC.asp === "turbo" ? 1.08 : 1.0;
+  const want = CC.lcRpm || at * bias;
+  return clamp(want, ENG.idle * 1.7, ENG.cut * 0.9);
+}
+
+/* is this car even capable of the thing? An electric car has no clutch, no
+   limiter and no reason — it makes its maximum torque at a standstill
+   already, which is what launch control is FOR on everything else. */
+function lcFitted() {
+  return S.lcOn && !isEv() && !CC.ev && !(CC.edrive && S.eDrive === "ev");
+}
+
+/* the gear you have to be in, per gearbox, and on an H-pattern the left foot
+   as well — there is no two-step in the world that can hold a car still with
+   the clutch out and first engaged. */
+function lcInGear() {
+  if (S.mode === "auto") return S.autoSel === "D";
+  if (S.mode === "clutch") return S.gear === 1 && S.clutchPedal > 0.5;
+  return S.gear === 1;
+}
+
+/* on a gated car the box owns the revs and nothing else — see above */
+function lcOwnsClutch() { return S.mode !== "clutch" && !convOf(); }
+
+function lcTick(dt) {
+  const lc = S.lc;
+  if (!lcFitted() || !S.engineOn || S.stalled) {
+    if (lc.phase !== "off") lcEnd(true);
+    return;
+  }
+
+  const brake = S.in.brake, gas = S.in.gas;
+  const still = Math.abs(S.v) < 0.9;
+
+  switch (lc.phase) {
+    case "off":
+      /* Both feet, hard, stopped, in gear. Deliberately read off S.in rather
+         than the smoothed pedals: arming is a thing you DID, and it should
+         happen on the frame you did it rather than a fifth of a second later
+         once a ramp has caught up. */
+      if (still && lcInGear() && brake > 0.7 && gas > 0.5) {
+        lc.phase = "hold"; lc.t = 0; lc.drop = 0;
+        sfxBeep(1180, 0.07, 0.11);
+        setTimeout(() => { if (S.lc.phase === "hold") sfxBeep(1560, 0.09, 0.11); }, 90);
+        sayEvent("lc", "Launch control armed", { cool: 8 });
+        updateLcUi();
+      }
+      break;
+
+    case "hold":
+      lc.t += dt;
+      /* it comes off the brake — that is the launch, and it is the only way
+         out of here that is not a cancellation */
+      if (brake < 0.3 && gas > 0.4) {
+        lc.phase = "go"; lc.t = 0; lc.drop = 0;
+        sfxBeep(2100, 0.1, 0.13);
+        updateLcUi();
+        break;
+      }
+      // lifted, rolled, or changed your mind about the gear
+      if (gas < 0.35 || !lcInGear() || !still) { lcEnd(false); break; }
+      /* Nobody sits on a two-step for a minute. Real systems time out, both
+         because it is hard on the engine and because a driver who has been
+         holding it that long has stopped launching and started revving. */
+      if (lc.t > 12) { lcEnd(false); }
+      break;
+
+    case "go": {
+      lc.t += dt;
+      /* THE CLUTCH COMING IN — AND WHY IT IS NOT A SEPARATE MACHINE.
+
+         Three earlier versions of this all built a little controller with
+         MEMORY — a `drop` that accumulated toward some target at some rate
+         — and all three eventually oscillated, because a control loop with
+         state in it can wind up: ask it to close, it closes a bit too much
+         for what the engine can currently give, the revs sag, and now the
+         controller is carrying momentum in the wrong direction that takes
+         several frames to unwind. Get the damping even slightly wrong for
+         one particular flywheel and gearing combination — and this garage
+         runs from a 49cc single to a light hybrid V8 revving to ten
+         thousand — and it hunts, and a hunting clutch delivers almost no
+         net torque at all, which is exactly backwards for a feature whose
+         only job is to be quick.
+
+         The fix is not a better controller. It is not building a second
+         clutch model at all: `computeEngage()` already has one, right
+         below, for every manual and DCT car in the garage that ISN'T doing
+         a launch — a bite curve read straight off CURRENT engine rpm, with
+         no memory of its own, which is exactly why an ordinary pull-away
+         never hunts. A function with no memory cannot wind up. It cannot
+         ask for more than the rpm in front of it justifies, so the instant
+         the revs sag it backs off on its own, automatically, for free —
+         which is the "rescue" every stateful version above needed to add
+         by hand and never quite got right.
+
+         So this branch does almost nothing. It watches the clock so the
+         feature can time out, and it lets the ceiling back open — see the
+         parkLimit note below — and it leaves the actual clutch bite to the
+         curve that was already proven not to oscillate, just handed a
+         higher target than an ordinary idle-speed pull-away gets, so a
+         launch bites decisively instead of crawling through the whole rev
+         range the way easing away from a light does. See computeEngage(). */
+      if (gas < 0.25 || S.gear === 0 || S.gear === "R" ||
+          (S.mode === "auto" && S.autoSel !== "D") ||
+          Math.abs(S.v) > 24 || lc.t > 3.2) lcEnd(false);
+      break;
+    }
+  }
+}
+
+function lcEnd(silent) {
+  const was = S.lc.phase;
+  S.lc.phase = "off"; S.lc.t = 0; S.lc.drop = 0;
+  if (was === "hold" && !silent) sfxBeep(430, 0.13, 0.08);
+  if (was !== "off") updateLcUi();
+}
+
 function computeEngage() {
   if (S.gear === 0) return 0;
-  if (S.mode === "clutch") {
-    const b = biteWindow();
-    return clamp(((1 - S.clutchPedal) - b.start) / b.width, 0, 1);
-  }
+  if (S.mode === "clutch") return clutchEngage(S.clutchPedal);
   if (S.shiftCut > 0) return 0;
   if (CC.ev) return 1;                       // direct drive — torque from zero rpm
+  /* LAUNCH CONTROL owns the clutch on anything with one — see LAUNCH CONTROL.
+     A converter car is exempt and must be: there is no clutch to hold open,
+     the fluid does the slipping, and holding a car on the brakes against a
+     stalled converter IS the launch. That is the same event by another
+     mechanism, and it already works. */
+  if (lcOwnsClutch()) {
+    if (S.lc.phase === "hold") return 0.03;   // open, bar a whisker of drag
+    if (S.lc.phase === "go") {
+      /* THE BITE, AND WHY IT IS THE SAME SHAPE AS AN ORDINARY PULL-AWAY.
+
+         This is deliberately the exact curve two paragraphs down — a
+         smoothstepped ramp with no memory of its own, read straight off
+         CURRENT engine rpm — because that shape is the reason an ordinary
+         launch from idle never hunts or bogs: ask it for capacity the
+         engine cannot currently back up and the answer falls with the rpm
+         on the very next frame, automatically, with nothing extra to tune
+         and nothing that can wind up. A stateful "close over X seconds"
+         servo was tried here three times running up to this and oscillated
+         on a light, high-revving flywheel every time; this doesn't, on
+         any of them, for the same reason the ordinary version never has.
+
+         The only thing that changes for a launch is WHERE the curve sits.
+         An idle pull-away wants to bite gently over a long stretch above
+         idle, because the whole point is not to snap a stationary car's
+         neck the moment you touch the pedal. A launch wants exactly the
+         opposite: decisive, and biting well under the target rather than
+         crawling all the way up to it, because the entire reason to hold
+         the revs up there in the first place was to have torque on tap the
+         instant the clutch can take it, not to spend the first half second
+         of the launch easing through a soft-start ramp built for someone
+         pulling out of a parking space. */
+      const tgt = lcTargetRpm();
+      /* THE WINDOW, AND WHY IT STRADDLES THE TARGET RATHER THAN SITTING
+         BELOW IT.
+
+         The two-step holds the crank AT the target the whole time the brake
+         is down, so the instant the brake lifts, rpm is already sitting
+         almost exactly on `tgt` — that is the entire point of a two-step.
+         Which means a window that finishes climbing BELOW the target (an
+         earlier version used 0.62 of it) is already saturated at 1.0 on the
+         very first frame of the launch, before the curve has done anything
+         at all: on a car with real torque to give, that is a full clutch
+         dump at 7,000rpm with nothing metering it, and on real tyres it is
+         a smoking, spinning mess the traction control then has to spend the
+         next second clawing back — slower than a plain launch, not faster.
+
+         So the window straddles the target instead of finishing under it:
+         engagement is strong but short of maximum right where the launch
+         actually begins, which is what leaves the self-damping headroom
+         the rest of this comment block promised — room for engagement to
+         still rise as the revs climb further, and room for it to fall back
+         on its own if they sag, in both directions, exactly like an
+         ordinary pull-away. */
+      const lo = Math.max(ENG.idle * 1.1, tgt * 0.45), hi = tgt * 1.2;
+      const raw = clamp((S.rpm - lo) / (hi - lo), 0, 1);
+      return raw * raw * (3 - 2 * raw);
+    }
+  }
   /* An automatic with a converter has no clutch to feather and nothing to
      stall: the slipping is done in oil, downstream of here, and it is done
      properly. So engagement is simply "is the gearbox connected" — which it
@@ -11155,8 +11694,7 @@ function synchroState(target, dt) {
   const want = shaftRpmFor(target);
   if (want === null) return { ok: true, mismatch: 0, grind: 0, baulked: false };
 
-  const engage = S.mode === "clutch"
-    ? clamp(((1 - S.clutchPedal) - biteWindow().start) / biteWindow().width, 0, 1) : 0;
+  const engage = S.mode === "clutch" ? clutchEngage(S.clutchPedal) : 0;
 
   /* Where the input shaft actually is. In gear it is geared to the road; out
      of gear with the clutch up it is turning with the engine; out of gear
@@ -11200,8 +11738,7 @@ function shaftTick(dt) {
   // toward the gear you asked for and nothing else gets a vote
   if (S.syncTo !== null && S.syncTo !== undefined) return;
 
-  const engaged = S.mode !== "clutch" ? 1
-    : clamp(((1 - S.clutchPedal) - biteWindow().start) / biteWindow().width, 0, 1);
+  const engaged = S.mode !== "clutch" ? 1 : clutchEngage(S.clutchPedal);
   if (engaged > 0.55) {
     /* out of gear, clutch OUT: the shaft is bolted to the engine and turns
        with it. This is the branch double-declutching lives in — blip in
@@ -11329,6 +11866,7 @@ function hasTC() {
    whenever something changes underneath the physics — a new car, a different
    switch — so a slide can never survive the thing that caused it. */
 function resetTraction() {
+  if (S.lc) lcEnd(true);            // …and neither does it survive a new car
   S.spinV = 0; S.slipR = 0; S.slipSigned = 0; S.tracF = 0; S.tcCut = 0; S.lockup = false;
   S.yaw = 0; S.yawV = 0; S.lock = 0; S.spinOut = 0;
   S.loose = 0; S.looseV = 0; S.scrub = 0; S._seed = 0; S._snapT = 0;
@@ -11454,8 +11992,9 @@ function slideTick(dt, driveF, sSigned, SP, rwd, gripLock, tcOn) {
 
 function stepPhysics(dt) {
   // pedal smoothing (keyboard is binary; ramps make it analog)
-  S.throttle += clamp(S.in.gas - S.throttle, -RATES.thrDn * dt, RATES.thrUp * dt);
-  S.brake += clamp(S.in.brake - S.brake, -RATES.brkDn * dt, RATES.brkUp * dt);
+  const PR = pedalRates();
+  S.throttle += clamp(S.in.gas - S.throttle, -PR.thrDn * dt, PR.thrUp * dt);
+  S.brake += clamp(S.in.brake - S.brake, -PR.brkDn * dt, PR.brkUp * dt);
   // auto drive: blend the chauffeur's feet in under the player's
   if (AD.on) {
     S.throttle = Math.max(S.throttle, AD.gas);
@@ -11480,7 +12019,7 @@ function stepPhysics(dt) {
      a clutch and using one. See BITE. */
   const assist = clutchAssist();
   const bw = biteWindow();
-  let cltDn = assist ? RATES.cltDn : RATES.cltDn * 3.2;
+  let cltDn = assist ? PR.cltDn : PR.cltDn * 3.2;
   const biting = S.mode === "clutch" && S.gear !== 0 && S.engineOn && !S.locked &&
                  S.clutchPedal < 1 - bw.start * 0.4 && S.clutchPedal > 0.12;
   let biteSlip = 0, eNow = 0, eHold = 1;
@@ -11488,7 +12027,14 @@ function stepPhysics(dt) {
     const br = currentRatio();
     const wheelRpm = (Math.abs(S.v) / CAR.wheelR) * Math.abs(br) * (60 / (2 * Math.PI));
     biteSlip = S.rpm - wheelRpm;
-    eNow = clamp(((1 - S.clutchPedal) - bw.start) / bw.width, 0, 1);
+    /* `eNow` is CAPACITY, not pedal travel, and that distinction is the whole
+       reason the assist works on a diaphragm clutch: it is about to be
+       compared against `eHold`, which is a fraction of the clutch's torque
+       capacity. Comparing a pedal position against a torque fraction happened
+       to be nearly right on a linear model and is wrong on a real one — the
+       middle of the band is a third of the clamp load, not half of it. See
+       clutchEngage(). */
+    eNow = clutchEngage(S.clutchPedal);
     // the most engagement the engine can hold while the plates still slip
     eHold = clamp((torqueAt(Math.max(S.rpm, ENG.idle)) * ENG.tqMul * 0.9) / CAR.clutchCap, 0.04, 1);
     if (assist && S.in.clutch < S.clutchPedal) {
@@ -11498,7 +12044,7 @@ function stepPhysics(dt) {
          one that bites over a fiftieth of it — which is how a foot that was
          supposed to help ended up holding a Carrera GT at walking pace
          forever. The bite is what is being crossed, so the bite is the unit. */
-      if (biteSlip < 120)           cltDn = RATES.cltDn * 2;        // matched — drop it
+      if (biteSlip < 120)           cltDn = PR.cltDn * 2;          // matched — drop it
       else if (eNow < eHold * 0.85) cltDn = bw.width / 0.35;        // ease down to the bite…
       else                          cltDn = bw.width / 1.4;         // …then across it, and out
 
@@ -11514,7 +12060,7 @@ function stepPhysics(dt) {
     }
   }
   if (!biting || S.in.clutch > 0.5) S._biteT = 0;      // the deadline resets with the pedal
-  S.clutchPedal += clamp(S.in.clutch - S.clutchPedal, -cltDn * dt, RATES.cltUp * dt);
+  S.clutchPedal += clamp(S.in.clutch - S.clutchPedal, -cltDn * dt, PR.cltUp * dt);
   // catch reflex: over-engaged and drooping — back into the pedal, fast
   if (assist && biting && S.in.clutch === 0 && biteSlip > 120 &&
       (eNow > eHold * 1.15 || S.rpm < ENG.stall * 1.4))
@@ -11525,6 +12071,10 @@ function stepPhysics(dt) {
   shaftTick(dt);
   gateTick(dt);
   clutchJudder(dt, biteSlip, eNow);
+
+  /* launch control, before the limiter — it is a limiter, and it has to have
+     set its ceiling before the ECU's own one is chosen. See LAUNCH CONTROL. */
+  lcTick(dt);
 
   // cruise control: a slow PI foot on the throttle. Any brake or clutch
   // input cancels it (like the real thing); throttle above the cruise
@@ -11566,6 +12116,36 @@ function stepPhysics(dt) {
      Lean on the throttle at a standstill and it just holds here. */
   const inPN = S.mode === "auto" && (S.autoSel === "P" || S.autoSel === "N");
   S.parkLimit = inPN ? Math.min(PARK_REV_LIMIT, ENG.cut * 0.95) : 0;
+  /* THE TWO-STEP. It is not a separate mechanism — it is the rev limiter with
+     a different number in it, which is exactly what it is in a real ECU, and
+     routing it through `parkLimit` means it inherits the whole hysteresis
+     cycle for free: the bounce, the sawtooth, the fuel going away and coming
+     back several times a second, and every bang that falls out of that. A
+     two-step that did not hammer would not be a two-step. */
+  if (S.lc.phase === "hold") S.parkLimit = lcTargetRpm();
+  /* …and the ceiling does not just vanish the instant the brake lifts. Real
+     launch control holds the revs near the two-step number through the
+     first part of the clutch take-up as well, and it is not a nicety — it
+     is load-bearing. Let the ceiling disappear at the exact frame `go`
+     starts and the crank is still free (the clutch has not bitten yet), so
+     it races unopposed toward the ORDINARY redline in a couple of hundred
+     milliseconds. On an automatic that spike is enough to fool the gearbox
+     into thinking the car wants to upshift — while it is still standing
+     still — and once it is sitting in second with almost no road speed the
+     engine cannot pull it and the whole launch bogs. So the ceiling opens
+     up gradually, in step with the clutch: pinned near the target while the
+     pack is still mostly open, free to climb to the real limiter once it
+     has taken up enough load to actually make rising revs mean rising road
+     speed rather than a free-revving crank. */
+  else if (S.lc.phase === "go") {
+    const tgt = lcTargetRpm();
+    // the same bite curve computeEngage() is using this frame, so the
+    // ceiling opens in lock-step with how much the clutch has actually
+    // taken up rather than drifting out of phase with it
+    const lo = Math.max(ENG.idle * 1.1, tgt * 0.45), hi = tgt * 1.2;
+    const bite = clamp((S.rpm - lo) / (hi - lo), 0, 1);
+    S.parkLimit = tgt + (ENG.cut * 0.95 - tgt) * (bite * bite * (3 - 2 * bite));
+  }
   const ceiling = S.parkLimit || ENG.cut;
   S.softCut = 1;
   if (S.softLim && S.engineOn && !CC.ev) {
@@ -11710,15 +12290,35 @@ function stepPhysics(dt) {
   if (S.mode === "clutch" && S.engineOn && !S.cranking && !CC.ev &&
       S.gear !== 0 && S.engage > 0.03 && S.rpm < ENG.idle * 1.25)
     gov = Math.max(gov, clamp((ENG.idle * 1.25 - S.rpm) / (ENG.idle * 0.5), 0, 0.9));
-  let eff = Math.max(S.throttle, gov);
+  /* --- WHAT IS AIR, AND WHAT IS A PLATE ---
+     Two different things used to be added together here and then treated as
+     one number. They are not one number, and separating them is what makes
+     the throttle feel like a throttle:
+
+       THE PLATE    your right foot, and the ECU's blip. It is a butterfly at
+                    the mouth of an intake system, and what comes out the far
+                    end of that system arrives LATE — see the plenum below.
+       BYPASS AIR   the idle valve, the fast idle after a start, the
+                    anti-stall. Every engine ever built meters these through
+                    a small dedicated passage AROUND the plate, precisely so
+                    that they are immediate and do not have to wait for a
+                    plenum to fill. Which is why an idle governor can hold a
+                    stumbling engine up and your foot cannot.
+
+     So `plate` collects the first kind and gets the lag; `bypass` collects
+     the second and does not. Every start-up flare, fast idle and anti-stall
+     number in this file is untouched by the change, because none of them ever
+     went through the butterfly in the first place. */
+  let plate = S.throttle;
+  let bypass = gov;
   // downshift rev-match: blip just hard enough to catch the new gear's synced
   // rpm, easing off as it arrives — a real heel-toe stab, not a pinned throttle
   // that overshoots to redline and has to snap back down to match the wheels.
   if (S.blip > 0 && S.blipTarget != null) {
     const band = (ENG.max - ENG.idle) * 0.14;
-    eff = Math.max(eff, clamp((S.blipTarget - S.rpm) / band, 0, 1));
+    plate = Math.max(plate, clamp((S.blipTarget - S.rpm) / band, 0, 1));
   } else if (S.blip > 0) {
-    eff = Math.max(eff, Math.min(1, S.blip / 0.12));
+    plate = Math.max(plate, Math.min(1, S.blip / 0.12));
   }
   // startup flare — first fires push the revs up before the idle settles
   const catchWas = S.catchT;
@@ -11743,7 +12343,7 @@ function stepPhysics(dt) {
          at speed — a small car-park rev, not a wafting V12 clearing its
          throat. Proportional, with limits either end. */
       const band = clamp((peak - ENG.idle) * 0.35, 60, 400);
-      eff = Math.max(eff, (S.catchAmt || 0.55)
+      bypass = Math.max(bypass, (S.catchAmt || 0.55)
         * clamp((peak - lead) / band, 0, 1)
         * Math.min(1, S.catchT / 0.4));
     }
@@ -11795,10 +12395,75 @@ function stepPhysics(dt) {
       }
       if (S.rpm < target) {
         const band = Math.max(140, (S.settleFrom - ENG.idle) * 0.45);
-        eff = Math.max(eff, 0.6 * clamp((target - S.rpm) / band, 0, 1));
+        bypass = Math.max(bypass, 0.6 * clamp((target - S.rpm) / band, 0, 1));
       }
     }
   }
+  /* ================================================================
+     THE PLENUM — why a throttle is not a volume knob
+     ================================================================
+     Between the butterfly and the exhaust valve there is a VOLUME: a plenum,
+     a set of runners, and on a turbo car an intercooler and several feet of
+     charge pipe. Open the plate and that volume has to fill before the
+     cylinders see any of it, and the time that takes is a real, measurable
+     property of the engine — and one of the largest differences in feel
+     between one engine and another.
+
+       ~20ms   individual throttle bodies, one butterfly per cylinder, sitting
+               an inch off the port. A race V12, a superbike, a 911 GT3. This
+               is the "the engine responds before you have finished moving
+               your foot" engine, and it is why people describe them as
+               telepathic.
+       ~50ms   an ordinary naturally aspirated road engine with a single
+               plate and a plenum on top.
+       ~130ms  a big turbo motor with a cooler and a metre of pipework. This
+               is the engine that takes a BREATH before it goes.
+
+     Model it and three things you cannot otherwise get fall straight out:
+
+       · blipping a race engine works and blipping a turbo engine has to be
+         done EARLY, which is the actual skill in heel-and-toe
+       · a stab of throttle mid-corner arrives when it arrives, so lifting
+         is a decision with a cost
+       · and the difference between engines stops being a matter of how much
+         torque they make and starts being a matter of when
+
+     One first-order lag, exact for the timestep, on the plate only. Bypass
+     air goes round it, because on a real engine it goes round it. */
+  const tau = Math.max(0.008, CC.intakeLag !== undefined ? CC.intakeLag : 0.05);
+  S.plenum += (plate - S.plenum) * (1 - Math.exp(-dt / tau));
+
+  /* --- REV HANG ---
+     Lift off a modern car and the revs do not fall. They HANG, for something
+     between a third and three quarters of a second, and then sink. It is not
+     a flywheel — it is the ECU deliberately holding the plate cracked open
+     on the overrun, partly for the catalyst and partly so that drivers who
+     cannot work a clutch do not get a lurch when they let it back out.
+
+     It is also the single most complained-about characteristic of every
+     modern manual car ever sold, because it wrecks the one thing a manual is
+     for: you lift, you go for the next gear, and the engine is still at four
+     thousand rpm when you get there, so the shift can never be quick and can
+     never be smooth. Drivers of older cars notice its absence immediately and
+     describe it as the car feeling "connected".
+
+     So it is a per-car number and most of this garage has none of it. It only
+     applies where it physically applies: engine running, your foot genuinely
+     off the pedal, and the engine free to fall — in gear the road is holding
+     the crank and there is nothing to hang. */
+  const hang = CC.revHang || 0;
+  if (hang > 0 && S.engineOn && !CC.ev) {
+    const free = S.engage < 0.35 || S.gear === 0;
+    if (S.in.gas < 0.05 && free && S.rpm > ENG.idle * 1.35 && S.blip <= 0) {
+      S.hangT = Math.min(hang, (S.hangT || 0) + dt * 3);
+    } else S.hangT = Math.max(0, (S.hangT || 0) - dt * 6);
+    if (S.hangT > 0) bypass = Math.max(bypass, 0.16 * (S.hangT / hang));
+  } else S.hangT = 0;
+
+  /* what the cylinders actually get: whatever arrived through the plenum, or
+     the bypass air, whichever is more. */
+  let eff = Math.max(S.plenum, bypass);
+
   if (S.cutTimer > 0 || (S.shiftCut > 0 && S.blip <= 0) || !S.engineOn) eff = 0;
   // …and the soft limiter, which is the same decision made gradually
   else if (S.softCut < 1) eff *= S.softCut;
@@ -11839,9 +12504,16 @@ function stepPhysics(dt) {
     }
   } else S._blatT = 0.1;
 
-  // forced induction
+  /* --- forced induction ---
+     Fed by `airEff`, not by `eff`, and only during a launch. The distinction
+     is the whole reason a two-step builds boost: the limiter is taking away
+     the SPARK, several times a second, and the throttle plate never moved.
+     Air is still being pumped through the engine and out into the turbines
+     the entire time — which is why a car sitting on a two-step spools up
+     while it stands still, and why it goes when you let the brake off. */
+  const airEff = S.lc.phase === "hold" ? Math.max(eff, S.plenum) : eff;
   if (CC.turboRig && S.engineOn) {
-    turboRigStep(dt, eff);
+    turboRigStep(dt, airEff);
   } else if (CC.asp === "turbo" && S.engineOn) {
     // turbo needs exhaust flow: spools with rpm + load, bleeds fast off-throttle
     let tgt;
@@ -11856,11 +12528,11 @@ function stepPhysics(dt) {
       const s1 = clamp((S.rpm - CC.spool * 0.5) / (CC.spool * 0.9), 0, 1);
       const s2 = clamp((S.rpm - q.at) / q.span, 0, 1);
       S.seqStage = s2;
-      tgt = eff * ((1 - q.share) * s1 + q.share * s2);
-      if (s2 > 0.5 && (S._seqPrev || 0) <= 0.5 && eff > 0.4) sfxSeqEngage();
+      tgt = airEff * ((1 - q.share) * s1 + q.share * s2);
+      if (s2 > 0.5 && (S._seqPrev || 0) <= 0.5 && airEff > 0.4) sfxSeqEngage();
       S._seqPrev = s2;
     } else {
-      tgt = eff * clamp((S.rpm - CC.spool * 0.5) / (CC.spool * 1.1), 0, 1);
+      tgt = airEff * clamp((S.rpm - CC.spool * 0.5) / (CC.spool * 1.1), 0, 1);
     }
     // anti-lag keeps the charger lit even off-throttle
     if (curEx().burble)
@@ -11895,14 +12567,14 @@ function stepPhysics(dt) {
        has been in the last few hundred milliseconds. That is what "the plate
        has shut" actually means, it is frame-rate independent, and it fires on a
        lift that takes a realistic amount of time to happen. */
-    S._effPeak = Math.max(eff, (S._effPeak || 0) - dt * 1.6);
+    S._effPeak = Math.max(airEff, (S._effPeak || 0) - dt * 1.6);
     const eager = !!CC.flutterEager;
     const inShift = S.shiftCut > 0 || S.cutTimer > 0;
-    const shutHard = S._effPeak > 0.5 && eff < 0.15 && S.boost > 0.35;
+    const shutHard = S._effPeak > 0.5 && airEff < 0.15 && S.boost > 0.35;
     // one per shift, on the edge — not once per frame for the whole cut
     const shiftEdge = inShift && !S._flutShift && S._effPeak > 0.35;
     const eagerShut = eager && S.boost > 0.18
-                   && (((S._effPeak - eff) > 0.28 && eff < 0.62) || shiftEdge);
+                   && (((S._effPeak - airEff) > 0.28 && airEff < 0.62) || shiftEdge);
     S._flutShift = inShift;
     if (shutHard || eagerShut) {
       // Throttle slammed shut under boost. What comes out depends entirely on
@@ -11928,11 +12600,11 @@ function stepPhysics(dt) {
          dump scales with how far the plate really shut — which is also why the
          car comes back on boost instantly after a shift instead of having to
          spool from nothing. */
-      S.boost *= shutHard ? 0.22 : clamp(0.28 + eff * 0.62, 0.22, 0.9);
+      S.boost *= shutHard ? 0.22 : clamp(0.28 + airEff * 0.62, 0.22, 0.9);
       // the pressure is out; don't fire again until the pedal has been back up
-      S._effPeak = eff;
+      S._effPeak = airEff;
     }
-    S._prevBoostEff = eff;
+    S._prevBoostEff = airEff;
   } else if (CC.asp === "super" && S.engineOn) {
     // belt-driven: boost tracks rpm instantly, no lag
     S.boost += (S.throttle * (S.rpm / ENG.max) - S.boost) * Math.min(1, 12 * dt);
@@ -11952,9 +12624,15 @@ function stepPhysics(dt) {
 
   // engine torque (drive minus internal braking)
   let Te = 0;
+  /* Drive minus internal braking. The `(1 - eff)` keeps full throttle making
+     exactly what it always made — every acceleration figure in this file was
+     tuned against that and none of them move — while dragNm() gives the OTHER
+     end of the pedal the shape it never had. See ENGINE BRAKING. */
   if (S.engineOn && !dry) Te = (torqueAt(S.rpm) * boostMul * ENG.tqMul + evBoostNm(S.rpm)) * eff
-                     - (16 + S.rpm * 0.011) * (ENG.fric || 1) * (1 - eff);
-  else Te = -(20 + S.rpm * 0.02) * (ENG.fric || 1);
+                     - dragNm(S.rpm) * (1 - eff);
+  // …and an engine that is not firing at all is being turned over by the car,
+  // which costs more again: nothing is putting anything back in.
+  else Te = -dragNm(S.rpm) * 1.25;
 
   const engage = computeEngage();
   S.engage = engage;
@@ -12032,7 +12710,7 @@ function stepPhysics(dt) {
       const sdt = dt / n;
       const ceilNow = S.parkLimit || ENG.cut;
       // the drag that is left when the fuelling goes away mid-substep
-      const coast = -(20 + S.rpm * 0.02) * (ENG.fric || 1);
+      const coast = -dragNm(S.rpm) * 1.25;
       // the substeps have to honour the SAME hysteresis the frame-level
       // limiter does. Cutting on the bare ceiling in here re-fuels the
       // instant the crank dips a single rpm below it, and the bounce the
@@ -12305,6 +12983,42 @@ function stepPhysics(dt) {
       }
       driveF *= 1 - 0.85 * S.tcCut;
     } else { S.tcCut = 0; S.tcSettle = 1; }
+
+    /* --- LAUNCH CONTROL, THE TRACTION HALF ------------------------------
+       The clutch strategy in computeEngage() decides how much torque
+       arrives; this decides how much of it the road is allowed to keep. It
+       is the same job traction control does immediately above — hold the
+       driven tyres at the peak of their own grip curve — with two
+       differences, and both of them matter:
+
+         IT DOES NOT HUNT      The TC loop finds out about slip after the
+                               fact and spends the first second of every
+                               standing start overshooting its own
+                               corrections. This box knew the launch was
+                               coming, has been waiting for it with the
+                               clutch in its hand, and simply holds the
+                               number.
+         IT HAS THE AUTHORITY  A traction cut stops at 85% because it is
+                               protecting driveability as well as grip. A
+                               launch has no driveability to protect: it can
+                               take essentially all of the torque away and
+                               hand it straight back, and against 1,100Nm
+                               through a first gear it needs to be able to.
+
+       Which is the whole difference between launch control and simply
+       flooring it with the electronics on. Not more grip — no hesitation.
+
+       It has to sit HERE, ahead of the surplus-torque integration below,
+       and that is not a detail. Torque that has already been turned into
+       wheelspin cannot be taken back afterwards: trimming the force at the
+       road further down makes the number smaller and does nothing whatever
+       to the tyre, which is exactly where this block was first written and
+       exactly why it did nothing. */
+    if (S.lc.phase === "go" && tcOn && driveF > 0) {
+      const over = clamp((sSigned - SP * 0.9) / (SP * 0.55), 0, 1);
+      driveF *= 1 - 0.97 * over;
+    }
+
     // spinning the driven wheels means spinning everything bolted to them:
     // the engine, through the gearing, squared
     const geared = ratio ? Math.min(1200, ENG.inertia * ratio * ratio / (CAR.wheelR * CAR.wheelR)) : 0;
@@ -12430,7 +13144,23 @@ function stepPhysics(dt) {
   // how fast the crank moved this frame, for the limiter's look-ahead next one
   S._rpmRate = S.rpm - (S._rpmWas === undefined ? S.rpm : S._rpmWas);
   S._rpmWas = S.rpm;
-  S.rpm = clamp(S.rpm, 0, S.parkLimit ? S.parkLimit : ENG.cut * 1.24);
+  /* --- AND THE CEILING NEEDS HEADROOM, or there is no bounce ---
+     This used to clamp the revs exactly ON `parkLimit`, and that quietly
+     disabled the limiter it was supposed to be enforcing. The hysteresis
+     cycle up in THE HARD LIMITER starts with "have the revs gone past the
+     number" — and if the clamp pins them AT the number, they never do. No
+     cut, no relight, no sawtooth: the needle arrives and sits there, flat
+     and silent, which is the one thing a limiter never does.
+
+     It never mattered while `parkLimit` only meant an automatic idling in
+     Park. It matters enormously now, because a two-step is the same
+     mechanism and the hammering IS the feature — an engine banging off a
+     limiter that is not its redline is the entire sound of a car about to
+     launch. So the clamp sits a little over the number and lets the
+     hysteresis work underneath it, exactly as it does at the redline, where
+     the ceiling has always had 24% of headroom for this reason. */
+  const band = Math.max(220, (ENG.cut - ENG.idle) * 0.05);
+  S.rpm = clamp(S.rpm, 0, S.parkLimit ? S.parkLimit + band * 0.45 : ENG.cut * 1.24);
   // …and the limiter's sawtooth rides on top of it, so the needle hammers
   // against the stop instead of resting on it. See THE HARD LIMITER.
   if (S.limDip > 0.5) S.rpm = Math.max(ENG.idle * 0.5, S.rpm - S.limDip);
@@ -14146,7 +14876,12 @@ function gateTick(dt) {
   /* ---- 2. lever travel. A gear lever has mass and a linkage on it; it does
        not teleport. The hand can move it about a gate-width in a fifth of a
        second, and that throw is a real part of how long a shift takes. ---- */
-  const rate = GATE.dragging ? 3400 : 900;         // px/s — your hand vs the model's
+  /* px/s — your hand vs. the model's. And how fast the model's hand is
+     depends on the car, because a throw is a real distance: a milled billet
+     linkage with a 40mm gate moves where you put it, and a saloon's cable
+     shifter with a 90mm one does not. `throwRate` is that, and every car
+     without an opinion gets exactly the number that was here before. */
+  const rate = GATE.dragging ? 3400 : 900 * (CC.throwRate || 1);
   const stepMax = rate * dt;
 
   let x = GATE.x, y = GATE.y;
@@ -14171,14 +14906,31 @@ function gateTick(dt) {
 
   if (Math.abs(cy - GATE.chanY) <= GATE.chanHalf) {
     /* --- moving within the channel, or coming back out of a slot --- */
-    if (S.gear !== 0 && Math.abs(cy - GATE.chanY) < Math.abs(y - GATE.chanY)) {
-      // leaving a gear — it comes out the moment the collar clears
-      if (Math.abs(y - GATE.chanY) < GATE.chanHalf + 22) {
-        setGear(0, true);
-        S.syncTo = null; S.syncT = 0;
-        sfxGateOut(0.8);                 // the collar, back there
-        leverHit("out", 0.9);            // the detent ball, under your hand
-      }
+    /* Leaving a gear — it comes out the moment the collar clears.
+
+       This used to be guarded by "is the command pulling the lever TOWARD
+       the channel", which is true on every ordinary shift and false in the
+       one case that mattered: the lever already sitting IN the channel with
+       a gear still selected. That state is not reachable by moving the
+       lever, but it is reachable — fit a shorter gearbox in the workshop
+       while you are sitting in seventh and applyCar() clamps S.gear down to
+       the new top gear without touching the lever, which lands you exactly
+       there. And then the gate deadlocks, permanently: `x` is only allowed
+       to move in neutral, and neutral is only ever entered by moving `y`,
+       and `y` is already where it needs to be. The lever stops answering and
+       the only way out is a page reload.
+
+       The guard was never load-bearing anyway. This branch only runs when
+       the driver is commanding a position INSIDE the channel, and a lever in
+       the channel is a lever with the collar out of the teeth. So say that
+       instead: near the channel, with a gear selected, means the gear comes
+       out. Same behaviour on every real shift, and the impossible state now
+       resolves itself on the next frame instead of jamming. */
+    if (S.gear !== 0 && Math.abs(y - GATE.chanY) < GATE.chanHalf + 22) {
+      setGear(0, true);
+      S.syncTo = null; S.syncT = 0;
+      sfxGateOut(0.8);                 // the collar, back there
+      leverHit("out", 0.9);            // the detent ball, under your hand
     }
     y += clamp(cy - y, -stepMax, stepMax);
     if (S.gear === 0) x += clamp(cx - x, -stepMax, stepMax);
@@ -14238,7 +14990,7 @@ function gateTick(dt) {
          shaft toward the speed the new gear wants. It only gets to do that
          while the collar is pressed against it — let go and it stops. */
       const want = shaftRpmFor(target);
-      const engageNow = clamp(((1 - S.clutchPedal) - biteWindow().start) / biteWindow().width, 0, 1);
+      const engageNow = clutchEngage(S.clutchPedal);
       const pull = synchroRate(engageNow) * dt;
       if (want !== null) S.inShaft += clamp(want - S.inShaft, -pull, pull);
 
@@ -14330,13 +15082,12 @@ function engageGear(target, st) {
      nobody would know. Get it wrong and everyone in the car does. */
   const engaged = computeEngage();
   if (engaged > 0.5 && st.mismatch > 250) {
-    setTimeout(() => sfxDrivelineShunt(clamp(0.5 + (1 - match) * 1.1, 0.4, 1.5)), 26);
     // …and you feel it, which is the point of dumping the clutch on a bad
     // match. A clean snick moves nothing; a botched one shakes the car.
-    // …and which way the shunt threw you: dropping a gear winds the driveline
-    // up backwards and pitches the car onto its nose, taking one is the
-    // opposite. matchRpm() of the gear you just took against where the engine
-    // actually is settles it.
+    // …and which way it threw you: dropping a gear winds the driveline up
+    // backwards and pitches the car onto its nose, taking one is the
+    // opposite. matchRpm() of the gear you just took against where the
+    // engine actually is settles it.
     const down = matchRpm(target) > S.rpm;
     setTimeout(() => shiftJolt(clamp(0.25 + (1 - match) * 0.85, 0.2, 1.1), down), 26);
   }
@@ -14673,17 +15424,6 @@ function seqEngage(target, dir, silent) {
     // boxes already started theirs when the paddle moved (see seqShift)
     if (S.blip <= 0) { S.blip = 0.32; S.blipTarget = matchRpm(target); }
     S.shiftCut = Math.max(S.shiftCut, shiftCutDur(true));
-
-    /* THE TAKE-UP — the part that gives a downshift its weight.
-
-       The dogs landing is a noise. What you FEEL a beat later is the whole
-       driveline loading up backwards: the engine is now the slowest thing in
-       the system, so every shaft, joint and diff between it and the road
-       winds up against the play in it and then rings. That is a big, low,
-       damped shunt through the floor about 40ms behind the clack, and it is
-       the single most missing ingredient in a synthesized downshift —
-       without it the gear change is a click, and with it the car has mass. */
-    setTimeout(() => sfxDrivelineShunt(0.9 + Math.min(0.5, Math.abs(S.v) / 55)), 42);
 
     /* …and the bang, which lands LAST. The overrun pop is not the sound of
        the throttle opening, it is the sound of it slamming shut again at the
@@ -15120,6 +15860,9 @@ function setMode(mode) {
   S.mode = mode;
   S.gear = 0; S.autoSel = "P"; S.autoGear = 1; S.locked = false;
   S.in.clutch = 0;
+  // a launch is a thing you set up in one gearbox; it does not survive being
+  // handed a different one halfway through
+  lcEnd(true);
 
   document.querySelectorAll(".mode-btn").forEach(b => {
     b.classList.toggle("active", b.dataset.mode === mode);
@@ -15956,6 +16699,14 @@ function buildWorkshop() {
     $("ltimer").classList.remove("done");
     $("ltBig").classList.remove("golive");
   });
+  $("wsLaunch").addEventListener("click", () => {
+    S.lcOn = !S.lcOn;
+    if (!S.lcOn) lcEnd(true);
+    refreshWorkshop();
+    updateLcUi();
+    sfxClunk(0.45);
+    save();
+  });
   $("wsSoft").addEventListener("click", () => {
     S.softLim = !S.softLim;
     refreshWorkshop();
@@ -16077,6 +16828,31 @@ function refreshWorkshop() {
   $("wsLtVal").textContent = ltLabel();
   $("wsTune").classList.toggle("on", curMod().tune);
   const absOn = curMod().abs !== false;
+  /* LAUNCH CONTROL. Three states again, and for the same reason the traction
+     card has three: an electric car has no clutch to hold, no limiter to bounce
+     off and nothing to build — it already makes all of its torque at zero rpm,
+     which is the thing every launch control ever built was invented to fake. */
+  const lcCar = !isEv() && !CC.ev;
+  const lcCard = $("wsLaunch");
+  lcCard.classList.toggle("on", lcCar && S.lcOn);
+  lcCard.classList.toggle("ws-off", !lcCar);
+  lcCard.querySelector(".ws-card-name").textContent =
+    lcCar ? "LAUNCH CONTROL — " + (S.lcOn ? "ARMED" : "OFF")
+          : "LAUNCH CONTROL — NOT APPLICABLE";
+  $("wsLaunchDesc").innerHTML = !lcCar
+    ? "There is nothing here to control. An electric motor makes every newton-metre "
+      + "it has at a standstill and there is no clutch between it and the road &mdash; which "
+      + "is precisely the problem launch control was invented to solve on everything else."
+    : (S.mode === "clutch"
+      ? "On a car with three pedals this is a <b>two-step</b> and nothing more, because "
+        + "nothing else is possible: hold the clutch in, select first, stand on the brake "
+        + "and floor it, and the engine pins itself against a second, much lower limiter "
+        + "&mdash; hammering, banging, and on a turbo car spooling hard while you sit still. "
+        + "Come off the brake and it gets out of the way. The clutch is yours; it always was."
+      : "Arm it, then do it with your feet: hold the brake, floor the throttle, and the engine "
+        + "pins itself against a second, much lower limiter while the box holds the clutch open "
+        + "behind it. Lift off the brake and it feeds the clutch in over a quarter of a second "
+        + "while holding the tyres at the edge of their grip. Lift off the throttle to cancel.");
   $("wsSoft").classList.toggle("on", S.softLim);
   $("wsSoft").querySelector(".ws-card-name").textContent =
     "SOFT LIMITER — " + (S.softLim ? "ON" : "OFF");
@@ -16372,6 +17148,23 @@ function autodriveTick(dt) {
       }
     }
   }
+}
+
+/* ---------------- launch control lamp ----------------
+   Three things to say and one lamp to say them with, so it says them the way
+   a cluster does: dark when there is nothing to report, steady when the
+   system is armed and waiting for your feet, and BLINKING while it is
+   actually holding the engine against the two-step — because that is the one
+   state where the car is doing something you did not tell it to do this
+   instant, and a lamp that blinks is a lamp that is asking to be looked at. */
+function updateLcUi() {
+  const l = $("lampLc");
+  if (!l) return;
+  const armed = lcFitted();
+  const holding = S.lc.phase === "hold";
+  l.classList.toggle("lit", armed && S.lc.phase !== "off");
+  l.classList.toggle("blink", holding);
+  l.classList.toggle("dim", armed && S.lc.phase === "off");
 }
 
 /* ---------------- cruise control ---------------- */
@@ -17013,7 +17806,8 @@ function save() {
       car: CC.id, tunnel: S.tunnel, flyby: S.flyby, cabin: S.cabin, stock: S.stock, mods: S.mods,
       listen: S.listen, space: S.space,
       traffic: S.traffic, rain: S.rain, wind: S.wind, lt: S.ltTgt, ltBest: LT.best,
-      dmgOn: S.dmgOn, softLim: S.softLim, evV8: S.evV8, batt: S.batt, fuel: S.fuel,
+      dmgOn: S.dmgOn, softLim: S.softLim, lcOn: S.lcOn,
+      evV8: S.evV8, batt: S.batt, fuel: S.fuel,
       night: S.night, station: S.station,
       stations: MUS.saved, tapeNames: MUS.names,
       musVol: MUS.vol, musEcho: MUS.echo, musWide: MUS.wide,
@@ -17093,14 +17887,45 @@ function initInput() {
   window.addEventListener("keyup", (e) => { if (keymap(e, false)) e.preventDefault(); });
   window.addEventListener("blur", () => { S.in.gas = 0; S.in.brake = 0; S.in.clutch = 0; });
 
-  // pedals: click & hold
+  /* ---- THE PEDALS, WITH A FOOT ON THEM ----------------------------------
+     Click-and-hold used to mean 1.0, exactly, on every pedal — which is a
+     switch with a nicer graphic on it, and it made the mouse strictly worse
+     than the number keys the throttle already had.
+
+     A pointer has two axes and a pedal needs one, so: where you press down
+     the face of the pedal IS how far you have pushed it, and dragging up and
+     down moves it while you hold. The top of the pad is a brush, the bottom
+     is the floor. That gives all three pedals something the keyboard cannot
+     give any of them — and it matters most on the one in the middle of
+     nothing, because the clutch is the pedal where the whole car lives in a
+     band you have to sit inside. See BITE.
+
+     There is a floor under it (0.06) so a press always registers as a press,
+     and the very bottom of the travel snaps to 1 so "flat out" stays
+     reachable without asking anyone to hit a pixel. */
   const bindPedal = (el, prop) => {
+    const press = (e) => {
+      const r = el.getBoundingClientRect();
+      const t = clamp((e.clientY - r.top) / Math.max(r.height, 1), 0, 1);
+      // a comfortable dead zone at each end: the top third of the pad is
+      // still "just resting on it", the bottom eighth is the bulkhead
+      const v = t > 0.88 ? 1 : clamp((t - 0.10) / 0.72, 0, 1);
+      S.in[prop] = Math.max(0.06, v);
+    };
     el.addEventListener("pointerdown", (e) => {
       el.setPointerCapture(e.pointerId);
-      S.in[prop] = 1;
+      el._pid = e.pointerId;
+      press(e);
       e.preventDefault();
     });
-    const off = () => { S.in[prop] = 0; };
+    el.addEventListener("pointermove", (e) => {
+      if (el._pid === e.pointerId) { press(e); e.preventDefault(); }
+    });
+    const off = (e) => {
+      if (e && el._pid !== undefined && el._pid !== e.pointerId) return;
+      el._pid = undefined;
+      S.in[prop] = 0;
+    };
     el.addEventListener("pointerup", off);
     el.addEventListener("pointercancel", off);
   };
@@ -17410,8 +18235,15 @@ function pollGamepad() {
     ? gp.buttons[GP_MAP.BRAKE].value : Math.max(0, gp.axes[4] || 0);
   S.in.gas = pedalCurve(rawGas, 1.45);      // most of the travel is the bottom half
   S.in.brake = pedalCurve(rawBrake, 1.25);  // brakes want a little less curve
-  if (S.mode === "clutch")
-    S.in.clutch = held(GP_MAP.CLUTCH) ? 1 : 0;
+  /* the clutch, and it is analog wherever the hardware can be. A pad that
+     reports the button as a trigger gives a real left foot; one that reports
+     a plain button gives the switch it always was. And it belongs to the
+     gearbox rather than the mode — a dog sequential has a pedal too. */
+  if (S.mode === "clutch" || seqClutchBox()) {
+    const b = gp.buttons[GP_MAP.CLUTCH];
+    const v = b ? b.value : 0;
+    S.in.clutch = v > 0.03 ? pedalCurve(v, 1.15) : (held(GP_MAP.CLUTCH) ? 1 : 0);
+  }
 
   /* --- the ignition is press-and-hold on the pad too --- */
   const ignNow = held(GP_MAP.IGNITION);
@@ -17682,6 +18514,7 @@ function frame(now) {
   $("lampTc").classList.toggle("lit", tcOff);
 
   slideUi();
+  updateLcUi();
 
   /* --- redline / over-rev / slide cockpit vibration ---
      Three things move the cluster and they compose rather than compete: the
@@ -17796,6 +18629,7 @@ function slideUi() {
   S.dmgOn = !!saved.dmgOn;
   DMG.on = S.dmgOn;
   S.softLim = !!saved.softLim;
+  S.lcOn = !!saved.lcOn;
   S.evV8 = !!saved.evV8;
   // the tank and the pack only survive a reload if they mean anything —
   // with consequences off they're both notionally full forever

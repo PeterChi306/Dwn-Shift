@@ -294,10 +294,36 @@ kbd {
 
 .cluster { padding: 18px 26px 20px; display: flex; flex-direction: column; gap: 6px; }
 
-.warnrow { display: flex; gap: 8px; justify-content: flex-end; }
+/* THE WARNING ROW. Eight-odd lamps and a pair of indicator buttons used to
+   be one plain flex row with nothing telling it what to do when it ran out
+   of width — so instead of the ROW wrapping, the TEXT inside individual
+   pills did, and "OVER-REV" broke itself across two lines inside its own
+   pill. `flex-wrap` here and `white-space: nowrap` on `.lamp` swap which of
+   those wraps: a pill is now a fixed, whole unit, and it is the row that
+   folds onto a second line — at any width — when there isn't room for the
+   next one. Grouped into two clusters (see the HTML) with a little extra
+   gap between them, so it also reads as organised rather than as one long
+   jumbled strip: warnings on the left of each line, status/mode lamps
+   trailing off to the right, closest to the clock. */
+.warnrow {
+  display: flex; flex-wrap: wrap; row-gap: 6px; column-gap: 8px;
+  justify-content: flex-end;
+}
+.warnrow .lamp-group {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end;
+}
+/* a hairline between the two groups reads as a section break rather than
+   just a wider gap — and margin, not a gap value, is what survives the row
+   wrapping onto two lines without looking like a stray mark at the front of
+   the second one */
+.warnrow .lamp-group + .lamp-group {
+  margin-left: 6px; padding-left: 14px;
+  border-left: 1px solid var(--edge);
+}
 .lamp {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 9.5px; font-weight: 700; letter-spacing: 0.13em;
+  white-space: nowrap; flex: 0 0 auto;
   color: var(--muted); opacity: 0.45;
   padding: 4px 10px; border-radius: 999px;
   border: 1px solid var(--edge);
@@ -3169,3 +3195,12 @@ body.dash-dead .cluster .lamp i { box-shadow: none !important; }
   55%  { transform: none;             filter: drop-shadow(0 0 6px rgba(216,31,38,0.5)); }
   100% { transform: none;             filter: none; }
 }
+
+/* ARMED, BUT NOT DOING ANYTHING YET. The launch lamp has a third state the
+   rest of the cluster does not need: the system is switched on and waiting
+   for your feet. That is neither "off" (it isn't) nor "lit" (it hasn't done
+   anything), so it sits at half brightness in the lamp's own colour — which
+   is exactly what a real cluster does with a mode that is selected but not
+   engaged. See updateLcUi(). */
+.lamp.dim { opacity: 0.7; color: var(--lamp-ok); }
+.lamp.dim i { background: var(--lamp-ok); box-shadow: none; opacity: 0.55; }

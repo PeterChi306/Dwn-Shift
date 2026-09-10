@@ -91,16 +91,23 @@
             <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M10 4v5H4v6h6v5l10-8z"/></svg>
           </button>
         </div>
-        <div class="lamp" id="lampStall"><i></i>STALL</div>
-        <div class="lamp" id="lampRev"><i></i>OVER-REV</div>
-        <div class="lamp" id="lampGrip"><i></i>GRIP</div>
-        <div class="lamp" id="lampTc"><i></i>TC OFF</div>
-        <div class="lamp" id="lampShift"><i></i>SHIFT</div>
-        <div class="lamp" id="lampCel"><i></i>CHECK ENG</div>
-        <div class="lamp lamp-ev" id="lampEv"><i></i>eDRIVE</div>
-        <div class="lamp lamp-ok" id="lampCruise"><i></i>CRUISE</div>
-        <div class="lamp lamp-ok" id="lampAuto"><i></i>AUTO</div>
-        <div class="lamp lamp-ok" id="lampRun"><i></i>ENGINE</div>
+        <!-- warnings: the lamps that mean "pay attention" -->
+        <div class="lamp-group">
+          <div class="lamp" id="lampStall"><i></i>STALL</div>
+          <div class="lamp" id="lampRev"><i></i>OVER-REV</div>
+          <div class="lamp" id="lampGrip"><i></i>GRIP</div>
+          <div class="lamp" id="lampTc"><i></i>TC OFF</div>
+          <div class="lamp" id="lampShift"><i></i>SHIFT</div>
+          <div class="lamp" id="lampCel"><i></i>CHECK ENG</div>
+        </div>
+        <!-- status: what the car is currently doing, not what's wrong with it -->
+        <div class="lamp-group">
+          <div class="lamp lamp-ev" id="lampEv"><i></i>eDRIVE</div>
+          <div class="lamp lamp-ok" id="lampLc" title="Launch control (arm it in the workshop): hold the brake and floor the throttle, then lift off the brake"><i></i>LAUNCH</div>
+          <div class="lamp lamp-ok" id="lampCruise"><i></i>CRUISE</div>
+          <div class="lamp lamp-ok" id="lampAuto"><i></i>AUTO</div>
+          <div class="lamp lamp-ok" id="lampRun"><i></i>ENGINE</div>
+        </div>
       </div>
       <div class="dmg-strip" id="dmgStrip" aria-hidden="true">
         <div class="dmg-bar" id="dmgEngine"><span>ENGINE</span><i></i></div>
@@ -718,6 +725,10 @@
         <button class="ws-card ws-tune" id="wsGrip">
           <span class="ws-card-name">GRIP — OFF</span>
           <span class="ws-card-desc">Unobtainium rubber. Switch on and the tires simply never let go: no wheelspin off the line, no lit rear end out of a gear, no locked wheels under the brakes — whatever the car, whatever the weather.</span>
+        </button>
+        <button class="ws-card ws-tune" id="wsLaunch">
+          <span class="ws-card-name">LAUNCH CONTROL &mdash; OFF</span>
+          <span class="ws-card-desc" id="wsLaunchDesc">Arm it, then do it with your feet: hold the brake, floor the throttle, and the engine pins itself against a second, much lower limiter &mdash; hammering, banging, and on a turbo car spooling hard against a clutch the box is holding open for you. Lift off the brake and it feeds the clutch in over a quarter of a second while it holds the tyres at the edge of their grip. Nothing to press, and nothing you can&rsquo;t cancel by lifting.</span>
         </button>
         <button class="ws-card ws-tune" id="wsSoft">
           <span class="ws-card-name">SOFT LIMITER — OFF</span>

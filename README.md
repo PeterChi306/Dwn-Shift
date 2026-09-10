@@ -38,6 +38,10 @@ that's where all the useful control is.
 `I` **hold** to start · `K` cruise · `A` auto drive · `N` night · `V` cabin ·
 `F` flyby · `T` tunnel · `M` tape deck
 
+`1`–`9` / `0` hold 10–100% throttle. And all three pedals are analog to a
+pointer: press near the top of the pad for a brush, near the bottom for the
+floor, and drag while you hold to move it.
+
 ## Starting a car
 
 Not every car starts the same way.
@@ -444,6 +448,155 @@ matters more than anything sixth was doing.
 The engine under all this is a 2.1-litre **five**, which fires every 144°.
 Five is odd, so no two cylinders ever balance and the exhaust pulses never
 settle into pairs — the note walks, and that walk is the warble.
+
+## What a throttle actually does
+
+A throttle was a number here. You pressed a key, a ramp moved it to 1 over a
+fifth of a second, and torque came out the other side in exact proportion.
+Every engine in the garage responded identically, because the only thing
+between your foot and the crank was multiplication.
+
+There are three things missing from that, and all three are things you feel
+before you can name them.
+
+### The plenum
+
+Between the butterfly and the exhaust valve there is a **volume** — a plenum,
+a set of runners, and on a turbo car an intercooler and a metre of charge
+pipe. Open the plate and that volume has to fill before the cylinders see any
+of it. That delay is a real, measurable property of an engine and one of the
+largest differences in feel between one and another:
+
+| | |
+|---|---|
+| **~20 ms** | individual throttle bodies, one butterfly per cylinder, sitting an inch off the port — a race V12, a Carrera GT, a GT3. This is the engine people call *telepathic*. |
+| **~50 ms** | an ordinary naturally aspirated road engine with one plate and a plenum on top. |
+| **~150 ms** | four turbos, two coolers and pipework you could crawl through. This engine takes a **breath** before it goes. |
+
+Model it and things you cannot otherwise get fall straight out. Blipping a
+race engine works; blipping a big turbo motor has to be done *early*, which is
+the actual skill in heel-and-toe. A stab of throttle arrives when it arrives,
+so lifting becomes a decision with a cost. And the difference between two
+engines stops being how much torque they make and starts being **when**.
+
+Idle air goes around it, because on a real engine it goes around it: the idle
+valve, the fast idle after a start and the anti-stall are all metered through
+a small dedicated passage that bypasses the plate entirely. Which is why a
+governor can hold a stumbling engine up and your right foot cannot.
+
+### Rev hang
+
+Lift off a modern car and the revs do not fall. They **hang**, for something
+between a third and three quarters of a second, and then sink — the ECU
+holding the plate cracked open on the overrun for the catalyst and for drivers
+who cannot work a clutch.
+
+It is also the single most complained-about characteristic of every modern
+manual ever sold, because it wrecks the one thing a manual is for: you lift,
+you go for the next gear, and the engine is still at four thousand rpm when
+you get there. So it is a per-car number, most of this garage has none of it,
+and the cars that do are the ones that would. The **Utopia** has exactly zero,
+which is most of why it feels like a car from 1999.
+
+### Engine braking
+
+The drag on a closed throttle used to be a constant plus a straight line in
+rpm. That is *friction*, and friction is the small half. The big half is
+**pumping** — the engine is a machine for moving air, and with the plate shut
+it is pulling every cylinder down against a vacuum and pushing it back up,
+which costs roughly the **square** of engine speed.
+
+With the right shape in, lifting at high revs slows the car properly, a
+downshift lands the engine somewhere the drag is much bigger so the car
+*settles* onto engine braking instead of merely changing ratio, and big
+engines brake harder than small ones — which everyone who has driven both
+already knows. The low-rev end is anchored to what was there before, so idle,
+creeping and the two tiny engines behave exactly as they did.
+
+### And the pedals have a foot on them
+
+Click-and-hold used to mean 1.0, exactly, on all three — a switch with a
+nicer graphic. Now **where** you press down the face of the pedal is how far
+you have pushed it, and dragging moves it while you hold. The top of the pad
+is a brush; the bottom is the floor. That matters most on the left one,
+because the clutch is the pedal whose whole life happens in a band you have to
+sit inside. A gamepad trigger works the same way if the hardware reports one.
+
+The keyboard ramps got quicker too. A heel-and-toe blip is 100–150 ms of
+pedal, total, in the gap between the clutch going down and the lever going
+across — at the old 217 ms up and 179 ms down the blip could not finish before
+the gear had to go in, so the shift was always late and always slightly wrong.
+
+## Launch control
+
+Off by default and armed in the workshop, because it is a thing you set up
+rather than a thing that is always on. Then it is your feet: **hold the brake,
+floor the throttle.**
+
+**Hold.** The engine pins itself against a second, much lower limiter — the
+**two-step** — and hammers off it while the clutch is held open behind it.
+That is the sound everyone knows: an engine bouncing off a limiter that is not
+its redline, banging out of the pipes, at a standstill. On a turbo car it is
+doing something as well as making a noise, because air is still going through
+an engine whose *spark* keeps being taken away, and that air is spinning the
+turbochargers. You are building boost against a closed clutch, and it goes to
+full boost in about two seconds.
+
+**Go.** Lift off the brake. Two earlier versions of the clutch take-up both
+oscillated — one chased engine rpm and read the dip the pack itself caused as
+a fault, the other tracked wheel speed but could still swing from "close it"
+to "open it" inside a single frame, and a chattering clutch delivers almost no
+torque at all. The one in the file now doesn't build a separate controller for
+this at all: it reuses the same rpm-based bite curve an ordinary pull-away
+already uses — a function with no memory of its own, which is exactly why an
+ordinary launch from idle never hunts — just aimed at the two-step's target
+instead of idle, so it bites decisively rather than crawling. Ask it for more
+capacity than the current rpm justifies and the answer falls on the very next
+frame, automatically, with nothing to tune and nothing that can wind up.
+Meanwhile the box holds the driven tyres at the peak of their grip curve with
+full authority and none of the hesitation the ordinary traction loop spends
+its first second on, because it knew the launch was coming.
+
+On the real tyre model it is worth one to three seconds to 100 km/h on the
+cars that need it most. With the workshop's unobtainium rubber fitted the
+target follows the two-step all the way to redline instead of sitting at the
+torque peak — there is no tyre left to protect, so holding back buys nothing
+— and it still matches or beats flooring both pedals by hand on nearly
+everything in the garage.
+
+**And on a car with three pedals it is a two-step and nothing else**, because
+nothing else is possible. There is no clutch actuator in a Utopia — there is a
+pedal, and your foot is on it. So it holds the revs exactly where you asked
+while you sit there with the clutch in, and the moment the brake comes off it
+gets out of the way. That is not a reduced feature. It is the feature, and
+pretending a manual car can launch itself would be the same lie as putting
+paddles on the Zonda.
+
+## The one with seven pedaled gears
+
+The **San Cesario Utopia**: a 6.0-litre twin-turbo V12, 1,100 Nm from 2,800 to
+5,900 rpm, and a **seven-speed H-pattern** behind an open gate milled out of
+billet.
+
+Everyone else spent twenty years deleting the third pedal. This one was drawn
+around it, because the man who built it decided that a car you drive should be
+a car you *operate*. So, like the Zonda, it is `gatedOnly` — there is an
+automated version of the real car and there is no version of this file where
+offering it would be anything but removing the reason the car exists.
+
+It is the only twin-turbo H-pattern car in the garage, which makes it the only
+place you can lift mid-shift and hear what that costs you. And it is the
+opposite of its 7.3-litre naturally aspirated sibling in a way that is worth
+hearing back to back: the Zonda gives you everything at once and then tapers,
+and this one **arrives, holds, and does not stop**. Two turbochargers sit
+between the ports and the tailpipes, and a turbo is a muffler that spins — it
+takes the hard upper orders off and leaves something enormous and smooth with
+the weight further down. The Zonda sounds like a fight. This sounds like a
+warship.
+
+Its redline is 6,700 and that is not a shortcoming. There is no reason to rev
+an engine that has finished making its torque; the seventh gear is there
+because the sixth ran out of road, not because the engine ran out of revs.
 
 ## Traction control is its own switch now
 
