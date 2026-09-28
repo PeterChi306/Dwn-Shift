@@ -3,15 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DWNSHIFT — immersive interface driving simulator</title>
+<title>DWNSHIFT — Los Santerra</title>
 <meta name="description" content="DWNSHIFT — immersive interface driving simulator. Synthesized engines, real clutch physics, flames included.">
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="%2316171c"/><path d="M4 22 L14 6 L18 6 L11 17 L20 17 L28 6 L28 11 L18 26 L14 26 L20 17" fill="none" stroke="%23e0a144" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/></svg>'>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="world.css?v=20260927c">
+<style>/* The 3D world is the app: the original simulator page is never shown (game.js still runs under it as the drivetrain). Inline, so a cached stylesheet can never bring it back. */#stage,.grain,.keylight,.nightstreak{visibility:hidden!important;pointer-events:none!important}body{background:#06090c}#bootLoader{position:fixed;inset:0;z-index:200;background:#0a1116}</style>
+<script type="importmap">{"imports":{"three":"./vendor/three/three.webgpu.js","three/webgpu":"./vendor/three/three.webgpu.js","three/tsl":"./vendor/three/three.tsl.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body data-theme="obsidian">
+<div id="bootLoader" role="status" aria-live="polite"><div class="boot-inner"><div class="boot-brand">DWN<b>SHIFT</b></div><div class="boot-sub">LOS SANTERRA · SOUTHERN CALIFORNIA</div><div class="boot-bar"><i id="bootFill"></i></div><div class="boot-step" id="bootStep">Starting the engine…</div></div></div>
 
 <div class="grain" aria-hidden="true"></div>
 <div class="keylight" aria-hidden="true"></div>
@@ -1062,6 +1066,18 @@
   </div>
 </div>
 
+<script>
+/* If the 3D world cannot start, say why on the loading screen instead of waiting forever. */
+(function(){
+  var started=false;
+  function show(msg){var L=document.getElementById('bootLoader'),t=document.getElementById('bootStep');if(!L||!t||L.classList.contains('done'))return;L.classList.add('failed');t.innerHTML='';t.append(document.createTextNode(msg+' '));var b=document.createElement('button');b.textContent='Reload';b.style.cssText='margin-left:8px;padding:6px 12px;border-radius:6px;border:1px solid #ffffff33;background:#ffffff14;color:#fff;font:inherit;cursor:pointer';b.onclick=function(){location.reload();};t.append(b);}
+  window.__bootStarted=function(){started=true;};
+  addEventListener('error',function(e){var s=e.target;if(s&&s.tagName==='SCRIPT')show('A game file failed to load ('+(s.src||'').split('/').pop()+').');else if(e.message)show('Startup error: '+e.message);},true);
+  addEventListener('unhandledrejection',function(e){var r=e.reason;show('Startup error: '+(r&&r.message||r));});
+  setTimeout(function(){if(!started)show(navigator.gpu?'The 3D engine did not start. Press Cmd+Shift+R to reload without old files.':'This browser has no WebGPU. Please use Chrome.');},20000);
+})();
+</script>
 <script src="game.js"></script>
+<script type="module" src="world.js?v=20260927c"></script>
 </body>
 </html>

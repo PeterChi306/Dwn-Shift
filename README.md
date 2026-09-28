@@ -1,5 +1,11 @@
 # Dwn-Shift
 
+## New: Los Santerra open-road world
+
+The supplied Los Santerra map now drives a connected street graph, replacing the first prototype's lap. Pasadena, San Marino, Beverly Hills and West Hollywood have distinct scenery rules, connected roads and freeway ramps. The original drivetrain/audio powers a new Blender performance coupe, alongside multiple NPC vehicle types, gentler steering, an orbiting chase camera, an analog speedometer and a dedicated Map page.
+
+Run `python3 -m http.server 8080 --bind 127.0.0.1` and open `http://127.0.0.1:8080`. See [WORLD.md](WORLD.md) for controls, the reference-map tracing method, Blender sources, validation and current limits. **Drive → Original simulator** returns to the full existing interface.
+
 An immersive interface driving simulator. Every engine is synthesized in the
 browser — no samples — so each car has its own firing order, its own crank,
 and its own voice.

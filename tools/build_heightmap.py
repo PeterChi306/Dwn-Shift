@@ -1,0 +1,290 @@
+"""Bake tools/terrain.py out to a 16-bit heightmap for an Unreal Landscape.
+
+Pure standard library on purpose: no numpy, no Pillow. The PNG is written by
+hand (a 16-bit greyscale PNG is a zlib stream of big-endian samples with a
+filter byte per row), so this runs on a stock python3 with nothing installed.
+
+Output lands in output/unreal/:
+    los-santerra-height.png   the landscape heightmap
+    los-santerra-terrain.json the exact import settings to type into Unreal
+
+Resolution is chosen so Unreal divides it into whole components with no
+resampling: Landscape components are 127 quads, so both axes are (n x 127) + 1.
+
+Run:  python3 tools/build_heightmap.py
+"""
+import json
+import os
+import math
+import struct
+import sys
+import zlib
+from array import array
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from terrain import MAP_W, MAP_H, METRES_PER_PIXEL, height  # noqa: E402
+
+ROOT = Path(__file__).resolve().parent.parent
+OUT = ROOT / 'output' / 'unreal'
+
+# Unreal builds a Landscape out of components of 127 quads (section size 127,
+# one section per component), NOT 128 — so a clean import needs a resolution of
+# (components x 127) + 1 on each axis. 30 x 20 components gives 3810 x 2540
+# quads, which is exactly 3:2, the same aspect as the 1536 x 1024 reference map,
+# so the whole 15360 x 10240 m world lands with no resampling and no letterbox.
+COMPONENTS_X, COMPONENTS_Y = 30, 20
+QUADS_PER_COMPONENT = 127
+WIDTH = COMPONENTS_X * QUADS_PER_COMPONENT + 1                  # 3811
+HEIGHT = COMPONENTS_Y * QUADS_PER_COMPONENT + 1                 # 2541
+METRES_PER_QUAD = MAP_W * METRES_PER_PIXEL / (WIDTH - 1)        # 4.0315 m
+
+# Unreal maps the full 16-bit range to 512 m at a Z scale of 100, centred on
+# 32768. Picking the Z scale from the real height range keeps the precision.
+UE_RANGE_AT_UNIT_SCALE = 512.0
+
+
+def evaluate_grid():
+    """Exact height() on a 1 px lattice.
+
+    The finest feature in the terrain is the 13 px detail noise, so a 1 px
+    lattice oversamples it about 13x; the output grid is then interpolated from
+    this. Evaluating height() 9.8 M times directly would be needlessly slow for
+    a result that is identical to well under a millimetre.
+    """
+    gw, gh = MAP_W + 1, MAP_H + 1
+    grid = [None] * gh
+    for j in range(gh):
+        row = array('d', bytes(8 * gw))
+        for i in range(gw):
+            row[i] = height(i, j)
+        grid[j] = row
+        if j % 128 == 0:
+            print(f'  sampled row {j}/{gh}', flush=True)
+    return grid, gw, gh
+
+
+def carve_roads(field, px_per_sample):
+    """Cut the graded road profile into the terrain lattice.
+
+    Roads are engineered, not draped: build_network.py smooths each road's
+    profile and caps its grade, so the finished centreline sits up to 30 m away
+    from the raw terrain height. Baking the terrain without accounting for that
+    leaves the landscape cutting straight through the road surface -- which is
+    what reads as bumps and broken asphalt when you drive it, and what makes a
+    hillside road look half-buried.
+
+    So every surface edge is stamped into the lattice: the carriageway plus a
+    shoulder is set to the road's own height, and a verge around it blends back
+    to natural ground over VERGE_M. Elevated layers are skipped -- a freeway
+    deck or a ramp is meant to fly, and a tunnel is meant to be inside the hill.
+
+    Corridors are resolved nearest-wins rather than stamped in sequence. Writing
+    each edge straight into the lattice made the result depend on edge order: at
+    an intersection the road carved last overwrote its neighbours, and worse, its
+    verge blended the junction back toward *natural* ground even though a road
+    already sat there -- which is where the 5 m seating errors under underpasses
+    came from. Here each sample keeps only the strongest claim on it, so the order
+    edges happen to appear in cannot change the terrain.
+    """
+    net = json.loads((ROOT / 'assets' / 'world' / 'network.json').read_text())
+    nodes = net['nodes']
+    # When the level ships the thinned export, carving every road in the full
+    # graph would flatten corridors where no road was built -- hundreds of km of
+    # bare scars. Restrict the carve to the road identities that survived.
+    # Segments share a name, so this is keyed on name+kind and over-carves only
+    # where a multi-segment road was partly thinned.
+    keep_ids = None
+    thin = ROOT / 'output' / 'unreal' / 'los-santerra-roads-thin.json'
+    if os.environ.get('LOS_SANTERRA_THIN') and thin.exists():
+        keep_ids = {(r['name'], r['kind'])
+                    for r in json.loads(thin.read_text())['roads']}
+        print('carve: restricted to {} thinned road identities'.format(len(keep_ids)))
+    # The lattice height() is sampled on is 10 m; a 13 m street cannot be drawn
+    # on it at all. Carving happens on the output grid instead, where a sample is
+    # METRES_PER_QUAD (about 4 m) and the narrowest road is still three samples
+    # wide. Map pixels convert to output samples by dividing by px_per_sample.
+    to_sample = 1.0 / px_per_sample
+
+    VERGE_M = 26.0          # metres of blend from road edge back to real ground
+    SHOULDER_M = 3.0        # flat shoulder carried beyond the carriageway edge
+    # Strongest claim on each sample, and the height that claim wants it at.
+    claim_w = array('f', bytes(4 * WIDTH * HEIGHT))
+    claim_z = array('f', bytes(4 * WIDTH * HEIGHT))
+    carved = 0
+    for e in net['edges']:
+        na, nb = nodes[e['a']], nodes[e['b']]
+        if na['layer'] != 'surface' or nb['layer'] != 'surface':
+            continue
+        if e['kind'] in ('tunnel', 'freeway', 'ramp'):
+            continue
+        if keep_ids is not None and (e['name'], e['kind']) not in keep_ids:
+            continue
+        ax, ay = na['map']
+        bx, by = nb['map']
+        za, zb = na['position'][1], nb['position'][1]
+
+        ax, ay = ax * to_sample, ay * to_sample
+        bx, by = bx * to_sample, by * to_sample
+        half = (e['width'] * 0.5 + SHOULDER_M) / METRES_PER_QUAD   # carriageway, samples
+        verge = VERGE_M / METRES_PER_QUAD
+        reach = half + verge
+
+        lo_x = max(0, int(math.floor(min(ax, bx) - reach)))
+        hi_x = min(WIDTH - 1, int(math.ceil(max(ax, bx) + reach)))
+        lo_y = max(0, int(math.floor(min(ay, by) - reach)))
+        hi_y = min(HEIGHT - 1, int(math.ceil(max(ay, by) + reach)))
+        if lo_x > hi_x or lo_y > hi_y:
+            continue
+
+        ex, ey = bx - ax, by - ay
+        seg_len = ex * ex + ey * ey
+        for j in range(lo_y, hi_y + 1):
+            base = j * WIDTH
+            dy0 = j - ay
+            for i in range(lo_x, hi_x + 1):
+                dx0 = i - ax
+                t = 0.0 if seg_len == 0 else max(0.0, min(1.0, (dx0 * ex + dy0 * ey) / seg_len))
+                qx, qy = ax + ex * t, ay + ey * t
+                d = math.hypot(i - qx, j - qy)
+                if d > reach:
+                    continue
+                if d <= half:
+                    w = 1.0
+                else:
+                    u = (d - half) / verge
+                    w = 1.0 - (u * u * (3.0 - 2.0 * u))   # smoothstep back to ground
+                k = base + i
+                if w > claim_w[k]:
+                    claim_w[k] = w
+                    claim_z[k] = za + (zb - za) * t
+        carved += 1
+
+    for j in range(HEIGHT):
+        row = field[j]
+        base = j * WIDTH
+        for i in range(WIDTH):
+            w = claim_w[base + i]
+            if w > 0.0:
+                row[i] = row[i] * (1.0 - w) + claim_z[base + i] * w
+    print(f'  carved {carved} road corridors into the terrain')
+    return field
+
+
+def write_png16(path, width, height_px, samples):
+    """Minimal 16-bit greyscale PNG writer."""
+    raw = bytearray()
+    stride = width
+    for y in range(height_px):
+        raw.append(0)                                   # filter type 0 (None)
+        row = samples[y * stride:(y + 1) * stride]
+        be = array('H', row)
+        if sys.byteorder == 'little':
+            be.byteswap()                               # PNG is big-endian
+        raw += be.tobytes()
+
+    def chunk(tag, data):
+        return (struct.pack('>I', len(data)) + tag + data
+                + struct.pack('>I', zlib.crc32(tag + data) & 0xffffffff))
+
+    ihdr = struct.pack('>IIBBBBB', width, height_px, 16, 0, 0, 0, 0)
+    png = (b'\x89PNG\r\n\x1a\n'
+           + chunk(b'IHDR', ihdr)
+           + chunk(b'IDAT', zlib.compress(bytes(raw), 9))
+           + chunk(b'IEND', b''))
+    path.write_bytes(png)
+    return len(png)
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    print(f'baking {WIDTH} x {HEIGHT} at {METRES_PER_QUAD} m per quad')
+    grid, gw, gh = evaluate_grid()
+
+    lo, hi = math.inf, -math.inf
+    for row in grid:
+        for v in row:
+            if v < lo:
+                lo = v
+            if v > hi:
+                hi = v
+    print(f'  terrain range {lo:.2f} m to {hi:.2f} m')
+
+    # Z scale that puts `hi` at the top of the 16-bit range with a little air.
+    z_scale = round(100.0 * (hi * 1.02) / (UE_RANGE_AT_UNIT_SCALE / 2), 4)
+    metres_per_unit = (UE_RANGE_AT_UNIT_SCALE / 2) * (z_scale / 100.0)
+
+    scale_x = (gw - 1) / (WIDTH - 1)
+    scale_y = (gh - 1) / (HEIGHT - 1)
+    field = [None] * HEIGHT
+    for y in range(HEIGHT):
+        fy = y * scale_y
+        j0 = int(fy)
+        j1 = min(j0 + 1, gh - 1)
+        ty = fy - j0
+        r0, r1 = grid[j0], grid[j1]
+        row = array('d', bytes(8 * WIDTH))
+        for x in range(WIDTH):
+            fx = x * scale_x
+            i0 = int(fx)
+            i1 = min(i0 + 1, gw - 1)
+            tx = fx - i0
+            a = r0[i0] + (r0[i1] - r0[i0]) * tx
+            b = r1[i0] + (r1[i1] - r1[i0]) * tx
+            row[x] = a + (b - a) * ty
+        field[y] = row
+        if y % 256 == 0:
+            print(f'  resampled row {y}/{HEIGHT}', flush=True)
+
+    field = carve_roads(field, scale_x)
+
+    lo = min(min(r) for r in field)
+    hi = max(max(r) for r in field)
+    print(f'  range after carving {lo:.2f} m to {hi:.2f} m')
+
+    samples = array('H', bytes(2 * WIDTH * HEIGHT))
+    for y in range(HEIGHT):
+        row = field[y]
+        base = y * WIDTH
+        for x in range(WIDTH):
+            v = 32768 + int(round(row[x] / metres_per_unit * 32767.0))
+            samples[base + x] = 0 if v < 0 else (65535 if v > 65535 else v)
+
+    png_path = OUT / 'los-santerra-height.png'
+    size = write_png16(png_path, WIDTH, HEIGHT, samples)
+    print(f'  {png_path.relative_to(ROOT)}  {size/1e6:.1f} MB')
+
+    meta = dict(
+        resolution=[WIDTH, HEIGHT],
+        metresPerQuad=METRES_PER_QUAD,
+        worldSizeMetres=[MAP_W * METRES_PER_PIXEL, MAP_H * METRES_PER_PIXEL],
+        terrainRangeMetres=[round(lo, 3), round(hi, 3)],
+        # Everything below is typed straight into Unreal's Landscape import.
+        unreal=dict(
+            heightmapFile='los-santerra-height.png',
+            scaleX=round(METRES_PER_QUAD * 100.0, 4),   # 1 m = 100 Unreal units
+            scaleY=round(METRES_PER_QUAD * 100.0, 4),
+            scaleZ=z_scale,
+            sectionSize=QUADS_PER_COMPONENT,
+            sectionsPerComponent=1,
+            componentCount=[COMPONENTS_X, COMPONENTS_Y],
+            landscapeLocation=[-MAP_W * METRES_PER_PIXEL * 50.0,
+                               -MAP_H * METRES_PER_PIXEL * 50.0, 0.0],
+            note=('Height 0 m is stored at 32768. With this Z scale one 16-bit '
+                  'step is %.4f mm. Place the Landscape at landscapeLocation so '
+                  'its centre is world origin, matching network.json.'
+                  % (metres_per_unit / 32767.0 * 1000.0)),
+        ),
+        # So the road graph and the landscape agree on where the origin is.
+        originPixel=[MAP_W / 2, MAP_H / 2],
+        mapping=('world_x = (pixel_x - 768) * 10, world_z = (pixel_y - 512) * 10; '
+                 'Unreal X = world_x * 100, Unreal Y = world_z * 100'),
+    )
+    meta_path = OUT / 'los-santerra-terrain.json'
+    meta_path.write_text(json.dumps(meta, indent=2) + '\n')
+    print(f'  {meta_path.relative_to(ROOT)}')
+    print(f'  Unreal Z scale {z_scale}  (0 m stored at 32768)')
+
+
+if __name__ == '__main__':
+    main()

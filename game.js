@@ -4903,6 +4903,15 @@ const LISTEN = {
              inside: true,  eng: 0.82, lo: +4, hi: -8, lp: 2600,
              gain: 0.9, sub: 2, subHz: 70, wide: 0.16, haas: 0.017, gas: 0.05,
              pop: 0.7, intake: 0.45, turbo: 0.55, wind: 0.85 },
+  /* ON FOOT (2026-09-27, the world's walk mode). You got out and shut the
+     door: you are standing beside the car, a little in front of the rear
+     wheel, and then walking away from it. Not a seat, not a pipe — the whole
+     car at once, some body in it, the exhaust off to one side. How loud and
+     how dull it gets as you walk away is the flyby stage's job (S.walk). */
+  street:  { name: "STANDING BESIDE IT", tag: "out of the car. Walk away and it fades into the hills.",
+             inside: false, eng: 1.1, lo: +2, hi: -1, lp: 16000,
+             gain: 1.15, sub: 2.5, subHz: 80, wide: 0.4, haas: 0.015, gas: 0.35,
+             pop: 1.5, intake: 0.7, turbo: 1.1, wind: 0 },
 };
 
 function ear() { return LISTEN[S.listen] || LISTEN.driver; }
@@ -6316,6 +6325,21 @@ function audioTick() {
     spDist = clamp(flyWet / Math.max(flyG, 1e-4), 1, 9);
     // and the reflections arrive later than the direct sound does, by more
     // and more as the direct path lengthens. This gap is heard as depth.
+    spPreS = clamp((r / 343) * 0.35, 0.004, 0.09);
+  }
+  else if (S.walk) {
+    /* ON FOOT: the car idling where you left it. The same three cues as a
+       flyby — level, air, and a reverberant field that holds up while the
+       direct sound falls away — so at the front door it is a distant,
+       dull, big thing rumbling on the drive, not a quiet small one. */
+    const r = Math.max(1.6, S.walk.r);
+    const direct = clamp(2.4 / r, 0.012, 1);
+    flyR = r; flyG = direct;
+    flyP = clamp(S.walk.pan, -1, 1) * clamp(r / 5, 0, 0.85);
+    flyLp = clamp(12 / r, 0.4, 1);
+    flyAirHz = clamp(22000 / (1 + r / 9), 520, 20000);
+    const wet = clamp(Math.pow(direct, 0.3), 0.3, 1.1);
+    spDist = clamp(wet / Math.max(flyG, 1e-4), 1, 6);
     spPreS = clamp((r / 343) * 0.35, 0.004, 0.09);
   }
   AU.flyGain.gain.setTargetAtTime(flyG, t, 0.08);
@@ -15527,6 +15551,8 @@ function popFlame(power) {
 
   const kind = flameKind(power);
   const size = power > 0.78 ? "huge" : power > 0.4 ? "big" : "";
+  // The 3D world throws the same fire from its car's pipes (world/carFx.js).
+  try { window.DwnDrive?.onFlame?.(power, kind); } catch (e) { /* the world is optional */ }
   const el = $("tipL");                    // one side-exit pipe now
   if (el) {
     el.className = "tip k-" + kind + (size ? " " + size : "");
@@ -17804,7 +17830,7 @@ function save() {
       theme: document.body.dataset.theme, units: S.units, mode: S.mode, muted: S.muted,
       voice: S.voice,
       car: CC.id, tunnel: S.tunnel, flyby: S.flyby, cabin: S.cabin, stock: S.stock, mods: S.mods,
-      listen: S.listen, space: S.space,
+      listen: S.listen === "street" ? (S._listenBefore || "driver") : S.listen, space: S.space,
       traffic: S.traffic, rain: S.rain, wind: S.wind, lt: S.ltTgt, ltBest: LT.best,
       dmgOn: S.dmgOn, softLim: S.softLim, lcOn: S.lcOn,
       evV8: S.evV8, batt: S.batt, fuel: S.fuel,
@@ -18319,10 +18345,11 @@ function frame(now) {
   let dt = Math.min((now - lastT) / 1000, 0.05);
   lastT = now;
 
+  if (window.DwnWorld?.active && window.DwnWorld.paused) return;
   pollGamepad();
 
   acc += dt;
-  while (acc >= STEP) { stepPhysics(STEP); acc -= STEP; }
+  while (acc >= STEP) { stepPhysics(STEP); window.DwnWorld?.step(STEP); acc -= STEP; }
 
   audioTick();
   joltTick(dt);                 // the gear change, arriving at your head
@@ -18676,3 +18703,36 @@ function slideUi() {
 
   requestAnimationFrame(frame);
 })();
+
+/* Additive world adapter: the existing drivetrain remains authoritative. */
+window.DwnDrive = {
+  get state() { return S; }, get car() { return CC; }, get cars() { return CARS; },
+  ignitionDown, ignitionUp, selectCar, setMode, openWorkshop, closeWorkshop,
+  setNight, shift: seqShift,
+  select(value) { document.querySelector(`.prnd button[data-sel="${value}"]`)?.click(); },
+  setTunnel(on) {
+    if (S.tunnel === on) return;
+    S.tunnel = on;
+    $("tunnelBtn").classList.toggle("on", on);
+    document.body.classList.toggle("tunnel", on);
+    applyTunnel(); applySpace(); refreshSpaceUi();
+  },
+  sound() { return { pitch: curMod().pitch ?? 1, vol: curMod().vol ?? 1, tone: curMod().tone ?? 0 }; },
+  tune(key, value) {
+    const ids = { pitch: "wsPitch", vol: "wsVol", tone: "wsTone" };
+    const el = $(ids[key]);
+    if (el) { el.value = value; el.dispatchEvent(new Event("input", { bubbles: true })); }
+  },
+  release() { S.in.gas = S.in.brake = S.in.clutch = 0; ignitionUp(); },
+  resetMotion() { S.v = 0; S.spinV = 0; S.yaw = 0; S.yawV = 0; },
+  pauseAudio(on) { if (AU.ctx) { const operation = on ? AU.ctx.suspend() : AU.ctx.resume(); operation.catch(() => {}); } },
+  get audioReady() { return AU.ready; },
+  /** The world's sound bus (ambience, footsteps): the context and the ambience input. */
+  get audio() { return AU.ready ? { ctx: AU.ctx, out: AU.amb } : null; },
+  /** On foot: the microphone leaves the car; `r` metres away, `pan` -1..1 to the right. */
+  setWalk(w) {
+    if (w && !S.walk) { S._listenBefore = S.listen; S.listen = "street"; if (AU.ready) applyListen(); }
+    if (!w && S.walk) { S.listen = S._listenBefore || "driver"; if (AU.ready) applyListen(); }
+    S.walk = w || null;
+  }
+};

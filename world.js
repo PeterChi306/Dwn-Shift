@@ -1,0 +1,444 @@
+import * as T from 'three';
+import {pass,Fn,uv,uniform,smoothstep,length} from 'three/tsl';
+import {bloom} from 'three/addons/tsl/display/BloomNode.js';
+import {RoadNetwork,steeringTarget,clamp,angleDelta} from './world/network.js';
+import {RoadModel} from './world/roads.js';
+import {Ground} from './world/ground.js';
+import {makeMaterials} from './world/materials.js';
+import {Stream} from './world/stream.js';
+import {Sky} from './world/sky.js';
+import {createPhysics,Car} from './world/vehicle.js';
+import {loadCars,makePlayerCar} from './world/cars.js';
+import {PAINTS} from './world/carBody.js';
+import {Autopilot} from './world/autopilot.js';
+import {Buildings} from './world/buildings.js';
+import {makeBuildingMaterials} from './world/buildingMaterials.js';
+import {Plants} from './world/plants.js';
+import {HeightPool} from './world/heightPool.js';
+import {buildLamps,lampSpots} from './world/lamps.js';
+import {buildFreewaySigns} from './world/freewaySigns.js';
+import {buildTunnels} from './world/tunnels.js';
+import {buildSea} from './world/sea.js';
+import {Places} from './world/places.js';
+import {planVenues,RaceTiming,venueOutlines} from './world/venues.js';
+import {planHomes,HOMES,homePose} from './world/homes.js';
+import {Walker} from './world/walker.js';
+import {Soundscape} from './world/ambience.js';
+import {Life} from './world/life.js';
+import {CarFx} from './world/carFx.js';
+import {SEA_Y} from './world/coast.js';
+import {buildDisplayCars} from './world/displayCars.js';
+import {Traffic} from './world/traffic.js';
+import {Parked} from './world/parked.js';
+import {Atlas,CLASSES} from './world/atlas.js';
+import {Navigator} from './world/nav.js';
+import {CITY} from './world/buildings.js';
+const drive=window.DwnDrive,$=id=>document.getElementById(id),V=(x,y,z)=>new T.Vector3(x,y,z);
+const ui=document.createElement('section');ui.id='world';
+ui.innerHTML=`<canvas id="worldCanvas" aria-label="Los Santerra driving world"></canvas><div class="world-vignette"></div><div class="world-underwater"></div>
+<header class="world-top"><a class="world-brand" href="#">DWN<span>SHIFT</span><small>LOS SANTERRA / OPEN ROADS</small></a><div class="world-live"><i></i> FREE DRIVE <span id="worldTime">18:42</span></div><div class="world-top-actions"><button id="worldMapButton">MAP <span>TAB</span></button><button id="worldMenu">MENU <span>ESC</span></button></div></header>
+<section class="world-location"><div class="world-eyebrow">LOS SANTERRA <span>CALIFORNIA</span></div><h1 id="worldDistrict">West Hollywood</h1><p><span id="worldStreet">Sunset Boulevard</span><time id="worldClock">18:42</time></p></section>
+<div class="world-race" id="worldRace" hidden><b id="worldRaceTitle"></b><strong id="worldRaceMain"></strong><small id="worldRaceSub"></small></div><div class="world-prompt" id="worldPrompt" hidden></div><div class="world-toast" id="worldToast" role="status">Building Los Santerra…</div>
+<aside class="world-nav glass"><div class="world-nav-head"><span id="worldNavTitle">EXPLORE LOS SANTERRA</span><span id="worldDistance">N ↑</span></div><canvas id="worldMap" width="552" height="320" aria-label="Local road network"></canvas><div class="world-nav-foot"><b id="worldNavGlyph"></b><span id="worldNext">Choose your own road</span><button id="worldExpandMap">↗ MAP</button></div></aside>
+<section class="world-dash forza"><div class="world-car"><span id="worldCar">PERFORMANCE COUPE</span><small id="worldEngine">HOLD I TO START</small></div><div class="world-signals"><i id="worldSigL">◀</i><i id="worldSigR">▶</i></div><canvas id="worldSpeedometer" width="560" height="560" aria-label="Tachometer and speed"></canvas><div class="world-dial-digital" hidden><strong id="worldSpeed">0</strong><small id="worldUnit">KM/H</small></div><div class="world-dial-gear" hidden><b id="worldGear">P</b></div><div class="world-bottom-rpm" hidden><span><b id="worldRpm">0.0</b></span><span id="worldTraction">FREE DRIVE</span></div><div class="world-revtrack" hidden><i id="worldRev"></i></div></section>
+<footer class="world-controls"><span><kbd>W</kbd><kbd>S</kbd> PEDALS</span><span><kbd>A</kbd><kbd>D</kbd> STEER</span><span><kbd>Q</kbd><kbd>E</kbd> SHIFT</span><span><kbd>SPACE</kbd> HANDBRAKE</span><span><kbd>,</kbd><kbd>.</kbd> SIGNALS</span><span><kbd>V</kbd> COCKPIT</span><span>DRAG TO LOOK</span><div class="world-prnd" id="worldQuickGear"><button data-selector="P">P</button><button data-selector="R">R</button><button data-selector="N">N</button><button data-selector="D">D</button></div><button id="worldCamera">CAMERA · CHASE</button><button id="worldNight">TIME · GOLDEN HOUR</button></footer>
+<dialog id="worldDialog"><div class="world-dialog-top"><div><div class="world-eyebrow">DWNSHIFT / DRIVE OS</div><h2 id="worldDialogTitle">The city is yours.</h2></div><button id="worldClose" aria-label="Close menu">✕</button></div><nav class="world-tabs"><button data-tab="drive" class="selected">Drive</button><button data-tab="map">Map</button><button data-tab="garage">Garage</button><button data-tab="sound">Car sound</button><button data-tab="settings">Settings</button></nav><div id="worldPanel"></div></dialog><button id="worldReturn" hidden>↗ ENTER 3D WORLD</button><div id="worldFade" aria-hidden="true"></div>`;
+document.body.append(ui);
+let tunnels=null,active=false,paused=true,loaded=false,lampCount=0,nightUniform=null,pipeline,plants,buildings,buildingMats,renderer,scene,camera,sky,stream,model,ground,physics,car,net,vehicle,sun,hemi,head,loadStats=null;
+let counterAssist=1,x=0,y=0,z=0,heading=0,steer=0,keySteer=0,hit=null,travelled=0,night=false,cameraMode=0,assist=false,quality='balanced',sensitivity=1;
+let orbit=0,orbitTarget=0,pitch=0,pitchTarget=0,dragging=false,dragX=0,dragY=0,lookIdle=0,cameraHeading=0;
+let last=0,lastHud=0,fps=0,frames=0,fpsTime=0,clockSeconds=15*3600+40*60,simTime=0,refreshTraffic=0,routeRefresh=0;
+let destination=null,navPath=[],tab='drive',lastRouteEdge=-1;const traffic=[],lights=[],keys=new Set();
+let mapIssues=false,mapZoom=1,mapCenter={x:0,z:0},atlasMap=null,nav=null,mapSel=null,mapHover=null,navInfo=null,lastMapView=null;
+const clock=()=>`${String(Math.floor(clockSeconds/3600)%24).padStart(2,'0')}:${String(Math.floor(clockSeconds/60)%60).padStart(2,'0')}`;
+function notify(message){$('worldToast').textContent=message;$('worldToast').classList.remove('quiet');clearTimeout(notify.timer);notify.timer=setTimeout(()=>$('worldToast').classList.add('quiet'),4200);}
+/** The loading screen: a step and a share of the bar, painted before the next heavy step runs. */
+async function boot(pct,step){window.__bootStarted?.();const f=document.getElementById('bootFill'),t=document.getElementById('bootStep');if(f)f.style.width=pct+'%';if(t)t.textContent=step;await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));}
+async function init(){try{
+ await boot(6,'Reading the road network…');
+ const t0=performance.now();
+ // Workers for bulk ground heights (plant seating), warming up while the page builds.
+ const heightPool=new HeightPool(new URL('assets/world/roads.json',location.href).href);
+ const response=await fetch('assets/world/roads.json',{cache:'no-store'});if(!response.ok)throw new Error('Road network could not load');net=new RoadNetwork(await response.json());
+ // One road model; the ground, the meshes and the colliders all come from it.
+ await boot(14,'Grading the roads and the ground…');model=new RoadModel(net);ground=new Ground(model);const pieces=model.buildPieces(ground);const t1=performance.now();
+ renderer=new T.WebGPURenderer({canvas:$('worldCanvas'),antialias:true,powerPreference:'high-performance',reversedDepthBuffer:true});await renderer.init();
+ // Instanced meshes small enough for a uniform buffer get their whole matrix array re-sent every
+ // draw of every pass (5 MB a frame here); as instance attributes they upload only when they change.
+ renderer.backend.capabilities.getUniformBufferLimit=()=>256;
+ renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.toneMapping=T.AgXToneMapping;renderer.toneMappingExposure=1.0;
+ scene=new T.Scene();scene.fog=new T.FogExp2('#c2c6bb',.00008);camera=new T.PerspectiveCamera(55,innerWidth/innerHeight,.15,30000);
+ hemi=new T.HemisphereLight('#c6def0','#817363',1.4);sun=new T.DirectionalLight('#ffe3b9',3.2);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-120,right:120,top:120,bottom:-120,near:1,far:700});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.0004;sun.shadow.normalBias=.05;scene.add(hemi,sun,sun.target);
+ sky=new Sky(scene,renderer);
+ // Post: bloom on the sun, sunset glare and lit windows, then tone mapping (AgX
+ // keeps a sunset's oranges from clipping to flat yellow).
+ {const scenePass=pass(scene,camera),color=scenePass.getTextureNode('output');pipeline=new T.RenderPipeline(renderer);
+  // Speed streaks: the frame's edges sampled back toward the centre; the middle stays sharp.
+  const streak=Fn(()=>{const c=uv().sub(.5),w=smoothstep(.1,.6,length(c)).mul(blurAmount).mul(.085);const acc=color.sample(uv()).toVar();for(let i=1;i<=6;i++)acc.addAssign(color.sample(uv().sub(c.mul(w.mul(i/6)))));return acc.div(7);});
+  pipeline.outputNode=streak().add(bloom(scenePass,.16,.35,.92));}physics=await createPhysics();
+ const materials=makeMaterials();stream=new Stream({scene,model,ground,pieces,materials,physics});
+ tunnels=buildTunnels({model,ground,scene,physics,textures:materials.textures});buildSea({scene});
+ // West Hollywood's buildings: planned clear of every road, one mesh per material.
+ const tb0=performance.now();await boot(38,'Planning the city blocks…');places=new Places({model,ground});planVenues(places);planHomes(places);buildings=new Buildings({model,ground,area:CITY});if(ground.pads)stream.worker.postMessage({type:'pads',pads:ground.pads});const tb1=performance.now();buildingMats=makeBuildingMaterials(materials.textures);
+ {const boxes=[],cells=new Map();for(const lot of buildings.lots){const k=Math.floor(lot.x/1024)*65536+Math.floor(lot.z/1024);if(!cells.has(k))cells.set(k,new Set());cells.get(k).add(lot);}
+  // One mesh per material per 1 km cell, so the blocks off screen are culled.
+  for(const set of cells.values()){const built=buildings.build(l=>set.has(l));boxes.push(...built.boxes);for(const [mat,g] of built.geometries){const mesh=new T.Mesh(g,buildingMats[mat]);mesh.userData.kind='bld:'+mat;mesh.castShadow=!['billboard','signs','lot','pool','glow'].includes(mat);mesh.receiveShadow=true;mesh.matrixAutoUpdate=false;scene.add(mesh);}}
+  const tb2=performance.now();await boot(62,'Planting the palms and gardens…');plants=new Plants({model,ground,buildings,area:CITY,deferY:true});await plants.seat(heightPool);heightPool.dispose();plants.build(scene);const tb3=performance.now();lampCount=buildLamps({model,scene,area:CITY,night:materials.night});places.build({scene,physics,night:materials.night});fireLights=(places.kit?.fires||[]).slice(0,2).map(f=>{const L=new T.PointLight('#ff8a3c',0,18,2);L.position.set(f.x,f.y,f.z);scene.add(L);return L;});timing=new RaceTiming({notify,hud:r=>{const el=$('worldRace');if(!r){el.hidden=true;return;}el.hidden=false;$('worldRaceTitle').textContent=r.title;$('worldRaceMain').textContent=r.main;$('worldRaceSub').textContent=r.sub;}});fwySigns=buildFreewaySigns({model,scene,night:materials.night});nightUniform=materials.night;const tb4=performance.now();window.__loadTimes={plan:Math.round(tb1-tb0),buildMesh:Math.round(tb2-tb1),plants:Math.round(tb3-tb2),lamps:Math.round(tb4-tb3)};
+  // A collider covers the building, not the lot: parking in front of a mini-mall stays drivable.
+  physics.setBoxes('buildings',boxes.map(({lot,h,lx0=0,lx1=lot.depth,lz=0,w=lot.width})=>({x:lot.x+lot.fx*(lx0+lx1)/2-lot.fz*lz,z:lot.z+lot.fz*(lx0+lx1)/2+lot.fx*lz,y:lot.base+h/2-2,hx:(lx1-lx0)/2,hy:h/2+2,hz:w/2,yaw:Math.atan2(-lot.fz,lot.fx)})));}
+ const sources=await loadCars(['performance-coupe']);vehicle=makePlayerCar(sources['performance-coupe'],{paint:savedPaint()});scene.add(vehicle.object);displayCars=buildDisplayCars(scene,buildings.lots,vehicle.wheels,vehicle.wheels[0]?.y||.365);car=new Car(physics,vehicle.wheels,{radius:vehicle.wheels[0]?.y||.36});carFx=new CarFx({scene,vehicle});walker=new Walker({scene,physics});life=new Life({scene,ground});drive.onFlame=(p,k)=>carFx?.flame(p,k);
+ await boot(86,'Filling the streets with traffic…');npcs=new Traffic({scene,model,physics});npcs.setDensity(savedTraffic());parked=new Parked({scene,model,physics,traffic:npcs,lots:buildings.lots});atlasMap=new Atlas({net,model,lots:buildings.lots});for(const p of places.pois){const e=atlasMap.places.find(q=>q.name===p.name);if(e)Object.assign(e,p);else atlasMap.places.push(p);}atlasMap.extras=venueOutlines();nav=new Navigator({net,model,scene});
+ head=new T.SpotLight('#e4efff',0,90,.5,.5,1.6);scene.add(head,head.target);
+ loadStats={lamps:lampCount,freewaySigns:fwySigns?.count,plants:plants.stats,buildings:buildings.lots.length,model:Math.round(t1-t0),total:0,pieces:pieces.length,roadVertices:stream.roadVertices,piers:stream.pierCount,segments:model.segments.length,junctions:model.junctions.length};
+ active=true;loaded=true;document.body.classList.add('world-active');boot(100,'Los Santerra');setTimeout(()=>document.getElementById('bootLoader')?.classList.add('done'),350);{const h=savedHome();if(h)spawnHome(h,true);else spawn('Sunset Strip');}setTimeOfDay(drive.state.night?'night':'golden');sky.update(x,z,0,clockSeconds/3600);sky.refreshEnvironment(true);openMenu();requestAnimationFrame(render);
+ loadStats.total=Math.round(performance.now()-t0);notify('Los Santerra · Open streets, one connected city.');
+}catch(error){console.error(error);active=false;document.body.classList.remove('world-active');{const L=document.getElementById('bootLoader');if(L){L.classList.add('failed');document.getElementById('bootStep').textContent='Los Santerra could not start · '+error.message+' · a browser with WebGPU is needed.';}}}}
+/** The road under or nearest to a point, with its graph edge (for names, districts and routing). */
+function roadAt(px,pz,py=null){const r=model.nearest(px,pz,py);return r?{...r,edge:net.edges[r.e]}:null;}
+function spawn(name){
+ let px=x,pz=z;if(name){const l=net.landmark(name);px=(l.map[0]-768)*10;pz=(l.map[1]-512)*10;}
+ const r=roadAt(px,pz,name?null:y);if(!r)return;hit=r;
+ // Drive on the right: the right-hand side of travel is the section's +normal.
+ const sec=model.sectionAt(r.seg,Math.min(Math.max(r.s,r.seg.cut[0]+4),r.seg.L-r.seg.cut[1]-4)),off=Math.min(1.9,sec.h*.45);
+ x=sec.x+sec.nx*off;z=sec.z+sec.nz*off;y=sec.y;heading=Math.atan2(sec.tx,sec.tz);
+ stream.update(x,z,1e9);car.place(x,y+.3,z,heading);
+ steer=keySteer=0;cameraHeading=heading;orbit=orbitTarget=0;drive.resetMotion();drive.release();drive.setTunnel(r.seg.kind==='tunnel');
+ camera.position.set(x-Math.sin(heading)*8,y+3,z-Math.cos(heading)*8);camOffset.set(-Math.sin(heading)*8,3,-Math.cos(heading)*8);
+}
+/** A player house: the car parked in its drive, nose to the street. */
+function savedHome(){try{return localStorage.getItem('dwnHome')||null;}catch{return null;}}
+function spawnHome(id,quiet=false){
+ const h=HOMES.find(q=>q.id===id);if(!h||!h.park)return false;if(onFoot){walker.leave();onFoot=false;drive.setWalk?.(null);document.body.classList.remove('on-foot');if(document.pointerLockElement)document.exitPointerLock();}
+ const p=homePose(h);x=p.x;z=p.z;y=p.y;heading=p.heading;stream.update(x,z,1e9);car.place(x,y+.35,z,heading);hit=roadAt(x,z)||hit;
+ steer=keySteer=0;cameraHeading=heading;orbit=orbitTarget=0;drive.resetMotion();drive.release();drive.setTunnel(false);
+ camera.position.set(x-Math.sin(heading)*8,y+3,z-Math.cos(heading)*8);camOffset.set(-Math.sin(heading)*8,3,-Math.cos(heading)*8);
+ try{localStorage.setItem('dwnHome',id);}catch{}
+ if(!quiet)notify(h.name+' · home · F to step out');return true;}
+/** The water (pool, spa) at a point, from the set pieces' volumes. */
+function waterAt(px,pz){const W=places?.kit?.waters;if(!W)return null;for(const w of W){const dx=px-w.x,dz=pz-w.z;if(w.r!==undefined){if(dx*dx+dz*dz<w.r*w.r)return w;continue;}if(Math.abs(dx*w.fx+dz*w.fz)<w.hl&&Math.abs(-dx*w.fz+dz*w.fx)<w.hw)return w;}return null;}
+function nearestHome(px,pz){let best=null,bd=Infinity;for(const h of HOMES){if(!h.pad)continue;const d=Math.hypot(h.pad.cx-px,h.pad.cz-pz);if(d<bd){bd=d;best=h;}}return bd<200?best:null;}
+/** Out of the car and back in (F). */
+function toggleOnFoot(){
+ if(!walker)return;
+ if(!onFoot){
+  if(Math.abs(drive.state.v)>1.5){notify('Stop the car to get out');return;}
+  // Out through the driver's door (the car's left, +x in its own frame).
+  const o=vehicle.object,d=o.localToWorld(V(1.55,0,-.1));const gy=physics.groundAt(d.x,y+3,d.z,8)??y;
+  drive.release();walker.enter(d.x,gy,d.z,heading+Math.PI/2);onFoot=true;walkYaw=heading;fpPitch=0;orbit=orbitTarget=0;document.body.classList.add('on-foot');keys.clear();keySteer=0;
+ }else{
+  const p=walker.pos;if(Math.hypot(p.x-x,p.z-z)>4.5){notify('Walk back to the car to get in');return;}
+  walker.leave();onFoot=false;drive.setWalk?.(null);document.body.classList.remove('on-foot');keys.clear();cameraHeading=heading;if(document.pointerLockElement)document.exitPointerLock();
+ }
+}
+// The clock is the one source of truth: sky, sun colour, fog, window lights and
+// the dashboard's night palette all follow the hour. Night is derived from it,
+// never the other way round (the old toggle snapped the clock back to 19:10,
+// which is why every choice in the menu ended up at sunset again).
+const TIME_PRESETS=[['dawn','Dawn',5.7],['sunrise','Sunrise',6.6],['morning','California morning',8.6],
+ ['midday','Midday',12.4],['afternoon','Late afternoon',15.7],['golden','Golden hour',19.15],
+ ['sunset','Sunset',19.7],['dusk','Blue hour',20.25],['night','After hours',22.5]];
+// How fast the clock runs: game seconds per real second.
+const TIME_FLOWS=[['still','Paused',0],['slow','Slow · 1 h in 30 min',2],['cinematic','Cinematic · 1 h in 2 min',30],['timelapse','Timelapse · 1 h in 10 s',360]];
+let timeOfDay='golden',timeFlow='slow';
+const isDark=h=>h<6.15||h>19.95;
+function syncNight(){const dark=isDark(clockSeconds/3600);if(dark!==night){night=dark;}if(drive.state.night!==dark)drive.setNight(dark);$('worldNight').textContent='TIME · '+(TIME_PRESETS.find(p=>p[0]===timeOfDay)?.[1]||clock()).toUpperCase();}
+function setHour(hour,key=null){
+ clockSeconds=((hour%24+24)%24)*3600;
+ timeOfDay=key||TIME_PRESETS.find(p=>Math.abs(p[2]-hour)<.04)?.[0]||'custom';
+ syncNight();
+ if(sky){sky.update(x,z,simTime,clockSeconds/3600);sky.refreshEnvironment(true);}
+}
+function setTimeOfDay(key){const preset=TIME_PRESETS.find(p=>p[0]===key)||TIME_PRESETS[5];setHour(preset[2],preset[0]);}
+/** Toggled from outside (the simulator's own night switch): pick a sensible hour. */
+/** Paint: kept per browser, chosen in the garage. */
+function savedPaint(){try{return localStorage.getItem('dwnPaint')||null;}catch{return null;}}
+function setPaint(hex){if(vehicle?.body)vehicle.body.paint.color.set(hex);try{localStorage.setItem('dwnPaint',hex);}catch{}}
+function lighting(on){if(on!==isDark(clockSeconds/3600))setTimeOfDay(on?'night':'golden');else syncNight();}
+let life=null,fireLights=[],soundscape=new Soundscape(),stepIdx=0,wasSwim=false,airT=0,carWet=false,carWetT=0,indoor=0,indoorT=0,stillT=0,walkYaw=0,fpPitch=0,walker=null,onFoot=false,timing=null,lastExterior=0,carFx=null,places=null,wadeT=0,lastX=0,lastZ=0,flipped=0,tunnelMix=0,displayCars=null,npcs=null,fwySigns=null,parked=null;
+const trafficLabel=d=>d<.02?'Off':d<.3?'Light':d<.6?'Normal':d<.85?'Busy':'Rush hour';
+/** Traffic density 0..1, kept per browser. */
+function savedTraffic(){try{const v=localStorage.getItem('dwnTraffic');return v===null?.5:+v;}catch{return .5;}}
+/* Debug bot (?worldDebug=1): drives the real car through the real drivetrain
+ * and physics, following the road model, and records what goes wrong. */
+let bot=null,camOverride=null;
+function botStep(dt,s){
+ const c=bot.pilot.control(x,z,heading,s.v),m=bot.metrics;
+ m.time+=dt;m.distance+=Math.abs(s.v)*dt;
+ const err=c.speed-s.v;s.in.gas=clamp(err*.25,0,1);s.in.brake=clamp(-err*.2,0,1);
+ m.maxOffRoad=Math.max(m.maxOffRoad,c.offRoad);if(c.offRoad>1.5)m.offRoadTime+=dt;
+ const g=car.grounded;if(g<4)m.airTime+=dt;if(g===0)m.allWheelsOff+=dt;
+ if(Math.abs(s.v)<1&&m.time>4){bot.still+=dt;if(bot.still>6){m.stuck.push([Math.round(x),Math.round(z),hit?.edge.name]);bot.still=0;spawn();bot.pilot.attach(x,z,y,heading);}}else bot.still=0;
+ if(y<ground.height(x,z)-3)m.underground++;
+ return c.steer;
+}
+/** Is there a road deck 3.5-16 m overhead? (an underpass, or under a bridge) */
+function underDeck(px,py,pz){const list=model.near(px,pz);for(let k=0;k<list.length;k+=2){const seg=model.segments[list[k]];if(seg.kind==='tunnel')continue;const i=list[k+1],a=seg.pts[i],b=seg.pts[i+1];const dx=b.x-a.x,dz=b.z-a.z,l2=dx*dx+dz*dz;if(l2<1e-6)continue;const t=Math.max(0,Math.min(1,((px-a.x)*dx+(pz-a.z)*dz)/l2));const d=Math.hypot(px-a.x-dx*t,pz-a.z-dz*t),h=a.h+(b.h-a.h)*t+1,dy=a.y+(b.y-a.y)*t-py;if(d<h&&dy>3.5&&dy<16)return true;}return false;}
+/** The underside of a tunnel roof or road deck over (px, pz) near the road level ry, or null. */
+function roofOver(px,pz,ry){const r=model.nearest(px,pz,ry);if(r&&r.seg.kind==='tunnel'&&r.d<r.h+2.5&&model.boredAt(r.seg,r.s))return r.y+6;if(underDeck(px,ry,pz))return ry+4.4;return null;}
+function step(dt){
+ if(!active||paused||!loaded)return;simTime+=dt;{const rate=TIME_FLOWS.find(f=>f[0]===timeFlow)[2];if(rate){clockSeconds=(clockSeconds+dt*rate)%86400;if(timeOfDay!=='custom'&&rate>2)timeOfDay='custom';syncNight();}}const s=drive.state;
+ let raw=onFoot?0:(keys.has('KeyA')||keys.has('ArrowLeft')?1:0)-(keys.has('KeyD')||keys.has('ArrowRight')?1:0);
+ keySteer+=clamp(raw-keySteer,-dt*(raw?4.4:6),dt*(raw?4.4:6));let input=keySteer;
+ const gp=Array.from(navigator.getGamepads?.()||[]).find(Boolean);if(gp&&Math.abs(gp.axes[0])>.075)input=-gp.axes[0];
+ if(bot)input=botStep(dt,s);
+ let target=steeringTarget(input,Math.abs(s.v),sensitivity);
+ // Countersteer help: hands off and the rear stepping out, the wheel turns
+ // into the slide (a real car's caster does this; so does Forza's assist).
+ {const over=Math.abs(car.rearSlip)-Math.abs(car.frontSlip);  // oversteer: the rear sliding more than the front
+  if(counterAssist&&Math.abs(s.v)>6&&over>.03)target+=clamp(car.rearSlip*.55,-.18,.18)*(1-Math.min(1,Math.abs(input)*1.6))*counterAssist;}
+ // Real steering racks have a finite speed: ~1.5 turns lock to lock in 0.35 s.
+ steer+=clamp((target-steer)*(1-Math.exp(-dt*14)),-dt*2.6,dt*2.6);
+ car.drive=drive.car.awd?'awd':drive.car.fwd?'fwd':'rwd';car.handbrake=onFoot?1:keys.has('Space')?1:0;if(onFoot){s.in.gas=0;s.in.brake=0;}
+ car.step(dt,s,steer);
+ const p=car.position;x=p.x;y=p.y;z=p.z;heading=car.heading;
+ if(onFoot){walker.water=waterAt(walker.pos.x,walker.pos.z);}
+ if(onFoot){const k=c=>keys.has(c)?1:0;walker.update(dt,{fwd:k('KeyW')+k('ArrowUp')-k('KeyS')-k('ArrowDown'),right:k('KeyD')+k('ArrowRight')-k('KeyA')-k('ArrowLeft'),run:keys.has('ShiftLeft')||keys.has('ShiftRight'),jump:keys.has('Space')},walkYaw);if(walker.pos.y<ground.height(walker.pos.x,walker.pos.z)-6){const gy=ground.height(walker.pos.x,walker.pos.z);walker.enter(walker.pos.x,gy+.5,walker.pos.z,walker.yaw);}
+  // Footsteps on whatever is underfoot; strokes and splashes in the pool; a thump landing a jump.
+  const w=walker,idx=Math.floor(w.phase/Math.PI),surf=()=>w.wading>.05?'water':(physics.surfaceAt(w.pos.x,w.pos.y+.4,w.pos.z,1.2,w.collider)?.surface||'stone');
+  if(idx!==stepIdx){stepIdx=idx;if(w.swimming)soundscape.step('swim',w.speed/1.9);else if(w.grounded&&w.speed>.4)soundscape.step(surf(),clamp(w.speed/6,0,1)*.7+.3);}
+  if(w.swimming&&!wasSwim)soundscape.splash(.7);wasSwim=w.swimming;
+  if(!w.grounded&&!w.swimming)airT+=dt;else{if(airT>.35&&w.grounded){soundscape.step(surf(),1);}airT=0;}
+  if(w.climbed){w.climbed=false;soundscape.step('water',.8);}}
+ // The car rolled into the pool: it wallows to a stop; a moment later, back to the drive.
+ {const wv=waterAt(x,z);if(wv&&wv.r===undefined&&y<wv.y-.15){const lv=car.body.linvel(),k=Math.exp(-dt*(1.2+Math.min(wv.y-y,1.5)*2.5));car.body.setLinvel({x:lv.x*k,y:Math.max(lv.y,-2.5),z:lv.z*k},true);drive.state.v*=k;
+  if(!carWet){carWet=true;soundscape.splash(1.5);notify('Splash · the car is in the pool');}carWetT+=dt;if(carWetT>3.5&&!onFoot){const h=nearestHome(x,z);carWet=false;carWetT=0;if(h){spawnHome(h.id,true);notify('Towed back to the drive · dripping');}}}else{carWet=false;carWetT=0;}}
+ travelled+=Math.hypot(x-lastX,z-lastZ);lastX=x;lastZ=z;
+ hit=roadAt(x,z,y)||hit;
+ // On its roof or side for a moment: put it back on the road, upright.
+ const r=car.rotation,upY=1-2*(r.x*r.x+r.z*r.z);if(upY<.35&&Math.abs(s.v)<4){flipped+=dt;if(flipped>1.5){flipped=0;if(bot)bot.metrics.flips.push([Math.round(x),Math.round(z)]);spawn();bot?.pilot.attach(x,z,y,heading);return;}}else flipped=0;
+ // The Pacific: wading through the shallows drags the car down; once the
+ // water is over the sills the map ends here, and it is back to the beach road.
+ {const depth=SEA_Y-ground.height(x,z);if(depth>.15&&y<SEA_Y+.6){const lv=car.body.linvel(),k=Math.exp(-dt*(.6+Math.min(depth,1.2)*2.2));car.body.setLinvel({x:lv.x*k,y:lv.y,z:lv.z*k},true);
+  if(depth>1.05){wadeT+=dt;if(wadeT>.5){wadeT=0;notify('The Pacific · the map ends at the water');spawn();return;}}else wadeT=0;}else wadeT=0;}
+ // Off the edge of the world, or somehow under it: back to the nearest road.
+ if(Math.abs(x)>7600||Math.abs(z)>5050||y<ground.height(x,z)-25){if(bot)bot.metrics.respawns.push([Math.round(x),Math.round(y),Math.round(z)]);spawn();bot?.pilot.attach(x,z,y,heading);}
+ // Inside a bored tunnel, or under a deck (an underpass): tunnel light and acoustics.
+ const tunnel=(hit?.seg.kind==='tunnel'&&hit.d<hit.h+1&&model.boredAt(hit.seg,hit.s))||underDeck(x,y,z);if(s.tunnel!==tunnel)drive.setTunnel(tunnel);
+ npcs?.update(dt,{x,y,z,heading,v:s.v},{x:camera.position.x,z:camera.position.z,fx:Math.sin(cameraHeading),fz:Math.cos(cameraHeading)});parked?.update(dt,{x:camera.position.x,z:camera.position.z},{x,z});
+ timing?.update(dt,{x,z,v:s.v,kmh:Math.abs(s.v)*3.6});stillT=Math.abs(s.v)<.5?stillT+dt:0;
+ navInfo=nav&&destination?nav.update(dt,{x,z,heading},hit?.edge):null;if(navInfo?.arrived){notify('You have arrived · '+navInfo.arrived);destination=null;navInfo=null;}navPath=nav?.dest?nav.path:[];
+}
+/* ---------------------------------------------------------------- camera
+ * Six rigs (X cycles, Z looks back, wheel zooms, drag orbits). Speed is sold
+ * by the camera as much as by the number on the dial: the chase cam sits low
+ * and close, falls back under acceleration and tucks in under braking, the
+ * field of view opens with speed, the image shivers faintly at high speed,
+ * and the edges of the frame streak (radial blur in the post pipeline). */
+const CAMS=[
+ {name:'CHASE',dist:6.1,h:1.45,look:1.05,ahead:3.5,fov:60},
+ {name:'CHASE FAR',dist:10.5,h:2.6,look:1.1,ahead:5,fov:56},
+ {name:'COCKPIT',cockpit:true,fov:66},
+ {name:'HOOD',hood:[0,1.12,1.0],fov:64},
+ {name:'BUMPER',hood:[0,.52,2.45],fov:68},
+ {name:'CINEMATIC',cine:true,fov:40},
+ {name:'HELICOPTER',dist:26,h:15,look:0,ahead:12,fov:48},
+];
+const camOffset=V(0,3,-8);let zoom=1,lookBack=false,camV=0,camAcc=0,shakeT=0,cineAnchor=null,cineTimer=0,speedFx=1,shakeFx=1;const blurAmount=uniform(0);
+function updateCamera(dt,s,position,forward,cam){
+ const speed=Math.abs(s.v),kmh=speed*3.6;
+ const gp=Array.from(navigator.getGamepads?.()||[]).find(Boolean);if(gp&&Math.abs(gp.axes[2]||0)>.12){orbitTarget-=gp.axes[2]*dt*1.7;lookIdle=0;}if(gp&&Math.abs(gp.axes[3]||0)>.12)pitchTarget=clamp(pitchTarget+gp.axes[3]*dt*.7,-.15,.75);
+ lookIdle+=dt;if(!dragging&&lookIdle>2&&speed>2){orbitTarget*=Math.exp(-dt*.8);pitchTarget+=(0-pitchTarget)*(1-Math.exp(-dt*.8));}
+ orbit+=angleDelta(orbitTarget-orbit)*(1-Math.exp(-dt*9));pitch+=(pitchTarget-pitch)*(1-Math.exp(-dt*9));
+ // The chase camera trails the car's heading a little, so a turn shows the car's flank.
+ cameraHeading+=angleDelta(heading-cameraHeading)*(1-Math.exp(-dt*(3.4+speed*.06)));
+ // Longitudinal g, smoothed: pushes the camera back when you floor it.
+ const acc=(s.v-camV)/Math.max(dt,1e-3);camV=s.v;camAcc+=(clamp(acc,-14,10)-camAcc)*(1-Math.exp(-dt*3));
+ const fx=speedFx;let desired,gaze,snap=false;
+ if(onFoot){
+  // On foot: first person, at eye height. Mouse look (click to capture the pointer, or drag);
+  // a small bob with the stride. The body stays hidden so it never fills the view.
+  const w=walker.pos,ch=walkYaw,bob=Math.abs(Math.cos(walker.phase))*Math.min(1,walker.speed/3)*.035;walker.mesh.visible=false;
+  desired=V(w.x,w.y+1.62+bob,w.z);gaze=desired.clone().add(V(Math.sin(ch)*Math.cos(fpPitch),Math.sin(fpPitch),Math.cos(ch)*Math.cos(fpPitch)));
+  camOffset.copy(desired).sub(position);snap=true;
+ }else if(cam.cockpit&&carFx?.eye){
+  // In the driver's seat: the eye rides with the body; the view leans a
+  // little into the corner and can be dragged round to look out the side.
+  const e=carFx.eye;desired=vehicle.object.localToWorld(V(e[0],e[1],e[2]));
+  gaze=vehicle.object.localToWorld(V(e[0]-steer*1.2,e[1]-1.1,e[2]+(lookBack?-30:30)));
+  if(orbit){const q=new T.Quaternion().setFromAxisAngle(V(0,1,0),orbit);gaze.sub(desired).applyQuaternion(q).add(desired);}
+  snap=true;
+ }else if(cam.hood){
+  const o=cam.hood;desired=vehicle.object.localToWorld(V(o[0],o[1],lookBack?-2.7:o[2]));
+  gaze=vehicle.object.localToWorld(V(0,o[1]-.05,(lookBack?-1:1)*40));
+  if(orbit){const q=new T.Quaternion().setFromAxisAngle(V(0,1,0),orbit);gaze.sub(desired).applyQuaternion(q).add(desired);}
+  snap=true;
+ }else if(cam.cine){
+  // A trackside camera ahead of the car; when the car has gone by, the next one.
+  cineTimer-=dt;const far=cineAnchor&&cineAnchor.distanceTo(position)>70;
+  if(!cineAnchor||far||cineTimer<0){const side=Math.random()<.5?-1:1,ahead=20+Math.min(speed*1.6,55);
+   cineAnchor=position.clone().addScaledVector(forward,ahead).add(V(Math.cos(heading)*side*(7+Math.random()*5),0,-Math.sin(heading)*side*(7+Math.random()*5)));
+   cineAnchor.y=Math.max(ground.height(cineAnchor.x,cineAnchor.z),y-3)+1.1+Math.random()*2.5;cineTimer=6+Math.random()*3;snap=true;camera.position.copy(cineAnchor);}
+  desired=cineAnchor;gaze=position.clone().add(V(0,.7,0));
+ }else{
+  const ch=cameraHeading+orbit+(lookBack?Math.PI:0),z0=cam.dist*zoom;
+  const dist=z0*(1+clamp(camAcc*.012*fx,-.1,.14))+Math.min(speed*.012,1.1)*fx*(cam.dist<12?1:0);
+  const h=cam.h*Math.sqrt(zoom)+Math.sin(pitch)*z0;
+  desired=V(x-Math.sin(ch)*dist,y+h,z-Math.cos(ch)*dist);
+  // Inside a bore (or under a deck) the ground over the camera is the hill
+  // or the bridge above: keep the camera down under the roof instead.
+  const roof=roofOver(desired.x,desired.z,y);
+  if(roof!==null)desired.y=Math.min(desired.y,roof-1.1);else desired.y=Math.max(desired.y,ground.height(desired.x,desired.z)+.7);
+  gaze=V(x+Math.sin(ch)*cam.ahead,y+cam.look+Math.max(0,cam.h-4)*-.05,z+Math.cos(ch)*cam.ahead);
+ }
+ // Smooth the camera's OFFSET from the car, not its absolute position, or at
+ // 200 km/h a lerp leaves it metres behind and the car shrinks into the distance.
+ if(snap||cam.cine)camOffset.copy(desired).sub(position);else camOffset.lerp(desired.clone().sub(position),1-Math.exp(-dt*(cam.dist>20?4:10)));
+ camera.position.copy(position).add(camOffset);if(cam.cine)camera.position.copy(desired);
+ if(camOverride){camera.position.set(...camOverride[0]);gaze.set(...camOverride[1]);}
+ camera.lookAt(gaze);
+ // A faint high-frequency shiver above ~90 km/h: road texture through the car.
+ shakeT+=dt;const shake=clamp((kmh-90)/180,0,1)*.0028*shakeFx*(cam.cine?0:1);
+ if(shake){camera.rotateX(Math.sin(shakeT*31)*shake+Math.sin(shakeT*57.3)*shake*.6);camera.rotateY(Math.sin(shakeT*23.7)*shake*.7);camera.rotateZ(Math.sin(shakeT*17.1)*shake*.5);}
+ const base=cam.fov+(cam.cine?Math.max(0,40-position.distanceTo(camera.position))*-.3:0);
+ camera.fov=base+(cam.cine?0:Math.min(Math.max(kmh-20,0)*.07,17)*fx);camera.updateProjectionMatrix();
+ blurAmount.value=cam.cine?0:clamp((kmh-70)/190,0,1)*fx;
+}
+function render(now){requestAnimationFrame(render);if(!active)return;const dt=Math.min((now-last)/1000||.016,.05);last=now;if(drive.state.night!==night)lighting(drive.state.night);
+ const s=drive.state,forward=V(Math.sin(heading),0,Math.cos(heading)),position=V(x,y,z);
+ // Body and wheels straight from the physics: pitch, roll and suspension travel included.
+ const r=car.rotation;vehicle.object.position.copy(position);vehicle.object.quaternion.set(r.x,r.y,r.z,r.w);vehicle.object.updateMatrixWorld();
+ const cam=onFoot?CAMS[0]:CAMS[cameraMode];vehicle.object.visible=onFoot||!cam.hood;
+ vehicle.wheels.forEach((w,i)=>{const ws=car.wheelState(i);w.pivot.position.y=w.y+car.rest-ws.length;w.pivot.rotation.y=ws.steering;w.spin.rotation.x=ws.rotation;});
+ updateCamera(dt,s,position,forward,cam);
+ {const n=nightUniform?.value??0;
+  if(!soundscape.ready&&drive.audio)soundscape.init(drive.audio);
+  if(onFoot){indoorT-=dt;if(indoorT<0){indoorT=.25;const p=walker.pos,hit=physics.world.castRay(new physics.R.Ray({x:p.x,y:p.y+1.75,z:p.z},{x:0,y:1,z:0}),7,true,undefined,undefined,walker.collider);indoor=hit?1:0;}
+   const p=walker.pos,dx=x-p.x,dz=z-p.z,r=Math.hypot(dx,dz,y-p.y),rx=-Math.cos(walkYaw),rz=Math.sin(walkYaw);drive.setWalk?.({r:r*(1+indoor*.8),pan:(dx*rx+dz*rz)/Math.max(r,.5)});}
+  {const c=camera.position,wv=onFoot?waterAt(c.x,c.z):null;document.body.classList.toggle('underwater',!!wv&&c.y<wv.y-.02);}
+  const p=onFoot?walker.pos:position;soundscape.update(dt,{on:onFoot,x:p.x,y:p.y,z:p.z,yaw:onFoot?walkYaw:heading,day:sky.last?.day??1,night:n,sources:places?.kit?.sounds,indoor:onFoot?indoor:0});
+  life?.update(dt,{camera,day:sky.last?.day??1,night:n});
+  for(const L of fireLights){const d=camera.position.distanceTo(L.position);L.intensity=n>.12&&d<180?n*(26+7*Math.sin(simTime*13.1)+5*Math.sin(simTime*7.3+1)+4*Math.sin(simTime*23.7+2)):0;}}
+ carFx?.update(dt,{car,state:s,day:sky.last?.day??1,cockpit:!!cam.cockpit&&!onFoot,steer,dialCanvas:$('worldSpeedometer')});if(carFx){$('worldSigL').classList.toggle('on',carFx.signalOn&&(carFx.signal==='left'||carFx.signal==='hazard'));$('worldSigR').classList.toggle('on',carFx.signalOn&&(carFx.signal==='right'||carFx.signal==='hazard'));}
+ tunnelMix+=((s.tunnel?1:0)-tunnelMix)*(1-Math.exp(-dt*(s.tunnel?1.8:2.6)));const tunnel=tunnelMix>.5;stream.update(onFoot?walker.pos.x:x,onFoot?walker.pos.z:z);plants?.update(camera.position.x,camera.position.z);displayCars?.update(camera.position.x,camera.position.z);sky.update(x,z,simTime,clockSeconds/3600);sky.applyLighting({sun,hemi,fog:scene.fog,position,tunnel:tunnelMix});{const n=Math.min(1,Math.max(0,(.24-sky.last.day)/.2));if(buildingMats)buildingMats.night.value=n;if(nightUniform)nightUniform.value=n;if(npcs)npcs.night=Math.max(n,tunnelMix);}
+ if(vehicle.body){const braking=s.in.brake>.05||s.brake>.1||(s.v<-.2&&s.autoSel==='R');vehicle.body.tail.emissiveIntensity=braking?3.2:sky.night||tunnel?.9:.45;vehicle.body.head.emissiveIntensity=sky.night||tunnel?2.2:.6;}
+ head.position.copy(position).addScaledVector(forward,2).add(V(0,.7,0));head.target.position.copy(position).addScaledVector(forward,35);head.intensity=sky.night||tunnel?90:0;
+ pipeline.render();frames++;if(now-fpsTime>1000){fps=Math.round(frames*1000/(now-fpsTime));fpsTime=now;frames=0;}if(now-lastHud>60){hud();lastHud=now;}
+}
+/* Forza-style cluster: a round tachometer with a segmented rev arc (white,
+ * amber near the limit, red past it), a red redline band, a glowing needle,
+ * a shift flash, the gear large in the middle and the speed below it. */
+function drawDial(){
+ const cv=$('worldSpeedometer'),ctx=cv.getContext('2d'),s=drive.state,c=drive.car,W=cv.width,cx=W/2,cy=W/2,R=W*.43;
+ const mph=s.units==='mph',speed=Math.round(Math.abs(s.v)*(mph?2.23694:3.6)),red=c.max||7000,top=Math.ceil((red+400)/1000)*1000;
+ const rpm=clamp(s.rpm||0,0,top),a0=Math.PI*.75,a1=Math.PI*2.25,ang=v=>a0+(a1-a0)*v/top,now=performance.now();
+ ctx.clearRect(0,0,W,W);
+ // Backdrop: a dark disc with a soft edge, so it reads over sky or road.
+ const bg=ctx.createRadialGradient(cx,cy,R*.2,cx,cy,R*1.18);bg.addColorStop(0,'rgba(8,12,16,.72)');bg.addColorStop(.82,'rgba(8,12,16,.55)');bg.addColorStop(1,'rgba(8,12,16,0)');
+ ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,R*1.18,0,Math.PI*2);ctx.fill();
+ // Track and redline band.
+ ctx.lineCap='butt';ctx.lineWidth=R*.075;ctx.strokeStyle='rgba(255,255,255,.08)';ctx.beginPath();ctx.arc(cx,cy,R*.9,a0,a1);ctx.stroke();
+ ctx.strokeStyle='rgba(235,52,40,.85)';ctx.beginPath();ctx.arc(cx,cy,R*.9,ang(red),a1);ctx.stroke();
+ // Rev arc, in segments like an LED bar.
+ const segs=48,lit=rpm/top*segs;
+ for(let k=0;k<segs;k++){if(k>=lit)break;const u=k/segs,v=u*top,b0=a0+(a1-a0)*u+.006,b1=a0+(a1-a0)*(k+1)/segs-.006;
+  ctx.strokeStyle=v>=red?'#ff3b2f':v>=red*.82?'#ffb23a':'#f4f6f2';ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=v>=red*.82?14:6;
+  ctx.beginPath();ctx.arc(cx,cy,R*.9,b0,b1);ctx.stroke();}
+ ctx.shadowBlur=0;
+ // Ticks and numerals (x1000).
+ for(let v=0;v<=top;v+=250){const a=ang(v),major=v%1000===0,r0=R*(major?.76:.8),r1=R*.84;
+  ctx.strokeStyle=v>=red?'#ff5a4a':major?'rgba(255,255,255,.95)':'rgba(255,255,255,.45)';ctx.lineWidth=major?R*.022:R*.01;
+  ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);ctx.stroke();
+  if(major){ctx.fillStyle=v>=red?'#ff6b5a':'rgba(240,244,238,.9)';ctx.font=`600 ${R*.12}px Outfit, Arial`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(v/1000),cx+Math.cos(a)*R*.64,cy+Math.sin(a)*R*.64);}}
+ // Needle.
+ const na=ang(rpm);ctx.save();ctx.translate(cx,cy);ctx.rotate(na);ctx.shadowColor='#ff6a2a';ctx.shadowBlur=18;
+ const ng=ctx.createLinearGradient(0,0,R*.93,0);ng.addColorStop(0,'rgba(255,90,40,0)');ng.addColorStop(.35,'#ff6a2a');ng.addColorStop(1,'#ffd0a0');
+ ctx.fillStyle=ng;ctx.beginPath();ctx.moveTo(R*.22,-R*.016);ctx.lineTo(R*.95,-R*.005);ctx.lineTo(R*.95,R*.005);ctx.lineTo(R*.22,R*.016);ctx.closePath();ctx.fill();ctx.restore();ctx.shadowBlur=0;
+ // Shift flash: the whole outer ring pulses near the limiter.
+ if(rpm>red*.95&&Math.floor(now/70)%2){ctx.strokeStyle='rgba(255,70,50,.9)';ctx.lineWidth=R*.03;ctx.shadowColor='#ff3b2f';ctx.shadowBlur=24;ctx.beginPath();ctx.arc(cx,cy,R*1.0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;}
+ // Gear, in a ring.
+ const gear=s.mode==='auto'?(s.autoSel==='D'?String(s.autoGear||1):s.autoSel):String(s.gear||'N');
+ ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=R*.012;ctx.beginPath();ctx.arc(cx,cy,R*.3,0,Math.PI*2);ctx.stroke();
+ ctx.fillStyle=rpm>red*.95?'#ff5a4a':'#ffffff';ctx.font=`700 ${R*.36}px Outfit, Arial`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(gear,cx,cy+R*.02);
+ // Speed and units, below.
+ ctx.fillStyle='#ffffff';ctx.font=`600 ${R*.3}px Outfit, Arial`;ctx.fillText(String(speed),cx,cy+R*.58);
+ ctx.fillStyle='rgba(235,240,232,.6)';ctx.font=`600 ${R*.075}px Outfit, Arial`;ctx.fillText(mph?'MPH':'KM/H',cx,cy+R*.8);
+ ctx.fillStyle='rgba(235,240,232,.45)';ctx.font=`600 ${R*.06}px Outfit, Arial`;ctx.fillText('RPM ×1000',cx,cy-R*.46);
+ // Tunnel / assist state, a small tag at the bottom.
+ if(s.tunnel){ctx.fillStyle='rgba(255,200,120,.8)';ctx.font=`600 ${R*.06}px Outfit, Arial`;ctx.fillText('TUNNEL',cx,cy+R*.96);}
+}
+/* The map: world/atlas.js draws it from the road network (the minimap
+ * heading-up round the car, the atlas north-up with pan and zoom). */
+function mapView(canvas,full){
+ const w=canvas.width,h=canvas.height;
+ if(full){const mpp=Math.max(15360/w,10240/h)/mapZoom;return {cx:mapCenter.x,cz:mapCenter.z,mpp,rot:0,w,h,route:navPath,car:{x,z,heading},dest:destination,hover:mapHover,selected:mapSel,issues:mapIssues};}
+ const mpp=2.4+Math.min(3.2,Math.abs(drive.state.v)*.07),ahead=h*.18*mpp;
+ return {cx:x+Math.sin(heading)*ahead,cz:z+Math.cos(heading)*ahead,mpp,rot:heading-Math.PI,w,h,route:navPath,car:{x,z,heading},dest:destination};
+}
+function drawMap(canvas,full=false){
+ if(!atlasMap)return;
+ if(full){const rect=canvas.getBoundingClientRect();if(rect.width&&rect.height){const W=Math.round(rect.width*1.5),H=Math.round(rect.height*1.5);if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}}}
+ const view=mapView(canvas,full);if(full)lastMapView=view;
+ atlasMap.draw(canvas.getContext('2d'),view);
+ if(!full){const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,vig=ctx.createRadialGradient(w/2,h/2,Math.min(w,h)*.3,w/2,h/2,Math.max(w,h)*.7);vig.addColorStop(0,'rgba(8,14,18,0)');vig.addColorStop(1,'rgba(8,14,18,.75)');ctx.fillStyle=vig;ctx.fillRect(0,0,w,h);}
+}
+const NAV_GLYPH={left:'↰',right:'↱','keep-left':'↖','keep-right':'↗',uturn:'↶','ramp-left':'↖','ramp-right':'↗',merge:'⤴',arrive:'◉'};
+const fmtDist=m=>m>=1000?(m/1000).toFixed(1)+' km':m>=100?Math.round(m/10)*10+' m':Math.max(0,Math.round(m))+' m';
+/** Where the car goes on fast travel: the nearest road to (px, pz), facing along it. */
+function travelTo(px,pz,label){
+ const fade=$('worldFade');fade.classList.add('on');closeMenu();
+ {const h=HOMES.find(q=>q.name===label);if(h){setTimeout(()=>{spawnHome(h.id);setTimeout(()=>fade.classList.remove('on'),600);},420);return;}}
+ if(onFoot){walker.leave();onFoot=false;document.body.classList.remove('on-foot');if(document.pointerLockElement)document.exitPointerLock();}
+ setTimeout(()=>{const r=roadAt(px,pz);if(r){hit=r;const sec=model.sectionAt(r.seg,Math.min(Math.max(r.s,r.seg.cut[0]+4),r.seg.L-r.seg.cut[1]-4)),off=r.seg.kind==='freeway'?7.6:Math.min(1.9,sec.h*.45);
+  x=sec.x+sec.nx*off;z=sec.z+sec.nz*off;y=sec.y;heading=Math.atan2(sec.tx,sec.tz);stream.update(x,z,1e9);car.place(x,y+.3,z,heading);steer=keySteer=0;cameraHeading=heading;orbit=orbitTarget=0;drive.resetMotion();drive.release();drive.setTunnel(r.seg.kind==='tunnel');
+  camera.position.set(x-Math.sin(heading)*8,y+3,z-Math.cos(heading)*8);camOffset.set(-Math.sin(heading)*8,3,-Math.cos(heading)*8);}
+  setTimeout(()=>{fade.classList.remove('on');notify('Fast travel · '+(label||'Los Santerra'));},700);},420);
+}
+function setDestination(d){destination=d;if(d){nav.set(d);notify('Route set · '+d.name);}else nav.clear();navPath=[];}
+/** A name for any point on the map: the nearest road and its district. */
+function describePoint(px,pz){const r=net.nearest(px,pz);return {name:r?.edge.name||'Open country',district:r?.edge.district||'Los Santerra'};}
+function hud(){const s=drive.state,c=drive.car;{const pr=$('worldPrompt');let t='';if(onFoot){t=Math.hypot(walker.pos.x-x,walker.pos.z-z)<4.5?'<kbd>F</kbd> GET IN':'<kbd>W A S D</kbd> WALK · <kbd>SHIFT</kbd> RUN · <kbd>SPACE</kbd> JUMP · '+(document.pointerLockElement?'MOUSE TO LOOK':'CLICK TO LOOK');}else if(loaded&&stillT>2)t='<kbd>F</kbd> STEP OUT';if(pr.dataset.t!==t){pr.dataset.t=t;pr.innerHTML=t;pr.hidden=!t;}}$('worldDistrict').textContent=hit?.edge.district||'Los Santerra';$('worldStreet').textContent=hit?.edge.name||'Open country';$('worldTime').textContent=clock();$('worldClock').textContent=clock();$('worldCar').textContent=c.name;$('worldEngine').textContent=s.engineOn?s.mode.toUpperCase()+' · ENGINE RUNNING':s.cranking?'STARTING…':s.powered?'ELECTRIC DRIVE':'HOLD I TO START';$('worldSpeed').textContent=Math.round(Math.abs(s.v)*(s.units==='mph'?2.23694:3.6));$('worldUnit').textContent=s.units==='mph'?'MPH':'KM/H';$('worldGear').textContent=s.mode==='auto'?(s.autoSel==='D'?s.autoGear:s.autoSel):(s.gear||'N');$('worldRpm').textContent=(s.rpm/1000).toFixed(1);$('worldRev').style.width=Math.min(100,s.rpm/c.max*100)+'%';$('worldTraction').textContent=s.tunnel?'TUNNEL ACOUSTICS':assist?'STEERING ASSIST':'FREE DRIVE';$('worldNext').textContent=navInfo?.text||'Choose your own road';$('worldDistance').textContent=navInfo?fmtDist(navInfo.dist):'N ↑';$('worldNavGlyph').textContent=navInfo?NAV_GLYPH[navInfo.dir]||'↑':'';$('worldNavTitle').textContent=destination?(destination.name.toUpperCase()+' · '+fmtDist(navInfo?.remaining??0)):'EXPLORE LOS SANTERRA';$('worldQuickGear').hidden=s.mode!=='auto';document.querySelectorAll('[data-selector]').forEach(b=>b.classList.toggle('chosen',b.dataset.selector===s.autoSel));drawDial();drawMap($('worldMap'));if($('worldAtlas'))drawMap($('worldAtlas'),true);}
+function pause(on){paused=on;keys.clear();keySteer=0;drive.release();drive.pauseAudio(on);}
+function openMenu(page='drive'){if(document.pointerLockElement)document.exitPointerLock();pause(true);if(!$('worldDialog').open)$('worldDialog').showModal();panel(page);}
+function closeMenu(){if(!loaded)return;$('worldDialog').close();pause(false);}
+function panel(page){tab=page;document.querySelectorAll('.world-tabs button').forEach(b=>b.classList.toggle('selected',b.dataset.tab===page));$('worldDialog').classList.toggle('map-mode',page==='map');const p=$('worldPanel');
+ if(page==='drive'){p.innerHTML=`<div class="world-intro"><span class="world-eyebrow">LOS SANTERRA / SOUTHERN CALIFORNIA</span><h3>Every road leads somewhere.</h3><p>From the Sunset Strip to Pasadena's historic avenues.<br>Find a destination, take a turn, and make the drive your own.</p><div class="world-route"><span>West Hollywood</span><i>·</i><span>Beverly Hills</span><i>·</i><span>Pasadena</span><i>·</i><span>San Marino</span></div><button class="world-primary" id="worldResume">CONTINUE DRIVE &nbsp; ↗</button><div class="world-homes"><span class="world-eyebrow">YOUR HOMES · START HERE</span><div>${HOMES.map(h=>`<button data-home="${h.id}" class="${savedHome()===h.id?'chosen':''}"><b>${h.name}</b><small>${h.blurb}</small></button>`).join('')}</div></div><p class="world-tip">Hold <b>I</b> for ignition, select <b>D</b>, then use <b>W / S</b> and <b>A / D</b> or arrows. Drag the scene to look around. <b>Tab</b> opens the map.</p><div class="world-selectors"><label>Transmission<select id="worldTransmission"><option value="auto">Automatic</option><option value="manual">Sequential manual</option><option value="clutch">Manual + clutch</option></select></label><label>Selector<select id="worldSelector"><option>P</option><option>R</option><option>N</option><option>D</option></select></label></div></div>`;
+  $('worldResume').onclick=closeMenu;document.querySelectorAll('[data-home]').forEach(b=>b.onclick=()=>{const fade=$('worldFade');fade.classList.add('on');closeMenu();setTimeout(()=>{spawnHome(b.dataset.home);setTimeout(()=>fade.classList.remove('on'),600);},420);});$('worldTransmission').value=drive.state.mode;$('worldTransmission').onchange=e=>{drive.setMode(e.target.value);panel('drive');};$('worldSelector').value=drive.state.autoSel;$('worldSelector').disabled=drive.state.mode!=='auto';$('worldSelector').onchange=e=>{drive.select(e.target.value);e.target.value=drive.state.autoSel;};
+ }else if(page==='map'){
+  const here=describePoint(x,z);
+  p.innerHTML=`<div class="atlas-wrap"><div class="atlas-stage"><canvas id="worldAtlas" aria-label="Map of Los Santerra"></canvas>
+   <div class="atlas-legend">${CLASSES.map(c=>`<span><i style="--c:${c.color}" class="${c.dash?'dash':''}"></i>${c.label}</span>`).join('')}<span><i class="pin"></i>Places</span><label class="atlas-issues"><input type="checkbox" id="atlasIssues" ${mapIssues?'checked':''}> Dead ends</label></div>
+   <div class="atlas-zoom"><button id="worldZoomIn" aria-label="Zoom in">+</button><button id="worldZoomOut" aria-label="Zoom out">−</button><button id="worldMapMe" aria-label="Centre on car" title="Centre on car">◎</button><button id="worldMapFit" aria-label="Whole map" title="Whole map">⤢</button></div>
+   <div class="atlas-card" id="atlasCard" hidden></div>
+   <div class="atlas-hint">Click a place or any road · double-click to fast travel · drag to pan · scroll to zoom</div></div>
+   <aside class="atlas-side"><div class="atlas-here"><span class="world-eyebrow">YOU ARE IN</span><b>${here.district}</b><small>${here.name}</small></div>
+   <div class="atlas-route" id="atlasRoute">${destination?`<span class="world-eyebrow">ROUTE</span><b>${destination.name}</b><small>${navInfo?fmtDist(navInfo.remaining)+' to go':'calculating…'}</small><button id="worldClearRoute">END ROUTE</button>`:'<span class="world-eyebrow">NO ROUTE</span><small>Choose a destination on the map or below.</small>'}</div>
+   <span class="world-eyebrow atlas-h">PLACES</span><div class="atlas-list" id="atlasPlaces"></div>
+   <span class="world-eyebrow atlas-h">DISTRICTS</span><div class="atlas-list" id="atlasDistricts"></div></aside></div>`;
+  const atlas=$('worldAtlas'),card=$('atlasCard');$('atlasIssues').onchange=e=>{mapIssues=e.target.checked;drawMap(atlas,true);};
+  const item=(list,d,sub)=>{const row=document.createElement('div');row.className='atlas-item'+(destination?.name===d.name?' chosen':'');const km=fmtDist(Math.hypot(d.x-x,d.z-z));
+   row.innerHTML=`<div><b>${d.name}</b><small>${sub} · ${km}</small></div><button class="go">ROUTE</button><button class="tp">TRAVEL</button>`;
+   row.querySelector('.go').onclick=()=>{setDestination({name:d.name,x:d.x,z:d.z});panel('map');};row.querySelector('.tp').onclick=()=>travelTo(d.x,d.z,d.name);
+   row.onmouseenter=()=>{mapHover=d;drawMap(atlas,true);};row.onmouseleave=()=>{mapHover=null;drawMap(atlas,true);};list.append(row);};
+  const byDist=a=>[...a].sort((p,q)=>Math.hypot(p.x-x,p.z-z)-Math.hypot(q.x-x,q.z-z));
+  for(const pl of byDist(atlasMap.places))item($('atlasPlaces'),pl,pl.kind==='landmark'?'Landmark':pl.kind[0].toUpperCase()+pl.kind.slice(1));
+  for(const d of byDist(atlasMap.districts.filter(d=>!d.hills)))item($('atlasDistricts'),{...d,name:d.name.replace(/\B\w+/g,w=>w.toLowerCase())},'District');
+  if($('worldClearRoute'))$('worldClearRoute').onclick=()=>{setDestination(null);panel('map');};
+  const showCard=d=>{mapSel=d;if(!d){card.hidden=true;drawMap(atlas,true);return;}card.hidden=false;
+   card.innerHTML=`<span class="world-eyebrow">${d.kind?d.kind.toUpperCase():d.district.toUpperCase()}</span><b>${d.name}</b><small>${fmtDist(Math.hypot(d.x-x,d.z-z))} away</small><div><button id="cardRoute">SET ROUTE</button><button id="cardTravel" class="world-primary">FAST TRAVEL</button></div>`;
+   $('cardRoute').onclick=()=>{setDestination({name:d.name,x:d.x,z:d.z});panel('map');};$('cardTravel').onclick=()=>travelTo(d.x,d.z,d.name);drawMap(atlas,true);};
+  const pick=e=>{const r=atlas.getBoundingClientRect(),sx=(e.clientX-r.left)*atlas.width/r.width,sy=(e.clientY-r.top)*atlas.height/r.height;const pl=atlasMap.placeAt(lastMapView,sx,sy,18);if(pl)return pl;const [wx,wz]=atlasMap.toWorld(lastMapView,sx,sy),road=net.nearest(wx,wz);if(!road||road.distance>80)return null;const d=describePoint(road.p.x,road.p.z);return {name:d.name,district:d.district,x:road.p.x,z:road.p.z};};
+  $('worldZoomIn').onclick=()=>{mapZoom=clamp(mapZoom*1.4,1,40);drawMap(atlas,true);};$('worldZoomOut').onclick=()=>{mapZoom=clamp(mapZoom/1.4,1,40);drawMap(atlas,true);};
+  $('worldMapFit').onclick=()=>{mapZoom=1;mapCenter={x:0,z:0};drawMap(atlas,true);};$('worldMapMe').onclick=()=>{mapZoom=Math.max(mapZoom,6);mapCenter={x,z};drawMap(atlas,true);};
+  atlas.onwheel=e=>{e.preventDefault();const r=atlas.getBoundingClientRect(),sx=(e.clientX-r.left)*atlas.width/r.width,sy=(e.clientY-r.top)*atlas.height/r.height,[wx,wz]=atlasMap.toWorld(lastMapView,sx,sy);
+   const z0=mapZoom;mapZoom=clamp(mapZoom*(e.deltaY<0?1.15:1/1.15),1,40);const k=z0/mapZoom;mapCenter={x:wx+(mapCenter.x-wx)*k,z:wz+(mapCenter.z-wz)*k};drawMap(atlas,true);};
+  let start=null,moved=0;atlas.onpointerdown=e=>{start={x:e.clientX,y:e.clientY};moved=0;atlas.setPointerCapture(e.pointerId);};
+  atlas.onpointermove=e=>{if(!start){const r=atlas.getBoundingClientRect(),pl=atlasMap.placeAt(lastMapView,(e.clientX-r.left)*atlas.width/r.width,(e.clientY-r.top)*atlas.height/r.height,18);if(pl!==mapHover){mapHover=pl;atlas.style.cursor=pl?'pointer':'grab';drawMap(atlas,true);}return;}
+   const r=atlas.getBoundingClientRect(),k=lastMapView.mpp*atlas.width/r.width;mapCenter={x:mapCenter.x-(e.clientX-start.x)*k,z:mapCenter.z-(e.clientY-start.y)*k};moved+=Math.abs(e.clientX-start.x)+Math.abs(e.clientY-start.y);start={x:e.clientX,y:e.clientY};drawMap(atlas,true);};
+  atlas.onpointerup=e=>{if(start&&moved<5)showCard(pick(e));start=null;};atlas.onpointercancel=()=>start=null;
+  atlas.ondblclick=e=>{const d=pick(e);if(d)travelTo(d.x,d.z,d.name);};
+  requestAnimationFrame(()=>drawMap(atlas,true));
+ }else if(page==='garage'){p.innerHTML='<p class="world-tip">Choose your original powertrain and sound, and the coupe\'s paint.</p><div class="world-paints"></div><div class="world-garage"></div>';for(const [name,hex] of PAINTS){const b=document.createElement('button');b.className='world-paint';b.title=name;b.style.setProperty('--paint',hex);b.classList.toggle('chosen',(savedPaint()||PAINTS[0][1])===hex);b.innerHTML=`<i></i>${name}`;b.onclick=()=>{setPaint(hex);panel('garage');};p.querySelector('.world-paints').append(b);}for(const c of drive.cars){const b=document.createElement('button');b.textContent=c.name;b.classList.toggle('chosen',c.id===drive.car.id);b.onclick=()=>{drive.selectCar(c.id);spawn();panel('garage');};p.querySelector('.world-garage').append(b);}
+ }else if(page==='sound'){const values=drive.sound();p.innerHTML='<h3 id="worldSoundCar"></h3><p class="world-tip">Saved separately for every car, through your original sound workshop.</p><div class="world-settings" id="worldSound"></div><button id="worldWorkshop">OPEN FULL SOUND WORKSHOP ↗</button>';$('worldSoundCar').textContent=drive.car.name;for(const[key,title,id]of[['vol','Engine level','wsVol'],['pitch','Engine pitch','wsPitch'],['tone','Exhaust tone','wsTone']]){const src=$(id),label=document.createElement('label');label.textContent=title;const input=document.createElement('input');input.type='range';input.min=src.min;input.max=src.max;input.step=src.step;input.value=values[key];const out=document.createElement('output');out.textContent=values[key];input.oninput=()=>{drive.tune(key,+input.value);out.textContent=input.value;};label.append(input,out);$('worldSound').append(label);}$('worldWorkshop').onclick=()=>{$('worldDialog').close();pause(true);drive.openWorkshop();};
+ }else{p.innerHTML=`<div class="world-settings"><label>Time of day<select id="worldLighting">${TIME_PRESETS.map(p=>`<option value="${p[0]}">${p[1]}</option>`).join('')}<option value="custom" hidden>Custom</option></select></label><label>Hour<input id="worldHour" type="range" min="0" max="23.95" step="0.05" value="${(clockSeconds/3600).toFixed(2)}"><output id="worldHourOut">${clock()}</output></label><label>Time passes<select id="worldFlow">${TIME_FLOWS.map(f=>`<option value="${f[0]}">${f[1]}</option>`).join('')}</select></label><label>Rendering<select id="worldQuality"><option value="balanced">Balanced · 1.5×</option><option value="high">High · 2×</option><option value="low">Performance · 1×</option></select></label><label>Camera<select id="worldCamSel">${CAMS.map((c,i)=>`<option value="${i}">${c.name[0]+c.name.slice(1).toLowerCase()}</option>`).join('')}</select></label><label>Speed effects<input id="worldSpeedFx" type="range" min="0" max="1.5" step="0.05" value="${speedFx}"></label><label>Camera shake<input id="worldShake" type="range" min="0" max="2" step="0.1" value="${shakeFx}"></label><label>Traffic<input id="worldTraffic" type="range" min="0" max="1" step="0.05" value="${npcs?.density??savedTraffic()}"><output id="worldTrafficOut">${trafficLabel(npcs?.density??savedTraffic())}</output></label><label>Steering sensitivity<input id="worldSensitivity" type="range" min="0.5" max="1.6" step="0.05" value="${sensitivity}"></label><label>Stability assist<input id="worldYaw" type="range" min="0" max="1" step="0.05" value="${car.yawAssist}"></label><label>Countersteer assist<input id="worldCounter" type="range" min="0" max="1" step="0.05" value="${counterAssist}"></label><label>Steering assistance<input id="worldAssist" type="checkbox" ${assist?'checked':''}></label><p class="world-tip">Assistance follows your selected route or continues through the next junction. Brake before tight turns. Drag to orbit the camera, scroll to zoom, double-click to reset. <b>X</b> changes camera, hold <b>Z</b> to look back.</p><button id="worldReset">RECOVER TO NEAREST ROAD</button></div>`;$('worldLighting').value=timeOfDay;$('worldLighting').onchange=e=>{setTimeOfDay(e.target.value);$('worldHour').value=clockSeconds/3600;$('worldHourOut').textContent=clock();};$('worldHour').oninput=e=>{setHour(+e.target.value);$('worldHourOut').textContent=clock();$('worldLighting').value=timeOfDay;};$('worldFlow').value=timeFlow;$('worldFlow').onchange=e=>timeFlow=e.target.value;$('worldQuality').value=quality;$('worldQuality').onchange=e=>{quality=e.target.value;renderer.setPixelRatio(Math.min(devicePixelRatio,quality==='high'?2:quality==='low'?1:1.5));};$('worldSensitivity').oninput=e=>sensitivity=+e.target.value;$('worldTraffic').oninput=e=>{const d=+e.target.value;npcs?.setDensity(d);$('worldTrafficOut').textContent=trafficLabel(d);try{localStorage.setItem('dwnTraffic',d);}catch{}};$('worldCamSel').value=cameraMode;$('worldCamSel').onchange=e=>{cameraMode=+e.target.value-1;cycleCamera(1);};$('worldSpeedFx').oninput=e=>speedFx=+e.target.value;$('worldShake').oninput=e=>shakeFx=+e.target.value;$('worldYaw').oninput=e=>car.yawAssist=+e.target.value;$('worldCounter').oninput=e=>counterAssist=+e.target.value;$('worldAssist').onchange=e=>assist=e.target.checked;$('worldReset').onclick=()=>{spawn();closeMenu();};}
+}
+$('worldMenu').onclick=()=>openMenu();$('worldMapButton').onclick=$('worldExpandMap').onclick=()=>openMenu('map');$('worldClose').onclick=closeMenu;$('worldDialog').addEventListener('cancel',e=>{e.preventDefault();closeMenu();});document.querySelectorAll('.world-tabs button').forEach(b=>b.onclick=()=>panel(b.dataset.tab));$('worldNight').onclick=()=>{const i=TIME_PRESETS.findIndex(p=>p[0]===timeOfDay);setTimeOfDay(TIME_PRESETS[(i+1)%TIME_PRESETS.length][0]);};$('worldCamera').onclick=()=>cycleCamera(1);$('worldReturn').onclick=()=>{if(!loaded)return;active=true;document.body.classList.add('world-active');$('worldReturn').hidden=true;openMenu();};document.querySelectorAll('[data-selector]').forEach(b=>b.onclick=()=>drive.select(b.dataset.selector));
+function cycleCamera(d){cameraMode=(cameraMode+d+CAMS.length)%CAMS.length;cineAnchor=null;orbit=orbitTarget=0;$('worldCamera').textContent='CAMERA · '+CAMS[cameraMode].name;notify('Camera · '+CAMS[cameraMode].name.toLowerCase()+'  ·  X to change, Z to look back');}
+const steeringKeys=['KeyA','KeyD','ArrowLeft','ArrowRight'];
+window.addEventListener('keydown',e=>{if(!active)return;if(e.code==='Escape'){e.preventDefault();e.stopImmediatePropagation();if($('workshop').classList.contains('open')){drive.closeWorkshop();pause(false);}else if($('worldDialog').open)closeMenu();else openMenu();return;}if(e.target.matches('input,select,textarea'))return;if(e.code==='Tab'&&!paused){e.preventDefault();e.stopImmediatePropagation();openMenu('map');return;}if(paused){e.stopImmediatePropagation();return;}if(steeringKeys.includes(e.code)){keys.add(e.code);e.preventDefault();e.stopImmediatePropagation();}if(e.code==='Space'&&drive.state.mode!=='clutch'){keys.add('Space');e.preventDefault();e.stopImmediatePropagation();}if(e.code==='KeyT'){e.preventDefault();e.stopImmediatePropagation();}if(e.code==='KeyX'&&!e.repeat){e.preventDefault();e.stopImmediatePropagation();cycleCamera(e.shiftKey?-1:1);}if(e.code==='KeyZ'){e.preventDefault();e.stopImmediatePropagation();lookBack=true;}if(e.code==='KeyF'&&!e.repeat){e.preventDefault();e.stopImmediatePropagation();toggleOnFoot();return;}if(onFoot&&['KeyW','KeyS','KeyA','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight','Space','KeyQ','KeyE','KeyI'].includes(e.code)){keys.add(e.code);e.preventDefault();e.stopImmediatePropagation();return;}if(!e.repeat&&(e.code==='Comma'||e.code==='Period'||e.code==='Slash')){e.preventDefault();e.stopImmediatePropagation();carFx?.setSignal(e.code==='Comma'?'left':e.code==='Period'?'right':'hazard');}if(e.code==='KeyV'&&!e.repeat){e.preventDefault();e.stopImmediatePropagation();const ci=CAMS.findIndex(c=>c.cockpit);if(cameraMode===ci){cameraMode=lastExterior??0;}else{lastExterior=cameraMode;cameraMode=ci;}cycleCamera(0);}},true);
+window.addEventListener('keyup',e=>{keys.delete(e.code);if(onFoot&&['KeyW','KeyS','KeyA','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight','Space'].includes(e.code)){e.preventDefault();e.stopImmediatePropagation();return;}if(e.code==='KeyZ')lookBack=false;if(e.code==='Space'&&active&&drive.state.mode!=='clutch'){e.preventDefault();e.stopImmediatePropagation();}if(active&&steeringKeys.includes(e.code)){e.preventDefault();e.stopImmediatePropagation();}},true);
+$('worldCanvas').addEventListener('pointerdown',e=>{if(paused)return;if(onFoot&&!document.pointerLockElement){try{$('worldCanvas').requestPointerLock()?.catch?.(()=>{});}catch(_){}}dragging=true;dragX=e.clientX;dragY=e.clientY;$('worldCanvas').setPointerCapture(e.pointerId);});document.addEventListener('mousemove',e=>{if(onFoot&&document.pointerLockElement===$('worldCanvas')){walkYaw-=e.movementX*.0023;fpPitch=clamp(fpPitch-e.movementY*.0023,-1.35,1.35);}});$('worldCanvas').addEventListener('pointermove',e=>{if(!dragging)return;if(onFoot){if(!document.pointerLockElement){walkYaw-=(e.clientX-dragX)*.004;fpPitch=clamp(fpPitch-(e.clientY-dragY)*.004,-1.35,1.35);}dragX=e.clientX;dragY=e.clientY;return;}orbitTarget-=(e.clientX-dragX)*.004;pitchTarget=clamp(pitchTarget+(e.clientY-dragY)*.003,-.15,.75);dragX=e.clientX;dragY=e.clientY;lookIdle=0;});$('worldCanvas').addEventListener('wheel',e=>{if(paused)return;e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?1.08:1/1.08),.6,2.4);},{passive:false});$('worldCanvas').addEventListener('dblclick',()=>{orbitTarget=0;pitchTarget=0;zoom=1;});for(const type of ['pointerup','pointercancel','lostpointercapture'])$('worldCanvas').addEventListener(type,()=>{dragging=false;});
+window.addEventListener('blur',()=>{dragging=false;if(active&&loaded&&!$('worldDialog').open&&!$('workshop').classList.contains('open'))openMenu();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&active&&loaded&&!$('worldDialog').open)openMenu();});new MutationObserver(()=>{if(active&&!$('worldDialog').open&&!$('workshop').classList.contains('open'))pause(false);}).observe($('workshop'),{attributes:true,attributeFilter:['class']});
+window.addEventListener('resize',()=>{if(!renderer)return;renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
+window.DwnWorld={get active(){return active;},get paused(){return paused;},step,get diagnostics(){return{loaded,active,paused,fps,position:{x,y,z},heading,steer,orbit,travelled,road:hit?.edge.name,district:hit?.edge.district,roadId:hit?.edge.id,tunnel:drive.state.tunnel,nodes:net?.nodes.length,edges:net?.edges.length,networkKm:net?.totalKm,trafficTypes:[...new Set((npcs?.cars||[]).map(t=>t.type))],traffic:npcs?.count||0,tiles:stream?.tiles.size,colliders:physics?.bodies.size,load:loadStats,tunnels:tunnels&&{bores:tunnels.bores,length:tunnels.length,portals:tunnels.portals},grounded:car?.grounded,drawCalls:renderer?.info.render.calls,triangles:renderer?.info.render.triangles};}};
+if(new URLSearchParams(location.search).has('worldDebug'))window.DwnWorldDebug={spawn,get renderer(){return renderer;},get pipeline(){return pipeline;},get fps(){return fps;},menu:openMenu,get stream(){return stream;},get model(){return model;},get ground(){return ground;},get buildings(){return buildings;},get plants(){return plants;},get sky(){return sky;},get car(){return car;},setClock(h){setHour(h);},setFlow(f){timeFlow=f;},get network(){return net;},get traffic(){return npcs;},get parked(){return parked;},get lamps(){return lampSpots;},navTo(px,pz,name){setDestination({name:name||"Waypoint",x:px,z:pz});},travel(px,pz,name){travelTo(px,pz,name);},get nav(){return nav;},get navInfo(){return navInfo;},mapAt(cx,cz,zoom){mapCenter={x:cx,z:cz};mapZoom=zoom;openMenu("map");},get signs(){return fwySigns;},get scene(){return scene;},get places(){return places;},get fx(){return carFx;},get walker(){return walker;},get sound(){return soundscape;},get life(){return life;},waterAt,get fireLights(){return fireLights;},setLook(yw,pt=0){walkYaw=yw;fpPitch=pt;},get onFoot(){return onFoot;},toggleOnFoot,spawnHome,get camera(){return camera;},setInput(v){keySteer=v;},resume(){closeMenu();},view(from,to){camOverride=from?[from,to]:null;},bot(on,seed=1){if(!on){bot=null;return;}bot={pilot:new Autopilot(model,seed),still:0,metrics:{time:0,distance:0,maxOffRoad:-99,offRoadTime:0,airTime:0,allWheelsOff:0,underground:0,stuck:[],respawns:[],flips:[]}};bot.pilot.attach(x,z,y,heading);},get botMetrics(){return bot?.metrics;},get pilot(){return bot?.pilot;},setPosition(px,py,pz,h){x=px;z=pz;y=py;heading=h;stream.update(x,z,1e9);car.place(px,py,pz,h);},steeringTarget};
+init();

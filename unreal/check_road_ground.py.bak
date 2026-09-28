@@ -1,0 +1,95 @@
+"""Verify in the built level that roads are grounded, continuous and streamable.
+
+The Python-side checks (tools/check_road_seating.py) compare the exported road Z
+against the baked heightmap PNG. That proves the *data* agrees. It cannot prove
+the level agrees, because between the PNG and the level sit the Landscape import
+settings, the actor transforms and the collision the car actually drives on. This
+traces against that collision instead, so a wrong Z scale or an un-reimported
+Landscape shows up as a number rather than as a surprise on the first test drive.
+
+    ./unreal/run.sh ground
+"""
+import json
+import os
+import random
+
+import unreal
+
+PROJECT = r'/Users/peterchi/Desktop/Dwn SHIFT'
+DATA_DIR = os.path.join(PROJECT, 'output', 'unreal')
+LEVEL_PATH = '/Game/LosSanterra/Maps/L_LosSanterra'
+ROAD_TAG = 'LosSanterraRoad'
+SAMPLES = 800
+
+actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+
+
+def log(message):
+    unreal.log_warning('[Los Santerra] {}'.format(message))
+
+
+def main():
+    levels = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    levels.load_level(LEVEL_PATH)
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+
+    roads, landscapes, biggest = [], [], 0.0
+    for actor in actor_subsystem.get_all_level_actors():
+        if isinstance(actor, unreal.Landscape) or isinstance(actor, unreal.LandscapeProxy):
+            landscapes.append(actor)
+        if unreal.Name(ROAD_TAG) in actor.tags:
+            roads.append(actor)
+            origin, extent = actor.get_actor_bounds(False)
+            biggest = max(biggest, max(extent.x, extent.y) * 2.0 / 100.0)
+
+    log('road actors in level: {}'.format(len(roads)))
+    log('largest road actor bounds: {:.0f} m'.format(biggest))
+    log('landscape actors: {}'.format(len(landscapes)))
+    if not landscapes:
+        log('NO LANDSCAPE IN THE LEVEL -- import it in Landscape mode first; '
+            'every trace below will miss and the car will fall through.')
+
+    # Trace straight down onto the landscape only, from just above each road point.
+    params = unreal.CollisionQueryParams if hasattr(unreal, 'CollisionQueryParams') else None
+    payload = json.load(open(os.path.join(DATA_DIR, 'los-santerra-roads.json')))
+    surface = [r for r in payload['roads']
+               if not r['elevated'] and r['kind'] not in ('tunnel', 'freeway', 'ramp')]
+    random.seed(7)
+
+    ignore = unreal.Array(unreal.Actor)
+    for actor in roads:
+        ignore.append(actor)          # we want the ground under the asphalt, not the asphalt
+
+    gaps, misses = [], 0
+    for road in random.sample(surface, min(SAMPLES // 4, len(surface))):
+        for point in random.sample(road['points'], min(4, len(road['points']))):
+            start = unreal.Vector(point[0], point[1], point[2] + 5000.0)
+            end = unreal.Vector(point[0], point[1], point[2] - 5000.0)
+            hit = unreal.SystemLibrary.line_trace_single(
+                world, start, end, unreal.TraceTypeQuery.TRACE_TYPE_QUERY1,
+                True, ignore, unreal.DrawDebugTrace.NONE, True)
+            if not hit:
+                misses += 1
+                continue
+            gaps.append((point[2] - hit.to_tuple()[4].z) / 100.0)
+
+    if not gaps:
+        log('no ground was hit under any sampled road point ({} misses)'.format(misses))
+        return
+    gaps.sort()
+    above = [g for g in gaps if g > 0]
+    below = [-g for g in gaps if g < 0]
+    absolute = sorted(abs(g) for g in gaps)
+    log('traced {} road points ({} missed the ground entirely)'.format(len(gaps), misses))
+    log('road surface vs landscape collision, metres:')
+    log('   median {:.2f}   p90 {:.2f}   p99 {:.2f}   max {:.2f}'.format(
+        absolute[len(absolute) // 2], absolute[int(len(absolute) * .9)],
+        absolute[int(len(absolute) * .99)], absolute[-1]))
+    log('   {:.1f}% within 0.5 m'.format(100.0 * sum(1 for g in absolute if g < 0.5) / len(absolute)))
+    log('   floating above ground: {}   buried under it: {}'.format(len(above), len(below)))
+    if below:
+        below.sort()
+        log('   deepest burial {:.2f} m'.format(below[-1]))
+
+
+main()
