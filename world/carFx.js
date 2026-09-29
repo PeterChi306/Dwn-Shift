@@ -1,5 +1,5 @@
 /* The player car's details (2026-09-27): tyre smoke, exhaust fire, turn
- * signals and a cockpit you can sit in.
+ * signals and the cabin's moving parts.
  *
  *   smoke    instanced sprites off each tyre that is sliding (lateral slip
  *            past the peak), spinning (game.js S.spinV: burnouts, launches)
@@ -11,13 +11,12 @@
  *   signals  amber lamps at the four corners and on the mirrors, blinking at
  *            1.5 Hz with a relay tick; they cancel themselves once a turn in
  *            their direction has been made, like a real stalk.
- *   cockpit  dash with the live tach on the binnacle, a wheel that turns with
- *            the steering, bucket seats, door cards, headliner and pillars:
- *            the exterior body is single-sided and sees straight through
- *            from inside, so the interior closes every direction but glass.
+ *   cabin    the model's interior (carModels.js): the wheel turns with the
+ *            steering, the cluster shows the live tach, the ambient light
+ *            rises at night.
  */
 import * as T from 'three';
-import {instancedDynamicBufferAttribute, uv, vec3, vec4, float, smoothstep, mix, uniform, sin, time, positionLocal, abs} from 'three/tsl';
+import {instancedDynamicBufferAttribute, uv, vec3, vec4, float, smoothstep, mix, uniform, sin, time} from 'three/tsl';
 
 const SMOKE = 700, FIRE = 96;
 
@@ -30,15 +29,10 @@ export class CarFx {
     this.flash = new T.PointLight('#ff7a2a', 0, 9, 2); scene.add(this.flash);
     this.signal = null; this.blink = 0; this.turnAcc = 0; this.audio = null;
     this.buildSignals();
-    this.interior = this.buildInterior();
-    // The body is a closed shell: its top runs through the cabin at deck
-    // height. From the driver's seat, cut the cabin volume out of it.
-    this.cockpit = uniform(0);
-    if (this.dims && vehicle.body?.paint) {
-      const D = this.dims, p = positionLocal;
-      const inside = abs(p.x).lessThan(.66).and(p.z.greaterThan(D.GZ0 + .02)).and(p.z.lessThan(D.GZ1 - .005)).and(p.y.lessThan(.97)).and(p.y.greaterThan(.18));
-      vehicle.body.paint.maskNode = this.cockpit.lessThan(.5).or(inside.not());
-    }
+    // The cabin is part of the body (carModels.js): the driver's eye, the wheel, the cluster.
+    const cab = vehicle.body?.interior;
+    this.interior = cab?.group || null; this.eye = cab?.eye; this.wheel = cab?.wheel; this.cluster = cab?.cluster;
+    this.ambient = vehicle.body?.ambient;
     this.tmp = new T.Vector3(); this.tmp2 = new T.Vector3();
   }
 
@@ -114,17 +108,19 @@ export class CarFx {
 
   /* ------------------------------------------------------------ signals */
   buildSignals() {
-    const D = this.dims; if (!D) return;
+    const D = this.dims; if (!D?.signals) return;
     const mk = () => new T.MeshStandardMaterial({color: '#6a3a05', emissive: '#ffa21a', emissiveIntensity: 0, roughness: .3, toneMapped: false});
-    this.sigMat = {left: mk(), right: mk()};
+    this.sigMat = {left: mk(), right: mk()}; this.sigMeshes = [];
     // Left of the car is +x (it faces +z).
-    for (const [side, s] of [['left', 1], ['right', -1]]) {
-      const m = this.sigMat[side], add = (geo, x, y, z, ry = 0) => { const mesh = new T.Mesh(geo, m); mesh.position.set(x, y, z); mesh.rotation.y = ry; this.vehicle.object.add(mesh); };
-      add(new T.BoxGeometry(.05, .035, .16), s * (D.halfW(D.Z1 - .32) - .005), .5, D.Z1 - .32);             // front corner
-      add(new T.BoxGeometry(.12, .03, .012), s * .62, .52, D.Z1 - .02);                                   // front, under the lamp
-      add(new T.BoxGeometry(.18, .028, .012), s * .66, D.belt(D.Z0 + .06) - .075, D.Z0 - .004);           // rear, under the light bar
-      add(new T.BoxGeometry(.04, .02, .09), s * (D.halfW(D.GZ1 - .28) + .17), D.belt(D.GZ1 - .28) + .1, D.GZ1 - .33); // mirror repeater
+    for (const [side, s] of [['left', 1], ['right', -1]]) for (const L of D.signals(s)) {
+      const mesh = new T.Mesh(new T.BoxGeometry(L.sx, L.sy, L.sz), this.sigMat[side]); mesh.position.set(L.x, L.y, L.z);
+      this.vehicle.object.add(mesh); this.sigMeshes.push(mesh);
     }
+  }
+  dispose() {
+    for (const sys of [this.smoke, this.fire]) { this.scene.remove(sys.mesh); sys.mesh.geometry.dispose(); sys.mesh.material.dispose(); }
+    this.scene.remove(this.flash);
+    for (const m of this.sigMeshes || []) m.removeFromParent();
   }
   setSignal(mode) {
     this.signal = this.signal === mode ? null : mode; this.blink = 0; this.turnAcc = 0;
@@ -139,81 +135,6 @@ export class CarFx {
       g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.09, t + .002); g.gain.exponentialRampToValueAtTime(.0001, t + .03);
       o.connect(f); f.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + .04);
     } catch { /* no audio: silent indicators */ }
-  }
-
-  /* ------------------------------------------------------------ cockpit */
-  buildInterior() {
-    const D = this.dims; if (!D) return null;
-    const g = new T.Group(); g.visible = false;
-    const leather = new T.MeshStandardMaterial({color: '#1d1b1b', roughness: .7}), alcantara = new T.MeshStandardMaterial({color: '#262628', roughness: .95});
-    const red = new T.MeshStandardMaterial({color: '#6e1414', roughness: .6}), carbon = new T.MeshStandardMaterial({color: '#141619', roughness: .35, metalness: .5});
-    const alu = new T.MeshStandardMaterial({color: '#9aa0a6', roughness: .3, metalness: .9});
-    const box = (m, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => { const b = new T.Mesh(new T.BoxGeometry(sx, sy, sz), m); b.position.set(x, y, z); b.rotation.set(rx, ry, rz); g.add(b); return b; };
-    const zD = D.GZ1 - .08, eyeZ = -.3;                                 // dash face, driver's eye
-    this.eye = [.35, .97, eyeZ];
-    const wIn = z => D.halfW(z) - .1;
-    // Dash: a long leather top running to the windshield, carbon lower face.
-    box(leather, 0, .76, zD - .16, wIn(zD) * 1.7, .14, .46, -.1);
-    box(carbon, 0, .58, zD - .34, wIn(zD) * 2 - .1, .26, .06);
-    box(leather, .36, .86, zD - .3, .36, .1, .22, -.35);                  // binnacle hood
-    // The tach on the binnacle (world.js hands over its dial canvas).
-    this.cluster = new T.Mesh(new T.PlaneGeometry(.24, .24), new T.MeshBasicMaterial({color: '#ffffff', transparent: true, toneMapped: false}));
-    this.cluster.position.set(.36, .8, zD - .37); this.cluster.rotation.y = Math.PI; this.cluster.rotation.x = -.18; g.add(this.cluster);
-    // Centre console, a gear lever, a screen.
-    box(carbon, 0, .44, eyeZ + .1, .24, .22, 1.1);
-    box(alu, 0, .6, eyeZ + .28, .03, .14, .03, .2);
-    box(leather, 0, .68, eyeZ + .32, .05, .05, .05);
-    const screen = box(new T.MeshStandardMaterial({color: '#0b1a24', emissive: '#1a4a66', emissiveIntensity: .8, roughness: .2}), 0, .74, zD - .38, .22, .13, .01, -.3);
-    void screen;
-    // Steering wheel on its column.
-    this.wheel = new T.Group(); this.wheel.position.set(.36, .78, eyeZ + .44); this.wheel.rotation.x = -.35; g.add(this.wheel);
-    const rim = new T.Mesh(new T.TorusGeometry(.17, .018, 10, 32), leather); this.wheel.add(rim);
-    for (const a of [0, Math.PI * .5, Math.PI]) { const sp = new T.Mesh(new T.BoxGeometry(.15, .022, .02), carbon); sp.position.set(Math.cos(a + Math.PI) * .075, Math.sin(a + Math.PI) * .075, 0); sp.rotation.z = a; this.wheel.add(sp); }
-    const hub = new T.Mesh(new T.CylinderGeometry(.045, .05, .04, 16), carbon); hub.rotation.x = Math.PI / 2; this.wheel.add(hub);
-    const mark = new T.Mesh(new T.BoxGeometry(.02, .025, .025), new T.MeshStandardMaterial({color: '#ffcf1f'})); mark.position.set(0, .17, 0); this.wheel.add(mark);
-    for (const s of [-1, 1]) { const pad = new T.Mesh(new T.BoxGeometry(.012, .07, .03), alu); pad.position.set(s * .12, .12, -.02); this.wheel.add(pad); }   // shift paddles
-    box(carbon, .36, .72, eyeZ + .62, .07, .07, .36, -.35);              // column
-    // Bucket seats.
-    for (const x of [.36, -.36]) {
-      box(red, x, .3, eyeZ - .05, .5, .1, .5);
-      box(red, x, .64, eyeZ - .33, .5, .7, .1, -.22);
-      for (const s of [-1, 1]) box(leather, x + s * .24, .62, eyeZ - .3, .06, .6, .14, -.22);   // bolsters
-      box(red, x, 1.04, eyeZ - .42, .26, .16, .08, -.22);                 // head rest
-    }
-    // Door cards, below the side glass.
-    for (const s of [-1, 1]) {
-      const z0 = D.GZ0 + .1, z1 = zD - .1, zc = (z0 + z1) / 2, x = s * (wIn(zc) - .02);
-      const top = Math.min(D.belt(z0), D.belt(z1)) - .02;
-      box(leather, x, (.3 + top) / 2, zc, .05, top - .3, z1 - z0);
-      box(alu, x - s * .03, .72, zc + .2, .02, .02, .18);                 // handle
-      box(carbon, x - s * .01, top, zc, .07, .03, z1 - z0);               // sill top
-    }
-    // Headliner and pillars: the roof from inside.
-    {
-      // Headliner: one curved panel under the roof, dropping at its edges.
-      const z0 = D.GZ0 + .3, z1 = D.GZ1 - .5, nz = 16, nx = 10, pos = [], idx = [];
-      for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) {
-        const z = z0 + (z1 - z0) * j / nz, u = i / nx * 2 - 1, hw = .56;
-        pos.push(u * hw, D.roof(z) - .045 - u * u * .07, z);
-      }
-      for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i; idx.push(a, a + nx + 1, a + 1, a + 1, a + nx + 1, a + nx + 2); }
-      const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
-      const liner = new T.Mesh(geo, new T.MeshStandardMaterial({color: '#48464a', roughness: .95, side: T.DoubleSide})); g.add(liner);
-    }
-    for (const s of [-1, 1]) {
-      const a = [s * (wIn(zD) - .02), .8, zD - .02], b = [s * .5, D.roof(D.GZ1 - .45) - .04, D.GZ1 - .45];
-      const d = new T.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]), L = d.length();
-      const p = new T.Mesh(new T.CylinderGeometry(.035, .045, L, 8), alcantara);
-      p.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2); p.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize()); g.add(p);
-      box(alcantara, s * .52, (D.roof(D.GZ0 + .45) + .82) / 2, D.GZ0 + .38, .08, D.roof(D.GZ0 + .45) - .82, .14);   // B/C pillar
-    }
-    box(carbon, 0, D.roof(D.GZ1 - .42) - .09, D.GZ1 - .5, .18, .05, .01);        // mirror
-    // Rear bulkhead with a slot window onto the engine cover.
-    box(leather, 0, .52, D.GZ0 + .22, 1.0, .5, .04);
-    // Floor and footwell, so looking down is not the road.
-    box(carbon, 0, .2, (D.GZ0 + zD) / 2, 1.2, .02, zD - D.GZ0);
-    this.vehicle.object.add(g);
-    return g;
   }
 
   /* ------------------------------------------------------------ per frame */
@@ -261,16 +182,13 @@ export class CarFx {
       this.sigMat.right.emissiveIntensity = on && (this.signal === 'right' || this.signal === 'hazard') ? 4 : 0;
       this.signalOn = on;
     }
-    // Cockpit: the wheel turns with the steering; the cluster shows the tach.
-    if (this.interior) {
-      this.interior.visible = cockpit || !!this._keep; this.cockpit.value = cockpit ? 1 : 0;
-      if (cockpit) {
-        this.wheel.rotation.z = steer * 8.5;
-        if (dialCanvas) {
-          if (!this.cluster.material.map) { this.cluster.material.map = new T.CanvasTexture(dialCanvas); this.cluster.material.map.colorSpace = T.SRGBColorSpace; this.cluster.material.needsUpdate = true; }
-          this.cluster.material.map.needsUpdate = true;
-        }
-      }
+    // Cabin: the wheel turns with the steering; the cluster shows the tach
+    // (only re-uploaded from the driver's seat); the mood light is brighter at night.
+    if (this.wheel) this.wheel.rotation.z = steer * 8.5;
+    if (this.ambient) this.ambient.level.value = .3 + (1 - Math.min(1, Math.max(0, day))) * .7;
+    if (this.cluster && dialCanvas && (cockpit || !this.cluster.material.map)) {
+      if (!this.cluster.material.map) { this.cluster.material.map = new T.CanvasTexture(dialCanvas); this.cluster.material.map.colorSpace = T.SRGBColorSpace; this.cluster.material.color.set('#ffffff'); this.cluster.material.needsUpdate = true; }
+      this.cluster.material.map.needsUpdate = true;
     }
   }
 }

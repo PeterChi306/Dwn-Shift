@@ -85,3 +85,12 @@ body.on-foot .world-dash,body.on-foot .world-signals{opacity:0;pointer-events:no
 #world .world-homes button.chosen{border-color:#d0e0ac;background:#53674780}
 
 .world-underwater{position:fixed;inset:0;z-index:51;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(ellipse at 50% 30%,#3fb5cf55,#0b4a6ad9 75%);backdrop-filter:blur(3px) saturate(1.3)}body.underwater .world-underwater{opacity:1}
+
+.world-models{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 4px}
+#worldPanel .world-model{display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;padding:14px 14px 12px}
+#worldPanel .world-model b{font-weight:500;font-size:14px;letter-spacing:.02em}
+#worldPanel .world-model small{font-size:10px;opacity:.6;letter-spacing:.04em}
+#worldPanel .world-model.chosen{border-color:rgba(228,243,187,.8);background:rgba(228,243,187,.1)}
+.world-sub{font-size:9px;letter-spacing:2px;font-weight:500;opacity:.55;margin:18px 0 0}
+#worldPanel .world-paint i.glow{box-shadow:0 0 10px 1px var(--paint),inset 0 0 3px rgba(255,255,255,.6)}
+@media(max-width:700px){.world-models{grid-template-columns:1fr 1fr}}
