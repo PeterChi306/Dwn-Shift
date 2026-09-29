@@ -16,7 +16,8 @@
  *            rises at night.
  */
 import * as T from 'three';
-import {instancedDynamicBufferAttribute, uv, vec3, vec4, float, smoothstep, mix, uniform, sin, time} from 'three/tsl';
+import {Cluster} from './carCluster.js';
+import {instancedDynamicBufferAttribute, uv, vec3, vec4, float, smoothstep, mix, uniform, sin, time, attribute, step} from 'three/tsl';
 
 const SMOKE = 700, FIRE = 96;
 
@@ -31,7 +32,8 @@ export class CarFx {
     this.buildSignals();
     // The cabin is part of the body (carModels.js): the driver's eye, the wheel, the cluster.
     const cab = vehicle.body?.interior;
-    this.interior = cab?.group || null; this.eye = cab?.eye; this.wheel = cab?.wheel; this.cluster = cab?.cluster;
+    this.interior = cab?.group || null; this.eye = cab?.eye; this.wheel = cab?.wheel; this.cluster = cab?.cluster; this.clock = cab?.clock;
+    this.gauges = cab?.cluster ? new Cluster(cab.cluster, cab.clusterStyle || 'plain') : null;
     this.ambient = vehicle.body?.ambient;
     this.tmp = new T.Vector3(); this.tmp2 = new T.Vector3();
   }
@@ -108,6 +110,22 @@ export class CarFx {
 
   /* ------------------------------------------------------------ signals */
   buildSignals() {
+    const S = this.vehicle.body?.signals;
+    if (S) {
+      // Model-built lamps (light guides on the skin): an amber that sweeps along
+      // each lamp's `seq` (0 at its inner end) at the start of every flash.
+      const mk = () => {
+        const m = new T.MeshStandardNodeMaterial({color: '#3a2204', roughness: .25, metalness: .1});
+        const on = uniform(0), phase = uniform(1);
+        m.emissiveNode = vec3(1, .5, .06).mul(on).mul(step(attribute('seq', 'float'), phase)).mul(5);
+        m.userData = {on, phase}; return m;
+      };
+      this.sigMat = {left: mk(), right: mk()}; this.sigMeshes = [];
+      for (const side of ['left', 'right']) for (const g of S[side]) {
+        const mesh = new T.Mesh(g, this.sigMat[side]); this.vehicle.body.group.add(mesh); this.sigMeshes.push(mesh);
+      }
+      return;
+    }
     const D = this.dims; if (!D?.signals) return;
     const mk = () => new T.MeshStandardMaterial({color: '#6a3a05', emissive: '#ffa21a', emissiveIntensity: 0, roughness: .3, toneMapped: false});
     this.sigMat = {left: mk(), right: mk()}; this.sigMeshes = [];
@@ -138,7 +156,7 @@ export class CarFx {
   }
 
   /* ------------------------------------------------------------ per frame */
-  update(dt, {car, state, day, cockpit, steer, dialCanvas}) {
+  update(dt, {car, state, day, cockpit, steer, dialCanvas, hour = null, info = null, beam = false}) {
     this.day.value = day;
     const o = this.vehicle.object, v = car.body.linvel(), speed = Math.hypot(v.x, v.z);
     // Smoke from each tyre that is sliding, spinning or locked.
@@ -178,17 +196,38 @@ export class CarFx {
           if (this.turnAcc > .9 && Math.abs(steer) < .04) { this.signal = null; }
         }
       }
-      this.sigMat.left.emissiveIntensity = on && (this.signal === 'left' || this.signal === 'hazard') ? 4 : 0;
-      this.sigMat.right.emissiveIntensity = on && (this.signal === 'right' || this.signal === 'hazard') ? 4 : 0;
+      const L = on && (this.signal === 'left' || this.signal === 'hazard'), Rt = on && (this.signal === 'right' || this.signal === 'hazard');
+      if (this.sigMat.left.userData.on) {
+        // Sequential: the sweep runs through the first 0.2 s of each flash.
+        const ph = Math.min(1.05, (this.blink % .66) / .2 * 1.05);
+        this.sigMat.left.userData.on.value = L ? 1 : 0; this.sigMat.right.userData.on.value = Rt ? 1 : 0;
+        this.sigMat.left.userData.phase.value = this.sigMat.right.userData.phase.value = ph;
+      } else {
+        this.sigMat.left.emissiveIntensity = L ? 4 : 0;
+        this.sigMat.right.emissiveIntensity = Rt ? 4 : 0;
+      }
       this.signalOn = on;
     }
     // Cabin: the wheel turns with the steering; the cluster shows the tach
     // (only re-uploaded from the driver's seat); the mood light is brighter at night.
-    if (this.wheel) this.wheel.rotation.z = steer * 8.5;
+    // steer > 0 is a left turn; seen from the seat (looking +z) the rim then turns
+    // anticlockwise, which about the wheel's own +z axis is a negative angle.
+    if (this.wheel) {
+      const a = steer * (this.wheel.userData.ratio || 8.5);
+      this.wheel.rotation.z = -a;
+      const badge = this.wheel.userData.badge; if (badge) badge.rotation.z = a;
+    }
+    // The dashboard clock keeps the game's time (hands turn clockwise as the driver sees them).
+    if (this.clock && hour !== null) { this.clock.h.rotation.z = (hour % 12) / 12 * Math.PI * 2; this.clock.m.rotation.z = (hour % 1) * Math.PI * 2; }
     if (this.ambient) this.ambient.level.value = .3 + (1 - Math.min(1, Math.max(0, day))) * .7;
-    if (this.cluster && dialCanvas && (cockpit || !this.cluster.material.map)) {
-      if (!this.cluster.material.map) { this.cluster.material.map = new T.CanvasTexture(dialCanvas); this.cluster.material.map.colorSpace = T.SRGBColorSpace; this.cluster.material.color.set('#ffffff'); this.cluster.material.needsUpdate = true; }
-      this.cluster.material.map.needsUpdate = true;
+    // The cluster: only redrawn while someone could read it (from the seat, or the car is near and visible).
+    if (this.gauges && (cockpit || this.vehicle.object.visible)) {
+      const s = state || {}, mph = s.units === 'mph', v = Math.abs(s.v || 0) * (mph ? 2.23694 : 3.6);
+      const gear = s.mode === 'auto' ? (s.autoSel === 'D' ? String(s.autoGear || 1) : s.autoSel || 'P') : String(s.gear || 'N');
+      const L = this.signalOn && (this.signal === 'left' || this.signal === 'hazard'), Rt = this.signalOn && (this.signal === 'right' || this.signal === 'hazard');
+      const h = hour ?? 12, clock = `${String(Math.floor(h) % 24).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
+      this.gauges.update(dt, {speed: v, units: mph ? 'mph' : 'kmh', maxSpeed: mph ? info?.mphMax : info?.kmhMax, rpm: s.rpm || 0, red: info?.max, gear,
+        left: L, right: Rt, beam, brake: !!car.handbrake || s.autoSel === 'P', engine: !s.engineOn || !!s.celOn, tc: Math.abs(car.rearSlip || 0) > .09 && (s.in?.gas || 0) > .3, clock});
     }
   }
 }

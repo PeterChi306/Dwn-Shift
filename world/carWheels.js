@@ -12,7 +12,8 @@
  */
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {positionLocal, atan, fract, float, smoothstep, vec3, mix, abs, length, step} from 'three/tsl';
+import {positionLocal, atan, fract, float, smoothstep, vec3, mix, abs, length, step, floor, hash, max} from 'three/tsl';
+import {sweep, superLoop} from './carKit.js';
 
 const X = new T.Matrix4().makeRotationZ(-Math.PI / 2);     // lathe/cylinder axis y -> x
 
@@ -44,20 +45,31 @@ function spoke(a, r0, r1, w0, w1, depth, x0, dish, twist = 0) {
 
 const STYLE = {
   aero:    {width: [.265, .315], rim: .272, spokes: 10, pair: true, rimColor: '#0b0c0e', rimRough: .22, rimMetal: .6, caliper: '#1f47ff', rotor: .19, tyreR: 1, wall: 0},
-  lux:     {width: [.255, .275], rim: .27, spokes: 7, pair: true, rimColor: '#dfe3e8', rimRough: .06, rimMetal: 1, caliper: '#1a1a1c', rotor: .19, tyreR: 1, wall: 0},
+  lux:     {width: [.255, .275], rim: .3, spokes: 7, pair: true, rimColor: '#e4e7eb', rimRough: .05, rimMetal: 1, caliper: '#23252a', rotor: .2, tyreR: 1, wall: 0},
   classic: {width: [.165, .165], rim: .19, spokes: 0, rimColor: '#e8e4da', rimRough: .45, rimMetal: .1, caliper: null, rotor: .12, tyreR: 1, wall: 1},
   rugged:  {width: [.275, .275], rim: .26, spokes: 6, pair: false, rimColor: '#3a3d42', rimRough: .35, rimMetal: .8, caliper: '#8a0c10', rotor: .18, tyreR: 1, wall: 0},
 };
 
 export function buildWheels(wheels, radius, style = 'aero', {coarse = false} = {}) {
   const S = STYLE[style], seg = coarse ? 16 : 48;
-  const tyreMat = new T.MeshStandardNodeMaterial({color: '#161718', roughness: .88});
-  // A faint lettered band and tread on the tyre, from the local position.
+  const tyreMat = new T.MeshStandardNodeMaterial({color: '#111214', roughness: .86});
   {
-    const P = positionLocal, rr = length(P.yz), ang = atan(P.z, P.y);
-    const tread = step(.5, fract(ang.mul(40 / Math.PI))).mul(step(radius * .985, rr)).mul(.35);
-    const band = S.wall ? smoothstep(.004, 0, abs(rr.sub(radius * .8)).sub(radius * .065)) : float(0);
-    tyreMat.colorNode = mix(vec3(.022, .023, .024).mul(float(1).sub(tread)), vec3(.86, .85, .82), band);
+    // Tread: circumferential grooves and shoulder sipes. Sidewall: two arcs of
+    // raised lettering (blocky glyph strokes), or a whitewall on the classic.
+    const P = positionLocal, rr = length(P.yz), ang = atan(P.z, P.y), ax = abs(P.x), hwT = S.width[0] / 2;
+    const onTread = step(radius * .975, rr);
+    const groove = max(smoothstep(.007, .003, abs(ax.sub(hwT * .38))), smoothstep(.006, .002, ax)).mul(onTread);
+    const sipe = step(fract(ang.mul(58 / Math.PI)), .12).mul(step(hwT * .55, ax)).mul(onTread);
+    const r0 = S.rim + (radius - S.rim) * .42, bandH = (radius - S.rim) * .26, v = rr.sub(r0).div(bandH);
+    const inBand = step(0, v).mul(step(v, 1));
+    const turn = fract(ang.div(Math.PI * 2).add(1)), arc = max(step(abs(turn.sub(.25)), .085), step(abs(turn.sub(.75)), .085));
+    const u = ang.mul(64 / Math.PI), cell = floor(u), fu = fract(u);
+    const glyph = step(.35, hash(cell.mul(7.13).add(floor(v.mul(3)).mul(1.7)))).mul(step(.18, fu)).mul(step(fu, .82)).max(step(abs(v.sub(.5)), .09).mul(step(.5, hash(cell.mul(3.1)))));
+    const letters = S.wall ? float(0) : inBand.mul(arc).mul(glyph).mul(step(ax, hwT * 1.02)).mul(step(hwT * .7, ax));
+    const white = S.wall ? smoothstep(.004, 0, abs(rr.sub(radius * .8)).sub(radius * .065)) : float(0);
+    const base = vec3(.018, .019, .02).mul(float(1).sub(groove.mul(.6)).sub(sipe.mul(.35)));
+    tyreMat.colorNode = mix(mix(base, vec3(.07, .072, .075), letters), vec3(.86, .85, .82), white);
+    tyreMat.roughnessNode = float(.86).sub(letters.mul(.25)).sub(step(rr, radius * .97).mul(.08));
   }
   const D = T.DoubleSide;
   const rimMat = new T.MeshPhysicalMaterial({color: S.rimColor, roughness: S.rimRough, metalness: S.rimMetal, clearcoat: style === 'aero' ? 1 : 0, clearcoatRoughness: .1, side: D});
@@ -94,14 +106,24 @@ export function buildWheels(wheels, radius, style = 'aero', {coarse = false} = {
       const list = [];
       for (let i = 0; i < n; i++) {
         const a = i / n * Math.PI * 2;
-        if (S.pair) for (const o of [-1, 1]) list.push(spoke(a + o * (style === 'lux' ? .085 : .065), hub + .01, rim - .012, .026, style === 'lux' ? .02 : .016, .02, face, style === 'aero' ? .05 : .025, o * .004));
+        if (S.pair) for (const o of [-1, 1]) list.push(style === 'lux' ? spoke(a + o * .075, hub + .012, rim - .006, .034, .028, .026, face, .035, o * .006) : spoke(a + o * .065, hub + .01, rim - .012, .026, .016, .02, face, .05, o * .004));
         else list.push(spoke(a, hub, rim - .01, .075, .058, .035, face, .03));
       }
       spin.push([merged(list), rimMat]);
       // Hub: a cone with a centre-lock nut (aero) or a badge (lux).
       spin.push([lathe([[hub + .01, face - .03], [hub, face + .004], [.035, face + .012], [.001, face + .018]], coarse ? 12 : 32), rimMat]);
-      if (style === 'aero') { const nut = new T.CylinderGeometry(.03, .03, .03, 6); nut.applyMatrix4(X); nut.translate(face + .02, 0, 0); spin.push([nut, calMat]); }
-      if (style === 'lux') { const b = new T.CylinderGeometry(.034, .034, .008, 24); b.applyMatrix4(X); b.translate(face + .018, 0, 0); still.push([b, new T.MeshStandardMaterial({color: '#0c0d14', roughness: .2, metalness: .8})]); }
+      if (style === 'aero') {
+        // Centre-lock: a hex nut on a blue collar.
+        spin.push([lathe([[.001, face + .03], [.024, face + .03], [.028, face + .024], [.028, face + .006]], 6), chrome]);
+        spin.push([lathe([[.036, face + .004], [.036, face + .01], [.028, face + .012]], 32), calMat]);
+      }
+      if (style === 'lux') {
+        // A self-righting centre cap (it does not spin): dark enamel, chrome ring, the double-S.
+        const enamel = new T.MeshPhysicalMaterial({color: '#0d0f1c', roughness: .15, metalness: .3, clearcoat: 1});
+        still.push([lathe([[.001, face + .02], [.036, face + .02], [.04, face + .016]], 40), enamel]);
+        still.push([lathe([[.036, face + .021], [.041, face + .019], [.042, face + .012]], 40), chrome]);
+        for (const k of [-1, 1]) { const t = new T.TorusGeometry(.011, .0022, 6, 24, Math.PI * 1.25).rotateZ(k > 0 ? Math.PI * .25 : -Math.PI * .75).rotateY(Math.PI / 2); t.translate(face + .022, k * .0055, 0); still.push([t, chrome]); }
+      }
       if (style === 'rugged') for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, bolt = new T.CylinderGeometry(.009, .009, .02, 6); bolt.applyMatrix4(X); bolt.translate(face + .01, Math.cos(a) * .05, Math.sin(a) * .05); spin.push([bolt, chrome]); }
     }
     // Brake: rotor with a hat, and the caliper at the back-top of it (still).
@@ -109,9 +131,11 @@ export function buildWheels(wheels, radius, style = 'aero', {coarse = false} = {
       const rot = lathe([[S.rotor * .45, .02], [S.rotor, .02], [S.rotor, -.02], [S.rotor * .45, -.02]], seg);
       rot.translate(hw * .2, 0, 0); spin.push([rot, rotorMat]);
       if (calMat) {
-        const cal = new T.CylinderGeometry(S.rotor + .02, S.rotor + .02, .075, 16, 1, false, 0, 1.0);
-        cal.applyMatrix4(X); cal.rotateX(w.front ? -.35 : Math.PI - .65); cal.translate(hw * .2 + .01, 0, 0);
-        still.push([cal, calMat]);
+        // Caliper: a rounded block swept round the rotor's edge, behind the axle.
+        const c0 = w.front ? -.6 : .6, rc = S.rotor - .012, xc = hw * .2 + .012;
+        const arc = Array.from({length: 17}, (_, i) => { const a = c0 - .42 + .84 * i / 16; return [xc, Math.cos(a) * rc, Math.sin(a) * rc]; });
+        still.push([sweep(arc, () => superLoop(.024, .038, 4, 16), {up: [1, 0, 0]}), calMat]);
+        if (style === 'aero') still.push([sweep(arc.slice(4, 13).map(([x, y, z]) => [x + .039, y, z]), () => superLoop(.0012, .006, 4, 8), {up: [1, 0, 0]}), new T.MeshStandardMaterial({color: '#f4f6f8', roughness: .4})]);
       }
     }
     // Merge per material, then mirror the right-hand wheels.

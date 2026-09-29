@@ -73,7 +73,8 @@ let yaw = +(q.get('yaw') ?? 35) * Math.PI / 180, pitch = +(q.get('pitch') ?? 12)
 let steer = 0;
 window.lab = {
   build, T, scene, camera,
-  view(y, p, d, ty = .6, fov = 32) { yaw = y * Math.PI / 180; pitch = p * Math.PI / 180; dist = d; target.y = ty; camera.fov = fov; camera.updateProjectionMatrix(); cockpit = false; },
+  view(y, p, d, ty = .6, fov = 32, tz = 0, tx = 0) { yaw = y * Math.PI / 180; pitch = p * Math.PI / 180; dist = d; target.set(tx, ty, tz); camera.fov = fov; camera.updateProjectionMatrix(); cockpit = false; },
+  signal(mode) { fx.setSignal(mode); },
   seat(on = true, lookYaw = 0, lookPitch = -8) { cockpit = on; this.lookYaw = lookYaw; this.lookPitch = lookPitch; },
   night(on) { night = on; },
   steer(v) { steer = v; },
@@ -100,7 +101,8 @@ renderer.setAnimationLoop(now => {
   const dim = night ? .03 : 1;
   key.intensity = (studio ? 2.2 : 3) * dim; hemi.intensity = .5 * dim; scene.environmentIntensity = night ? .05 : 1;
   if (current.body) { current.body.head.emissiveIntensity = night ? 2.2 : .6; current.body.tail.emissiveIntensity = night ? .9 : .45; }
-  fx.update(dt, {car: fakeCar, state: {}, day: night ? 0 : 1, night: night ? 1 : 0, cockpit, steer});
+  fx.update(dt, {car: fakeCar, state: {}, day: night ? 0 : 1, night: night ? 1 : 0, cockpit, steer, hour: 10.14});
+  if (current.body.grille) current.body.grille.emissiveIntensity = night ? .55 : 0;
   o.visible = true;
   if (cockpit && fx.eye) {
     const e = fx.eye; camera.fov = 70; camera.updateProjectionMatrix();

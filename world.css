@@ -94,3 +94,6 @@ body.on-foot .world-dash,body.on-foot .world-signals{opacity:0;pointer-events:no
 .world-sub{font-size:9px;letter-spacing:2px;font-weight:500;opacity:.55;margin:18px 0 0}
 #worldPanel .world-paint i.glow{box-shadow:0 0 10px 1px var(--paint),inset 0 0 3px rgba(255,255,255,.6)}
 @media(max-width:700px){.world-models{grid-template-columns:1fr 1fr}}
+
+body.in-cockpit .world-dash{opacity:0;pointer-events:none;transition:opacity .3s}
+.world-dash{transition:opacity .3s}

@@ -131,15 +131,21 @@ export function carMaterials({paint = '#0c0d10', accent = '#1e4cff', flake = .6,
   m.gloss = new T.MeshPhysicalMaterial({color: '#08090a', roughness: .12, metalness: .3, clearcoat: 1, clearcoatRoughness: .05});
   m.carbon = new T.MeshPhysicalNodeMaterial({roughness: .3, metalness: .35, clearcoat: 1, clearcoatRoughness: .06});
   m.carbon.colorNode = carbonNode();
-  m.chrome = new T.MeshStandardMaterial({color: '#d4d7db', roughness: .08, metalness: 1});
-  m.satin = new T.MeshStandardMaterial({color: '#8d9298', roughness: .32, metalness: .9});
+  m.chrome = new T.MeshStandardMaterial({color: '#d4d7db', roughness: .08, metalness: 1, side: T.DoubleSide});
+  m.satin = new T.MeshStandardMaterial({color: '#8d9298', roughness: .32, metalness: .9, side: T.DoubleSide});
   m.rubber = new T.MeshStandardMaterial({color: '#141515', roughness: .85});
   m.accent = new T.MeshPhysicalMaterial({color: accent, roughness: .25, metalness: .5, clearcoat: 1});
-  m.head = new T.MeshStandardMaterial({color: '#dfe9f5', emissive: '#e8f2ff', emissiveIntensity: .6, roughness: .2, toneMapped: false});
+  m.head = new T.MeshStandardMaterial({color: '#dfe9f5', emissive: '#e8f2ff', emissiveIntensity: .6, roughness: .2, toneMapped: false, side: T.DoubleSide});
   m.tail = new T.MeshStandardMaterial({color: '#5a0508', emissive: '#ff1a1f', emissiveIntensity: .45, roughness: .3, toneMapped: false});
   m.tail.name = 'Brake LED'; m.head.name = 'Headlight LED';
   m.lens = new T.MeshPhysicalMaterial({color: '#0d1114', metalness: .1, roughness: .03, clearcoat: 1, clearcoatRoughness: .02, envMapIntensity: 2});
   m.lamp = new T.MeshPhysicalMaterial({color: '#10161d', metalness: .2, roughness: .02, clearcoat: 1, clearcoatRoughness: .02, envMapIntensity: 2, transparent: true, opacity: .55});
+  m.reverse = new T.MeshStandardMaterial({color: '#d9dde2', emissive: '#f4f7ff', emissiveIntensity: 0, roughness: .15, toneMapped: false});
+  m.grille = new T.MeshStandardMaterial({color: '#050506', emissive: '#fff1dc', emissiveIntensity: 0, roughness: .85, metalness: 0});
+  m.mirror = new T.MeshStandardMaterial({color: '#9aa3ad', roughness: .02, metalness: 1});
+  // Titanium exhaust: straw to blue heat tint along the tip.
+  m.ti = new T.MeshPhysicalNodeMaterial({metalness: 1, roughness: .22, clearcoat: .5, side: T.DoubleSide});
+  m.ti.colorNode = mix(mix(vec3(.72, .72, .74), vec3(.8, .6, .3), smoothstep(.15, .5, uv().y)), vec3(.28, .3, .78), smoothstep(.5, .95, uv().y));
   m.redLens = new T.MeshPhysicalMaterial({color: '#2a0205', metalness: .1, roughness: .05, clearcoat: 1, envMapIntensity: 1.6});
   m.amberLens = new T.MeshPhysicalMaterial({color: '#6a3a05', metalness: .1, roughness: .1, clearcoat: 1});
   m.vent = new T.MeshStandardNodeMaterial({roughness: .6, metalness: .3, side: T.DoubleSide});
@@ -177,7 +183,7 @@ export {step, abs};
  * }
  */
 export function loftBody(spec, wheels, radius, mats, {coarse = false} = {}) {
-  const DZ = coarse ? .16 : .045, PER = coarse ? 2 : 3, GDZ = coarse ? .14 : .04, PQ = coarse ? .4 : 1;
+  const DZ = coarse ? .16 : .035, PER = coarse ? 2 : 4, GDZ = coarse ? .14 : .04, PQ = coarse ? .4 : 1;
   const wx = Math.max(...wheels.map(w => Math.abs(w.x)));
   const zf = Math.max(...wheels.map(w => w.z)), zr = Math.min(...wheels.map(w => w.z)), wy = wheels[0].y;
   const R = spec.archR ?? radius + .12;
@@ -301,14 +307,20 @@ export function loftBody(spec, wheels, radius, mats, {coarse = false} = {}) {
   // first/last loops are open; close them so no slot shows at the base.
   add(capGeometry(gRows[0], [0, 0, -1]), mats.paint);
   add(capGeometry(gRows[gRows.length - 1], [0, 0, 1]), mats.glass);
+  const base = parts.length;              // the loft's own parts; details come after
 
   /** Merge every part into one mesh per material (a handful of draw calls). */
   const finish = () => {
     const byMat = new Map();
     const push = (m, g) => { (byMat.get(m) || byMat.set(m, []).get(m)).push(g); };
-    for (const [g, m] of parts) {
+    for (const p of parts) {
+      const [g, m] = p;
       // The dealer fleet (coarse) leaves out the small parts: nobody sees them from the road.
-      if (coarse && !Array.isArray(m)) { g.computeBoundingBox(); if (g.boundingBox.getSize(new T.Vector3()).length() < .16) continue; }
+      // Beyond the loft itself it keeps only big, simple parts (the grille frame, the wing, the splitter).
+      if (coarse && !Array.isArray(m) && parts.indexOf(p) >= base) {
+        g.computeBoundingBox(); const tris = (g.index ? g.index.count : g.attributes.position.count) / 3;
+        if (g.boundingBox.getSize(new T.Vector3()).length() < .3 || tris > 600) continue;
+      }
       let src = g.index ? g.toNonIndexed() : g.clone();
       for (const k of Object.keys(src.attributes)) if (!['position', 'normal', 'uv'].includes(k)) src.deleteAttribute(k);
       if (!src.attributes.normal) src.computeVertexNormals();
@@ -331,6 +343,21 @@ export function loftBody(spec, wheels, radius, mats, {coarse = false} = {}) {
     return group;
   };
 
+  /** A point `lift` metres proud of the skin at (z, t, side). */
+  const onSkin = (z, t, side = 1, lift = 0) => { const p = skinPoint(z, t, side), n = skinNormal(z, t, side); return [p[0] + n[0] * lift, p[1] + n[1] * lift, p[2] + n[2] * lift]; };
+  /** Turn-signal parts, lit by carFx (not merged): `seq` runs 0..1 along dir for the sequential sweep. */
+  const signals = {left: [], right: []};
+  const signal = (side, g, dir = null) => {
+    g = g.index ? g.toNonIndexed() : g;
+    const p = g.attributes.position, seq = new Float32Array(p.count);
+    if (dir) {
+      let lo = Infinity, hi = -Infinity; const v = i => p.getX(i) * dir[0] + p.getY(i) * dir[1] + p.getZ(i) * dir[2];
+      for (let i = 0; i < p.count; i++) { lo = Math.min(lo, v(i)); hi = Math.max(hi, v(i)); }
+      for (let i = 0; i < p.count; i++) seq[i] = (v(i) - lo) / Math.max(1e-6, hi - lo);
+    }
+    g.setAttribute('seq', new T.BufferAttribute(seq, 1));
+    signals[side > 0 ? 'left' : 'right'].push(g);
+  };
   const dims = {Z0, Z1, GZ0, GZ1, zf, zr, wx, wy, R, roof, halfW, deck, belt, sill, gw, rw, gBase};
-  return {group, add, place, box, patch, skinPoint, skinNormal, tAt, finish, dims, mats, coarse, halfW, belt, deck, sill, sillBase, roof, gw, rw, gBase, zf, zr, wx, wy, R, Z0, Z1, GZ0, GZ1};
+  return {group, add, place, box, patch, skinPoint, skinNormal, onSkin, signal, signals, tAt, finish, dims, mats, coarse, halfW, belt, deck, sill, sillBase, roof, gw, rw, gBase, zf, zr, wx, wy, R, Z0, Z1, GZ0, GZ1};
 }

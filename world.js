@@ -319,6 +319,8 @@ function render(now){requestAnimationFrame(render);if(!active)return;const dt=Ma
  // Body and wheels straight from the physics: pitch, roll and suspension travel included.
  const r=car.rotation;vehicle.object.position.copy(position);vehicle.object.quaternion.set(r.x,r.y,r.z,r.w);vehicle.object.updateMatrixWorld();
  const cam=onFoot?CAMS[0]:CAMS[cameraMode];vehicle.object.visible=onFoot||!cam.hood;
+ // From the driver's seat the car's own cluster is the instrument: the screen dial steps aside.
+ {const inCab=!!cam.cockpit&&!onFoot;if(inCab!==render.inCab){render.inCab=inCab;document.body.classList.toggle('in-cockpit',inCab);}}
  vehicle.wheels.forEach((w,i)=>{const ws=car.wheelState(i);w.pivot.position.y=w.y+car.rest-ws.length;w.pivot.rotation.y=ws.steering;w.spin.rotation.x=ws.rotation;});
  updateCamera(dt,s,position,forward,cam);
  {const n=nightUniform?.value??0;
@@ -329,9 +331,9 @@ function render(now){requestAnimationFrame(render);if(!active)return;const dt=Ma
   const p=onFoot?walker.pos:position;soundscape.update(dt,{on:onFoot,x:p.x,y:p.y,z:p.z,yaw:onFoot?walkYaw:heading,day:sky.last?.day??1,night:n,sources:places?.kit?.sounds,indoor:onFoot?indoor:0});
   life?.update(dt,{camera,day:sky.last?.day??1,night:n});
   for(const L of fireLights){const d=camera.position.distanceTo(L.position);L.intensity=n>.12&&d<180?n*(26+7*Math.sin(simTime*13.1)+5*Math.sin(simTime*7.3+1)+4*Math.sin(simTime*23.7+2)):0;}}
- carFx?.update(dt,{car,state:s,day:sky.last?.day??1,cockpit:!!cam.cockpit&&!onFoot,steer,dialCanvas:$('worldSpeedometer')});if(carFx){$('worldSigL').classList.toggle('on',carFx.signalOn&&(carFx.signal==='left'||carFx.signal==='hazard'));$('worldSigR').classList.toggle('on',carFx.signalOn&&(carFx.signal==='right'||carFx.signal==='hazard'));}
+ carFx?.update(dt,{car,state:s,info:drive.car,beam:!!(sky.night||s.tunnel),hour:clockSeconds/3600,day:sky.last?.day??1,cockpit:!!cam.cockpit&&!onFoot,steer,dialCanvas:$('worldSpeedometer')});if(carFx){$('worldSigL').classList.toggle('on',carFx.signalOn&&(carFx.signal==='left'||carFx.signal==='hazard'));$('worldSigR').classList.toggle('on',carFx.signalOn&&(carFx.signal==='right'||carFx.signal==='hazard'));}
  tunnelMix+=((s.tunnel?1:0)-tunnelMix)*(1-Math.exp(-dt*(s.tunnel?1.8:2.6)));const tunnel=tunnelMix>.5;stream.update(onFoot?walker.pos.x:x,onFoot?walker.pos.z:z);plants?.update(camera.position.x,camera.position.z);displayCars?.update(camera.position.x,camera.position.z);sky.update(x,z,simTime,clockSeconds/3600);sky.applyLighting({sun,hemi,fog:scene.fog,position,tunnel:tunnelMix});{const n=Math.min(1,Math.max(0,(.24-sky.last.day)/.2));if(buildingMats)buildingMats.night.value=n;if(nightUniform)nightUniform.value=n;if(npcs)npcs.night=Math.max(n,tunnelMix);}
- if(vehicle.body){const braking=s.in.brake>.05||s.brake>.1||(s.v<-.2&&s.autoSel==='R');vehicle.body.tail.emissiveIntensity=braking?3.2:sky.night||tunnel?.9:.45;vehicle.body.head.emissiveIntensity=sky.night||tunnel?2.2:.6;}
+ if(vehicle.body){const braking=s.in.brake>.05||s.brake>.1||(s.v<-.2&&s.autoSel==='R');vehicle.body.tail.emissiveIntensity=braking?3.2:sky.night||tunnel?.9:.45;vehicle.body.head.emissiveIntensity=sky.night||tunnel?2.2:.6;if(vehicle.body.reverse)vehicle.body.reverse.emissiveIntensity=s.autoSel==='R'?2.6:0;if(vehicle.body.grille)vehicle.body.grille.emissiveIntensity=sky.night||tunnel?.55:0;}
  head.position.copy(position).addScaledVector(forward,2).add(V(0,.7,0));head.target.position.copy(position).addScaledVector(forward,35);head.intensity=sky.night||tunnel?90:0;
  pipeline.render();frames++;if(now-fpsTime>1000){fps=Math.round(frames*1000/(now-fpsTime));fpsTime=now;frames=0;}if(now-lastHud>60){hud();lastHud=now;}
 }
