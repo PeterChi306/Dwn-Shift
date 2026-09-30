@@ -54,19 +54,23 @@ lerp = lambda a, b, t: a + (b - a) * t
 
 # ------------------------------------------------------------------ the car
 ZF, ZR, WX, WR = 1.41, -1.41, .91, .365          # wheel centres and radius (carModels.js)
-Z0, Z1 = ZR - .95, ZF + 1.06                     # tail, nose
-GZ0, GZ1 = ZR + .26, ZF - .55                    # canopy rear and windshield base
-R = WR + .075                                    # arch opening: a tight hypercar arch
+# Profiles fitted (2026-09-30) to Peter's image-to-3D Aurora (aurora_car.glb, scaled to this
+# wheelbase) with tools/blender/ref_measure.py + ref_overlay.py: lower and flatter than the
+# first cut, a short tail under an overhanging wing, a long nose and a forward windshield.
+Z0, Z1 = ZR - .78, ZF + 1.12                     # tail, nose
+GZ0, GZ1 = ZR + .26, ZF - .43                    # canopy rear and windshield base
+R = WR + .055                                    # arch opening: a tight hypercar arch
 
-W = curve([(Z0, .86), (Z0 + .12, .985), (-2.0, 1.065), (ZR, 1.10), (-1.0, 1.075), (-.72, 1.0), (-.35, .958), (.3, .955), (.72, .975),
-           (ZF - .38, 1.035), (ZF, 1.06), (1.86, 1.035), (2.2, .955), (Z1 - .1, .8), (Z1, .7)])
-SILL = curve([(Z0, .3), (Z0 + .2, .27), (Z0 + .45, .23), (-1.0, .2), (0, .19), (1.95, .19), (Z1 - .3, .2), (Z1, .205)])
-BELT = curve([(Z0, .78), (Z0 + .1, .925), (-2.0, .99), (ZR, 1.02), (-1.02, .985), (-.74, .915), (-.4, .84), (.3, .82), (.66, .835),
-              (1.0, .89), (ZF, .95), (1.82, .905), (2.12, .79), (Z1 - .1, .6), (Z1, .47)])
-HOOD = curve([(Z0, .79), (Z0 + .1, .9), (-2.1, .955), (-1.6, .975), (GZ0, .985), (0, .9), (GZ1, .8), (1.2, .715), (ZF, .675),
-              (2.0, .6), (Z1 - .1, .52), (Z1, .465)])
-ROOF = curve([(GZ0, .99), (-.85, 1.055), (-.45, 1.115), (-.12, 1.135), (.18, 1.115), (.48, 1.01), (GZ1, .8)])
-GW, RW = .785, .52                               # canopy half-widths at its base and roof shoulder
+# The arches flare 4-8 cm past the reference so they cover the game's tyres (outer edge x 1.04 front, 1.07 rear).
+W = curve([(Z0, .87), (Z0 + .1, 1.01), (-1.85, 1.08), (ZR, 1.105), (-1.0, 1.065), (-.72, .98), (-.45, .915), (.35, .905), (.62, .94),
+           (1.0, 1.02), (ZF - .1, 1.07), (1.6, 1.065), (1.9, 1.01), (2.1, .95), (2.3, .84), (Z1 - .08, .7), (Z1, .6)])
+SILL = curve([(Z0, .24), (Z0 + .2, .2), (Z0 + .45, .165), (-1.0, .15), (0, .15), (1.95, .15), (Z1 - .3, .16), (Z1, .17)])
+BELT = curve([(Z0, .74), (Z0 + .1, .83), (-1.85, .865), (-1.6, .9), (ZR, .925), (-1.1, .9), (-.8, .86), (-.5, .8), (.3, .775), (.66, .8),
+              (1.0, .84), (ZF, .83), (1.65, .79), (1.85, .72), (2.05, .6), (Z1 - .1, .5), (Z1, .44)])
+HOOD = curve([(Z0, .8), (Z0 + .1, .93), (-1.95, .995), (-1.6, 1.015), (GZ0, 1.035), (0, .9), (GZ1, .87), (1.25, .8), (1.45, .78),
+              (1.65, .74), (1.85, .69), (2.05, .61), (2.25, .52), (Z1 - .1, .45), (Z1, .42)])
+ROOF = curve([(GZ0, 1.05), (-.85, 1.09), (-.45, 1.147), (-.15, 1.168), (.15, 1.162), (.4, 1.13), (.6, 1.06), (.8, .97), (GZ1, .88)])
+GW, RW = .77, .48                                # canopy half-widths at its base and roof shoulder
 
 def arch(z):
     y = -1
@@ -101,7 +105,7 @@ NH = 14
 def sweep(z, x):
     """Stations near the ends bend back at the sides, so the nose and tail are round in plan."""
     w = W(z); u = min(1, abs(x) / w) ** 2
-    return z - .13 * smooth(Z1 - .55, Z1, z) * u + .09 * smooth(Z0 + .45, Z0, z) * u
+    return z - .09 * smooth(Z1 - .55, Z1, z) * u + .09 * smooth(Z0 + .45, Z0, z) * u
 def ring(z):
     h = half_section(z)
     return [(x, y) for x, y in h] + [(-x, y) for x, y in reversed(h[:-1])]
@@ -423,6 +427,10 @@ def build_parts(parts, ends):
                     V.append(G(x, WR + math.sin(a) * (R - .012), zc + math.cos(a) * (R - .012)))
             for i in range(A): F.append([2 * i, 2 * i + 1, 2 * i + 3, 2 * i + 2])
             out.append(mesh_obj(f'Liner{zc}{s}', V, F, 'black'))
+    # Side skirts: carbon wedges between the arches, growing out of the rocker to a blade edge.
+    for s in (1, -1):
+        sk = round_poly([(s * .8, .13), (s * .95, .13), (s * .965, .143), (s * .95, .157), (s * .86, .215), (s * .8, .215)], .006, 2)
+        ob = extrude2d(f'Skirt{s}', sk, ZR + R + .03, ZF - R - .03, 'carbon', axis='z'); bevel(ob, .003, 2); out.append(ob)
     fl = [G(.86, .16, Z0 + .3), G(-.86, .16, Z0 + .3), G(-.86, .16, Z1 - .35), G(.86, .16, Z1 - .35)]
     out.append(mesh_obj('Floor', fl, [[0, 1, 2, 3]], 'black', False))
     # Tail: reversing lamps and titanium exhausts through the honeycomb, a diffuser under the tail.
@@ -449,7 +457,8 @@ def build_parts(parts, ends):
             up.append((-x * c, th * c + cam)); lo.append((-x * c, -th * c + cam))
         pts = up + lo[::-1][1:-1]
         return [(z * math.cos(a) - y * math.sin(a) + dz, z * math.sin(a) + y * math.cos(a) + dy) for z, y in pts]
-    wz, wy, span = Z0 + .36, 1.3, 1.96
+    # The wing sits low, level with the roof's rear, and overhangs the tail.
+    wz, wy, span = Z0 + .15, .99, 1.72
     for nm, pts in (('Wing', foil(.36, .12, -.14, wz, wy)), ('Flap', foil(.13, .1, -.55, wz - .33, wy + .07))):
         ob = extrude2d(nm, pts, -span / 2, span / 2, 'carbon'); bevel(ob, .003, 2); out.append(ob)
     for s in (1, -1):
@@ -461,7 +470,7 @@ def build_parts(parts, ends):
     # Mirrors: teardrop pods on stalks.
     for s in (1, -1):
         mz = .56; h = half_section(mz); bx, by = h[6][0] * s, h[6][1]
-        pod = (bx + s * .2, by + .13, mz - .02)
+        pod = (bx + s * .15, by + .11, mz - .02)
         bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=1)
         ob = bpy.context.active_object; ob.name = f'Mirror{s}'; ob.scale = (.062, .115, .036); ob.location = G(*pod)
         ob.data.materials.append(MATS['paint']); bpy.ops.object.shade_smooth(); out.append(ob)
@@ -478,7 +487,7 @@ def build_parts(parts, ends):
         col = 1 if s > 0 else len(tail[0]) - 2
         pts = [game(tail[k][col]) for k in (0, 1, 2)]
         out.append(tube(f'signal{side}rear', [G(x, y, z - .012) for x, y, z in pts], .008, 'head'))
-        out.append(tube(f'signal{side}mirror', [G(bx_ + s * .0, 0, 0) for bx_ in ()] or [G(s * (half_section(.56)[6][0] + .2 + .05), half_section(.56)[6][1] + .105, .6), G(s * (half_section(.56)[6][0] + .2 + .062), half_section(.56)[6][1] + .12, .5)], .004, 'head'))
+        out.append(tube(f'signal{side}mirror', [G(bx_ + s * .0, 0, 0) for bx_ in ()] or [G(s * (half_section(.56)[6][0] + .15 + .05), half_section(.56)[6][1] + .085, .6), G(s * (half_section(.56)[6][0] + .15 + .062), half_section(.56)[6][1] + .1, .5)], .004, 'head'))
     return out
 # ------------------------------------------------------------------ scene
 def subdivide(ob, levels=2):
