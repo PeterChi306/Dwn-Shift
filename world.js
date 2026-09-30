@@ -8,7 +8,7 @@ import {makeMaterials} from './world/materials.js';
 import {Stream} from './world/stream.js';
 import {Sky} from './world/sky.js';
 import {createPhysics,Car} from './world/vehicle.js';
-import {makePlayerCar} from './world/cars.js';
+import {makePlayerCar} from './world/cars.js';import {preloadCars} from './world/carModels.js';
 import {PAINTS,AMBIENTS} from './world/carBody.js';
 import {MODELS,modelById,modelForSound} from './world/carModels.js';
 import {Autopilot} from './world/autopilot.js';
@@ -55,7 +55,7 @@ const clock=()=>`${String(Math.floor(clockSeconds/3600)%24).padStart(2,'0')}:${S
 function notify(message){$('worldToast').textContent=message;$('worldToast').classList.remove('quiet');clearTimeout(notify.timer);notify.timer=setTimeout(()=>$('worldToast').classList.add('quiet'),4200);}
 /** The loading screen: a step and a share of the bar, painted before the next heavy step runs. */
 async function boot(pct,step){window.__bootStarted?.();const f=document.getElementById('bootFill'),t=document.getElementById('bootStep');if(f)f.style.width=pct+'%';if(t)t.textContent=step;await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));}
-async function init(){try{
+async function init(){try{await preloadCars();
  await boot(6,'Reading the road network…');
  const t0=performance.now();
  // Workers for bulk ground heights (plant seating), warming up while the page builds.

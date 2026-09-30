@@ -23,6 +23,10 @@ import * as T from 'three';
 import {loftBody, carMaterials, shutLines, gap, step, abs, tube} from './carBody.js';
 import {buildWheels} from './carWheels.js';
 import {auroraSpec, auroraBody, auroraCabin} from './cars/aurora.js';
+import {preloadAurora, auroraGlbReady, auroraGlbBody} from './cars/auroraGlb.js';
+
+/** Load the Blender-built bodies (await before the first buildModel). */
+export const preloadCars = () => preloadAurora();
 import {sovereignSpec, sovereignBody, sovereignCabin} from './cars/sovereign.js';
 import {Cabin, makeAmbient, rbox, prism, tubeAlong, place, steeringWheel, clusterScreen, starHeadliner, headlinerGeometry} from './carInterior.js';
 
@@ -221,7 +225,7 @@ export const MODELS = [
       'carreragt', 'strada', 'motomachi', 'huracan', 'f458', 'cavallino', 'hexen', 'zuffen', 'veleno', 'f12tdf', 'fiorano599', 'tempest3k'],
     wheels: wheelsAt(.91, .91, 1.41, -1.41, .365), mass: 1390,
     spec: auroraSpec,
-    details: auroraBody, cabin: auroraCabin, mats: {accent: '#1e4cff', flake: .55, paintRough: .26, glassTint: '#070a0e', glassOpacity: .74},
+    details: auroraBody, glb: {ready: auroraGlbReady, body: auroraGlbBody}, cabin: auroraCabin, mats: {accent: '#1e4cff', flake: .55, paintRough: .26, glassTint: '#070a0e', glassOpacity: .74},
   },
   {
     id: 'sovereign', name: 'Sovereign', tag: 'luxury saloon · starlight roof', paint: '#16181d', ambient: '#ffd6a0', wheelStyle: 'lux',
@@ -294,8 +298,10 @@ export function buildModel(id, {paint = null, ambient = null, coarse = false} = 
   const mats = carMaterials({paint: paint || model.paint, ...model.mats});
   const K = loftBody(model.spec({zf, zr}), wheelsSpec, radius, mats, {coarse});
   const amb = makeAmbient(ambient || model.ambient);
-  const extra = model.details(K, mats, amb, coarse);
-  const group = K.finish();
+  // The Blender body when it has loaded (the dealer fleet gets its light LOD).
+  const glb = model.glb?.ready(coarse);
+  const extra = glb ? model.glb.body(K, mats, coarse) : model.details(K, mats, amb, coarse);
+  const group = glb ? extra.group : K.finish();
   const wheels = buildWheels(wheelsSpec, radius, model.wheelStyle, {coarse});
   let interior = null;
   if (!coarse) { interior = model.cabin(K, amb); interior.group.add(interior.wheel); group.add(interior.group); }

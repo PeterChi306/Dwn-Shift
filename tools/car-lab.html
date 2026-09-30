@@ -22,7 +22,8 @@ import * as T from 'three';
 import {pass} from 'three/tsl';
 import {bloom} from 'three/addons/tsl/display/BloomNode.js';
 import {makePlayerCar} from '../world/cars.js';
-import {MODELS} from '../world/carModels.js';
+import {MODELS, preloadCars} from '../world/carModels.js';
+await preloadCars();
 import {CarFx} from '../world/carFx.js';
 
 const q = new URLSearchParams(location.search);
