@@ -48,10 +48,19 @@ const STYLE = {
   lux:     {width: [.255, .275], rim: .3, spokes: 7, pair: true, rimColor: '#e4e7eb', rimRough: .05, rimMetal: 1, caliper: '#23252a', rotor: .2, tyreR: 1, wall: 0},
   classic: {width: [.165, .165], rim: .19, spokes: 0, rimColor: '#e8e4da', rimRough: .45, rimMetal: .1, caliper: null, rotor: .12, tyreR: 1, wall: 1},
   rugged:  {width: [.275, .275], rim: .26, spokes: 6, pair: false, rimColor: '#3a3d42', rimRough: .35, rimMetal: .8, caliper: '#8a0c10', rotor: .18, tyreR: 1, wall: 0},
+  // The workshop's wheels (2026-10-01): a forged centre-lock five-spoke, a
+  // cross-spoke mesh, and a deep dish with a wide polished lip.
+  forged:  {width: [.28, .335], rim: .278, spokes: 5, pair: false, rimColor: '#a7854b', rimRough: .28, rimMetal: .9, caliper: '#d3191c', rotor: .2, tyreR: 1, wall: 0, lip: 'dark', lock: true},
+  mesh:    {width: [.275, .325], rim: .275, spokes: 10, pair: true, mesh: true, rimColor: '#c7a453', rimRough: .25, rimMetal: .95, caliper: '#1f1f22', rotor: .19, tyreR: 1, wall: 0, lip: 'chrome'},
+  dish:    {width: [.28, .34], rim: .27, spokes: 6, pair: false, rimColor: '#16171a', rimRough: .3, rimMetal: .6, caliper: '#d3191c', rotor: .19, tyreR: 1, wall: 0, lip: 'chrome', face: .38},
 };
+export const WHEEL_STYLES = Object.keys(STYLE);
 
-export function buildWheels(wheels, radius, style = 'aero', {coarse = false} = {}) {
-  const S = STYLE[style], seg = coarse ? 16 : 48;
+export function buildWheels(wheels, radius, style = 'aero', {coarse = false, rimColor = null, caliper = null} = {}) {
+  const S = {...(STYLE[style] || STYLE.aero)}, seg = coarse ? 16 : 48;
+  if (!STYLE[style]) style = 'aero';
+  if (rimColor) S.rimColor = rimColor;
+  if (caliper && S.caliper) S.caliper = caliper;
   const tyreMat = new T.MeshStandardNodeMaterial({color: '#111214', roughness: .86});
   {
     // Tread: circumferential grooves and shoulder sipes. Sidewall: two arcs of
@@ -73,7 +82,7 @@ export function buildWheels(wheels, radius, style = 'aero', {coarse = false} = {
   }
   const D = T.DoubleSide;
   const rimMat = new T.MeshPhysicalMaterial({color: S.rimColor, roughness: S.rimRough, metalness: S.rimMetal, clearcoat: style === 'aero' ? 1 : 0, clearcoatRoughness: .1, side: D});
-  const lipMat = style === 'aero' ? new T.MeshStandardMaterial({color: '#2a2d31', roughness: .25, metalness: .9, side: D}) : style === 'rugged' ? new T.MeshStandardMaterial({color: '#b7bcc2', roughness: .18, metalness: 1, side: D}) : rimMat;
+  const lipMat = style === 'aero' || S.lip === 'dark' ? new T.MeshStandardMaterial({color: '#2a2d31', roughness: .25, metalness: .9, side: D}) : style === 'rugged' || S.lip === 'chrome' ? new T.MeshStandardMaterial({color: '#c9cdd2', roughness: .08, metalness: 1, side: D}) : rimMat;
   const chrome = new T.MeshStandardMaterial({color: '#d6d9dd', roughness: .07, metalness: 1, side: D});
   const rotorMat = new T.MeshStandardNodeMaterial({color: '#6c6f72', roughness: .45, metalness: .85});
   {
@@ -102,17 +111,20 @@ export function buildWheels(wheels, radius, style = 'aero', {coarse = false} = {
       spin.push([lathe([[rim - .004, hw * .9], [rim * .86, hw * .86], [rim * .78, hw * .74]], seg), chrome]);
       spin.push([lathe([[rim * .56, hw * .73], [rim * .5, hw * .86], [rim * .32, hw * .96], [.001, hw * 1.0]], seg), chrome]);
     } else {
-      const n = S.spokes, face = hw * .86, hub = style === 'rugged' ? .085 : .06;
+      const n = S.spokes, face = hw * (S.face || .86), hub = style === 'rugged' ? .085 : .06;
+      // A deep dish: the spoke face sits far back, a wide polished lip out front.
+      if (S.face) spin.push([lathe([[rim - .004, hw * .9], [rim - .03, hw * .86], [rim - .05, hw * .62], [rim - .052, face + .01]], seg), lipMat]);
       const list = [];
       for (let i = 0; i < n; i++) {
         const a = i / n * Math.PI * 2;
-        if (S.pair) for (const o of [-1, 1]) list.push(style === 'lux' ? spoke(a + o * .075, hub + .012, rim - .006, .034, .028, .026, face, .035, o * .006) : spoke(a + o * .065, hub + .01, rim - .012, .026, .016, .02, face, .05, o * .004));
+        if (S.mesh) for (const o of [-1, 1]) list.push(spoke(a + o * .16, hub + .01, rim - .012, .016, .012, .016, face, .03, o * .05));
+        else if (S.pair) for (const o of [-1, 1]) list.push(style === 'lux' ? spoke(a + o * .075, hub + .012, rim - .006, .034, .028, .026, face, .035, o * .006) : spoke(a + o * .065, hub + .01, rim - .012, .026, .016, .02, face, .05, o * .004));
         else list.push(spoke(a, hub, rim - .01, .075, .058, .035, face, .03));
       }
       spin.push([merged(list), rimMat]);
       // Hub: a cone with a centre-lock nut (aero) or a badge (lux).
       spin.push([lathe([[hub + .01, face - .03], [hub, face + .004], [.035, face + .012], [.001, face + .018]], coarse ? 12 : 32), rimMat]);
-      if (style === 'aero') {
+      if (style === 'aero' || S.lock) {
         // Centre-lock: a hex nut on a blue collar.
         spin.push([lathe([[.001, face + .03], [.024, face + .03], [.028, face + .024], [.028, face + .006]], 6), chrome]);
         spin.push([lathe([[.036, face + .004], [.036, face + .01], [.028, face + .012]], 32), calMat]);

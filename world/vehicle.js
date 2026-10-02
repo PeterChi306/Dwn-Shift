@@ -84,6 +84,34 @@ export class Physics {
 
 const FORWARD = new T.Vector3(), Q = new T.Quaternion(), V1 = new T.Vector3(), V2 = new T.Vector3(), V3 = new T.Vector3(), V4 = new T.Vector3(), W1 = new T.Vector3(), W2 = new T.Vector3();
 
+/* Handling modes (2026-10-01): the tyres' shape and how much the electronics
+ * hold the car. The old model let full throttle take 30% of the rear tyres'
+ * sideways grip at any speed, so a small steering tap at 150 km/h under power
+ * left the car 40 degrees off line; and the steering lock was capped so close
+ * to the kinematic angle that the fronts never reached their own peak, which
+ * is why it "barely turned". Measured in tools/handling-lab.mjs.
+ *
+ *   mu*      peak friction (x load), front / rear
+ *   peak*    slip angle (rad) where that peak is reached
+ *   slide*   share of the peak a fully sliding tyre keeps (what holds a drift)
+ *   esc      how firmly the stability program pulls the yaw toward the steering
+ *   tc       traction control: cornering grip comes first, power is cut to fit
+ *            (null = follow the drivetrain's own TC switch)
+ *   hand     rear grip left with the handbrake up
+ *   spinFloor the share of sideways grip a spinning rear tyre still has */
+export const HANDLING = {
+  grip:  {label: 'Grip',       muF: 1.32, muR: 1.42, peakF: .115, peakR: .095, slideF: .86, slideR: .82, esc: 1,   tc: null,  hand: .40, spinFloor: .52, driftAssist: .7},
+  drift: {label: 'Drift',      muF: 1.28, muR: 1.3,  peakF: .12,  peakR: .085, slideF: .92, slideR: .9,  esc: .15, tc: false, hand: .34, spinFloor: .58, driftAssist: 1, drift: true},
+  sim:   {label: 'Simulation', muF: 1.12, muR: 1.18, peakF: .1,   peakR: .09,  slideF: .8,  slideR: .74, esc: .3,  tc: null,  hand: .45, spinFloor: .4,  driftAssist: .3},
+};
+
+/** Normalised tyre curve: rises to 1 at `peak`, then eases to `slide` as it lets go. Signed. */
+export function tyreCurve(a, peak, slide) {
+  const x = Math.abs(a) / peak;
+  const f = x <= 1 ? x * (2 - x) : 1 - (1 - slide) * (1 - Math.exp(-(x - 1) * 1.3));
+  return Math.sign(a) * f;
+}
+
 export class Car {
   /** `wheels`: chassis-space wheel centres from the model, [{x,y,z,front}]. */
   constructor(physics, wheels, {mass = 1500, radius = .35} = {}) {
@@ -96,15 +124,19 @@ export class Car {
     const hw = (maxX - minX) / 2 + .12, hl = (maxZ - minZ) / 2 + .75;
     // Box: the cabin and body above the axles, not down to the road, so the
     // wheels (rays) do the touching and the body only meets walls and kerbs.
-    const collider = R.ColliderDesc.cuboid(hw, .34, hl).setTranslation(0, radius + .42, (minZ + maxZ) / 2)
+    // Centre of mass low, about at the hubs: the arcade-stability trick (a
+    // ray-cast car grips to the limit and would tip over instead of sliding).
+    // NB Rapier reads a collider's mass centre in the COLLIDER's frame: until
+    // 2026-10-01 this was given in the body's frame, which put the centre of
+    // mass 0.88 m up instead of 0.15 — every hard turn lifted the inside
+    // wheels and the car lost half its tyres. Hence "turn a bit and it spins".
+    const comY = .3, colY = radius + .42;
+    const collider = R.ColliderDesc.cuboid(hw, .34, hl).setTranslation(0, colY, (minZ + maxZ) / 2)
       .setFriction(.25).setRestitution(.05)
-      // Centre of mass well below the axles: the classic arcade-stability
-      // trick. A real car's roll moment is damped by tyres that slide first;
-      // a ray-cast car grips to the limit and tips over in a hard turn instead.
-      .setMassProperties(mass, {x: 0, y: .15, z: (minZ + maxZ) / 2},
+      .setMassProperties(mass, {x: 0, y: comY - colY, z: 0},
         {x: mass / 12 * (1.3 ** 2 + (2 * hl) ** 2), y: mass / 12 * ((2 * hw) ** 2 + (2 * hl) ** 2), z: mass / 12 * ((2 * hw) ** 2 + 1.3 ** 2)},
         {w: 1, x: 0, y: 0, z: 0});
-    world.createCollider(collider, this.body);
+    this.collider = world.createCollider(collider, this.body);
 
     const c = world.createVehicleController(this.body);
     c.indexUpAxis = 1;
@@ -117,33 +149,37 @@ export class Car {
       c.setWheelSuspensionRelaxation(i, 5);
       c.setWheelMaxSuspensionTravel(i, .22);
       c.setWheelMaxSuspensionForce(i, 1e5);
-      // Lateral grip is ours (tyreForces): Rapier's side-friction constraint
-      // grips like glue up to a limit and then lets go, with no slip angle
-      // in between, which is why the car felt on rails and then understeered.
+      // Both tyre directions are ours (tyreForces): Rapier's side-friction
+      // constraint grips like glue up to a limit and then lets go.
       c.setWheelFrictionSlip(i, 2.6);
       c.setWheelSideFrictionStiffness(i, 0);
     });
     this.controller = c;
     this.wheels = wheels;
     this.wheelbase = Math.max(2.2, maxZ - minZ);
-    this.com = {x: 0, y: .15, z: (minZ + maxZ) / 2};
+    this.com = {x: 0, y: comY, z: (minZ + maxZ) / 2};
     this.Iyy = mass / 12 * ((2 * hw) ** 2 + (2 * hl) ** 2);
-    // Stability assist, 0..1: a gentle yaw-rate pull toward what the front
-    // wheels ask for (like ESC). The tyres do the work; this only tidies.
-    this.yawAssist = .12;
-    // Tyres: a simplified Pacejka "magic formula" per wheel,
-    //   Fy = mu Fz sin(C atan(B alpha)),
-    // peak near 9 degrees of slip, keeping ~85% of it when sliding, so the
-    // car builds grip progressively, can be balanced on the throttle, and
-    // lets go gradually instead of snapping.
-    this.tyre = {B: 13, C: 1.38, muF: 1.05, muR: 1.12, roll: .1};   // mild understeer: the safe, road-car balance
+    this.yawAssist = .5;           // the stability slider, 0..1: scales the mode's ESC
+    this.setMode('grip');
     this.drive = 'rwd';            // which axle the drivetrain pushes: 'rwd' | 'awd' | 'fwd'
+    this.tc = true;                // the drivetrain's own TC switch (used when the mode says null)
     this.handbrake = 0;
-    this.slip = wheels.map(() => 0);            // per-wheel slip angle (rad), for effects/HUD
+    this.intent = 0;               // the driver's shaped steering input, -1..1 (left +)
+    this.slip = wheels.map(() => 0);            // per-wheel slip angle (rad)
+    this.skid = wheels.map(() => 0);            // per-wheel 0..~1.5: how hard each tyre is sliding/spinning (smoke, squeal)
     this.rearSlip = 0; this.frontSlip = 0;
+    this.beta = 0;                 // body slip angle (rad): + = travelling to the car's left
+    this.frontCourse = 0;          // front axle's direction of travel relative to the nose (rad)
+    this.drifting = 0;             // 0..1, eased: the car is in a held slide
+    this.driveRatio = 1;           // share of the drivetrain's push the tyres could take this step
+    this.rearUse = 0;
     this.lastDrive = 0;
     this.acc = 0;
+    this.handT = 0;                // seconds since the handbrake was last up
   }
+
+  setMode(id) { this.modeId = HANDLING[id] ? id : 'grip'; this.mode = HANDLING[this.modeId]; }
+  get peakF() { return this.mode.peakF; }
 
   place(x, y, z, heading) {
     this.body.setTranslation({x, y: y + .15, z}, true);
@@ -151,7 +187,7 @@ export class Car {
     this.body.setRotation({x: Q.x, y: Q.y, z: Q.z, w: Q.w}, true);
     this.body.setLinvel({x: 0, y: 0, z: 0}, true);
     this.body.setAngvel({x: 0, y: 0, z: 0}, true);
-    this.lastDrive = 0;
+    this.lastDrive = 0; this.drifting = 0; this._lv = null; this.latAcc = 0;
   }
 
   forward(out = FORWARD) {
@@ -170,43 +206,67 @@ export class Car {
     // Parked or held on the brake at a standstill: hold the car on a hill too.
     const hold = Math.abs(state.v) < .05 && (state.brake > .1 || state.autoSel === 'P' || !state.engineOn && !state.powered);
     this.wheels.forEach((w, i) => c.setWheelBrake(i, hold ? 40 : 0));
+    this.handT = this.handbrake ? 0 : this.handT + dt;
+    this.throttle = state.throttle ?? state.in?.gas ?? 0;
     this.acc += dt;
     const steps = Math.min(8, Math.floor(this.acc / world.timestep));
     this.acc -= steps * world.timestep;
     if (steps > 4) this.acc = 0;
+    const accel = dv / Math.max(dt, 1e-3);
+    let ratioSum = 0;
     for (let k = 0; k < steps; k++) {
-      // Traction only through tyres that touch something.
+      c.updateVehicle(world.timestep);
+      this.tyreForces(steer, world.timestep, accel, state);
+      // Traction only through tyres that touch something, and only as much
+      // as they could take (the rest went into wheelspin or a TC cut).
       const grip = this.grounded / this.wheels.length;
       if (grip > 0 && dv) {
-        const f = this.forward(), share = dv / steps * grip;
+        const f = this.forward(), share = dv / steps * grip * (dv > 0 ? this.driveRatio : 1);
         this.body.applyImpulse({x: f.x * share * this.mass, y: f.y * share * this.mass, z: f.z * share * this.mass}, true);
       }
-      c.updateVehicle(world.timestep);
-      this.tyreForces(steer, world.timestep, dv / Math.max(dt, 1e-3), state);
-      if (this.yawAssist && this.grounded >= 3) this.assistYaw(steer, world.timestep);
+      ratioSum += this.driveRatio;
+      if (this.grounded >= 3) this.assistYaw(steer, world.timestep);
       world.step();
     }
+    this.driveRatio = steps ? ratioSum / steps : 1;
     const v = this.body.linvel(), f = this.forward();
     const along = v.x * f.x + v.y * f.y + v.z * f.z;
     if (steps) { state.v = along; this.lastDrive = along; }
+    // The body's slip angle, and where the front axle is actually heading.
+    const r = this.body.rotation(), q = Q.set(r.x, r.y, r.z, r.w), left = V1.set(1, 0, 0).applyQuaternion(q);
+    const lat = v.x * left.x + v.y * left.y + v.z * left.z, sp = Math.hypot(along, lat);
+    const yaw = this.body.angvel().y, a = this.wheels.find(w => w.front)?.z - this.com.z || 1.4;
+    this.beta = sp > 1.5 ? Math.atan2(lat, Math.abs(along)) : 0;
+    this.frontCourse = sp > 1.5 && along > 0 ? Math.atan2(lat + yaw * a, along) : 0;
+    // Sideways acceleration (for the drift assist's sense of the curve).
+    if (this._lv) { const ax = (v.x - this._lv.x) / Math.max(dt, 1e-3), az = (v.z - this._lv.z) / Math.max(dt, 1e-3); const la = ax * left.x + az * left.z; this.latAcc = (this.latAcc || 0) + (la - (this.latAcc || 0)) * Math.min(1, dt * 8); }
+    this._lv = {x: v.x, z: v.z};
+    const want = Math.abs(this.beta) > .14 && sp > 6 ? 1 : 0;
+    this.drifting += (want - this.drifting) * Math.min(1, dt * (want ? 3 : 1.5));
     return along;
   }
 
-  /** Lateral tyre forces, applied at each contact patch every physics step.
-   *  Loads come from the suspension, so weight transfer (braking loads the
-   *  front, a corner loads the outside) changes grip the way it should.
-   *  `accel` is the drivetrain's longitudinal acceleration this frame: it
-   *  uses up the driven tyres' friction circle (power oversteer in a rear-
-   *  driver, heavier front push in a front-driver). */
+  /** Tyre forces at each contact patch, every physics step. Loads come from
+   *  the suspension, so weight transfer changes grip the way it should.
+   *  Sideways: the tyre curve on the slip angle. Lengthways: the drivetrain's
+   *  push (`accel`) shares each driven tyre's friction circle with cornering;
+   *  with TC the cornering wins and the push is cut, without it the push wins
+   *  and the rear lets go (power oversteer), and more than the tyre can take
+   *  is wheelspin. */
   tyreForces(steer, dt, accel, state) {
     const c = this.controller, body = this.body, r = body.rotation(), q = Q.set(r.x, r.y, r.z, r.w);
     const up = V1.set(0, 1, 0).applyQuaternion(q), fwd = V2.set(0, 0, 1).applyQuaternion(q);
     const t = body.translation(), lv = body.linvel(), av = body.angvel();
     const com = V3.set(this.com.x, this.com.y, this.com.z).applyQuaternion(q).add(V4.set(t.x, t.y, t.z));
-    const {B, C, muF, muR} = this.tyre, n = this.wheels.length;
-    const braking = state.brake > .05 || state.in?.brake > .05;
-    let rear = 0, nrear = 0;
+    const M = this.mode, n = this.wheels.length, perAxle = n / 2, Fz0 = this.mass * 9.81 / n;
+    const tc = M.tc === null ? this.tc : M.tc;
+    const braking = (state.brake > .05 || state.in?.brake > .05) && accel < 0;
+    const spinning = (state.spinV || 0) > 1.2;
+    // Downforce from the workshop's aero (carParts.js `aero`, 0..1): up to 12% more grip, growing with speed squared.
+    const aeroK = 1 + (this.aero || 0) * .12 * Math.min(1, (lv.x * lv.x + lv.z * lv.z) / 2500);
+    let rear = 0, nrear = 0, want = 0, got = 0, use = 0;
     this.wheels.forEach((w, i) => {
+      this.skid[i] = 0;
       if (!c.wheelIsInContact(i)) { this.slip[i] = 0; return; }
       const p = c.wheelContactPoint(i), Fz = Math.max(0, c.wheelSuspensionForce(i) ?? 0);
       if (!p || !Fz) return;
@@ -219,21 +279,48 @@ export class Car {
       const vLong = vx * d.x + vy * d.y + vz * d.z, vLat = vx * lat.x + vy * lat.y + vz * lat.z;
       const alpha = Math.atan2(vLat, Math.max(Math.abs(vLong), 2.5));
       this.slip[i] = alpha;
-      let mu = w.front ? muF : muR;
-      if (!w.front && this.handbrake) mu *= .42;          // locked rears: a slide, on purpose
+      // Load sensitivity: a heavily loaded tyre grips less per newton, which
+      // is what makes weight transfer cost the outside pair a little.
+      const load = Math.min(1.08, Math.max(.82, 1 - .09 * (Fz / Fz0 - 1)));
+      let mu = (w.front ? M.muF : M.muR) * load * aeroK;
+      const hand = !w.front && this.handbrake;
+      if (hand) mu *= M.hand;                              // locked rears: a slide, on purpose
       const peak = mu * Fz;
-      // The driven wheels spend some of their circle on traction (or all
-      // four on braking), and have that much less to give sideways.
+      let Fy = -peak * tyreCurve(alpha, w.front ? M.peakF : M.peakR, w.front ? M.slideF : M.slideR);
+      // Lengthways: what the drivetrain or the brakes ask of this tyre.
       const driven = this.drive === 'awd' || (this.drive === 'fwd') === w.front;
-      const perAxle = n / 2;                                 // wheels per axle
-      const share = braking || accel < 0 ? (w.front ? .6 : .4) / perAxle
-        : driven ? (this.drive === 'awd' ? .5 : 1) / perAxle : 0;
-      // Traction control: the drivetrain may use at most 70% of the circle,
-      // so a tyre under full power keeps ~70% of its cornering grip. Without
-      // this a launch left the rears ~20% and any yaw at all became a spin.
-      const Fx = Math.min(Math.abs(accel) * this.mass * share, peak * .7);
-      const avail = Math.sqrt(peak * peak - Fx * Fx);
-      let Fy = -avail * Math.sin(C * Math.atan(B * alpha));
+      let demand = 0;
+      if (braking) demand = -accel * this.mass * (w.front ? .62 : .38) / perAxle;
+      else if (accel > 0 && driven) demand = accel * this.mass * (this.drive === 'awd' ? (w.front ? .4 : .6) : 1) / perAxle;
+      let skid = Math.max(0, Math.abs(alpha) / (w.front ? M.peakF : M.peakR) - .85);
+      if (demand > 0) {
+        if (braking) {
+          // ABS keeps the tyre near its peak; what braking uses, cornering loses.
+          const u = Math.min(.96, demand / peak);
+          Fy *= Math.sqrt(1 - u * u);
+        } else if (tc) {
+          // Cornering first: the push is trimmed by the share of the circle
+          // cornering is using. (Straight-line traction stays the
+          // drivetrain's: cutting the push by demand/peak at a launch made
+          // game.js's clutch read the missing speed as load and bog the engine.)
+          const room = Math.sqrt(Math.max(0, peak * peak - Fy * Fy)) / peak;
+          want += 1; got += Math.max(.25, room);
+        } else {
+          // The push first. Past the peak the tyre spins and keeps only a
+          // floor of its sideways grip, which is the rear stepping out.
+          let u = demand / peak; if (spinning && !w.front) u = Math.max(u, 1.05);
+          use = Math.max(use, u);
+          Fy *= u < 1 ? Math.max(M.spinFloor, Math.sqrt(1 - u * u)) : M.spinFloor * Math.max(.6, 1 - (u - 1) * .25);
+          want += 1; got += 1;
+          skid += Math.max(0, u - .9) * 1.5;
+        }
+      }
+      if (hand) {
+        // Locked: the tyre drags along its own length too.
+        const drag = Math.min(Math.abs(vLong) * this.mass / n / dt * .5, peak * .55) * Math.sign(vLong);
+        body.applyImpulseAtPoint({x: -d.x * drag * dt, y: -d.y * drag * dt, z: -d.z * drag * dt}, p, true);
+        if (Math.abs(vLong) > 2) skid += .7;
+      }
       // Never more than stops this patch's sideways slide within the step
       // (the tyre cannot push the car the other way): keeps it stable at a
       // standstill and at low speed.
@@ -243,34 +330,65 @@ export class Car {
       // Applied at a point lifted toward the centre of mass ('roll influence',
       // as in Bullet's vehicle): full height would roll a car with no anti-
       // roll bars onto its side long before its tyres gave up.
-      const lift = (com.x - p.x) * up.x + (com.y - p.y) * up.y + (com.z - p.z) * up.z, k = 1 - this.tyre.roll;
+      const lift = (com.x - p.x) * up.x + (com.y - p.y) * up.y + (com.z - p.z) * up.z, k = .45;
       const at = {x: p.x + up.x * lift * k, y: p.y + up.y * lift * k, z: p.z + up.z * lift * k};
       body.applyImpulseAtPoint({x: lat.x * Fy * dt, y: lat.y * Fy * dt, z: lat.z * Fy * dt}, at, true);
+      this.skid[i] = Math.min(1.5, skid * Math.max(0, Math.min(1, (Math.hypot(vLong, vLat) - 3) / 5)));
       if (!w.front) { rear += alpha; nrear++; }
     });
+    this.driveRatio = want > 0 ? got / want : 1;
+    this.rearUse = use;              // TC off: how far past its grip the driven tyre is pushed (>1 = wheelspin)
     this.rearSlip = nrear ? rear / nrear : 0;
-    const fr = this.wheels.map((w, i) => w.front ? this.slip[i] : null).filter(v => v !== null);
-    this.frontSlip = fr.length ? fr.reduce((a, b) => a + b, 0) / fr.length : 0;
+    let fs = 0, nf = 0; this.wheels.forEach((w, i) => { if (w.front) { fs += this.slip[i]; nf++; } });
+    this.frontSlip = nf ? fs / nf : 0;
   }
 
-  /** Stability assist: a light pull of the yaw rate toward what the steering
-   *  asks for, within what the tyres could hold. 0 = off. */
+  /** Stability: pulls the yaw rate toward what the driver's input asks of the
+   *  tyres (ESC), firmly once the rear steps out past what the steering wants.
+   *  It stands back while the car is held in a slide on purpose (handbrake,
+   *  drift mode, or traction control off with the throttle in). In drift mode
+   *  it only catches a car that has gone past ~60 degrees. */
   assistYaw(steer, dt) {
     const v = this.body.linvel(), f = this.forward();
     const along = v.x * f.x + v.y * f.y + v.z * f.z;
-    if (Math.abs(along) < 3) return;
-    let target = along * Math.tan(steer) / this.wheelbase;
-    const cap = 11 / Math.abs(along);
-    target = Math.max(-cap, Math.min(cap, target));
-    const r = this.body.rotation(), up = V1.set(0, 1, 0).applyQuaternion(Q.set(r.x, r.y, r.z, r.w));
+    if (along < 3) return;
+    const M = this.mode, r = this.body.rotation(), up = V1.set(0, 1, 0).applyQuaternion(Q.set(r.x, r.y, r.z, r.w));
     const w = this.body.angvel(), yaw = w.x * up.x + w.y * up.y + w.z * up.z;
-    // ESC: once the rear steps out (rear slip past ~3 degrees and more than
-    // the front's) the pull gets much firmer, like a stability program
-    // braking one wheel. It stays out of the way while the car is tidy.
-    const over = Math.abs(this.rearSlip) - Math.abs(this.frontSlip);
-    const esc = Math.max(0, Math.min(1, (Math.abs(this.rearSlip) - .05) / .08)) * (over > 0 ? 1 : .3) * (this.handbrake ? 0 : 1);   // a handbrake slide is on purpose
-    const k = Math.min(1, (this.yawAssist * 6 + esc * 7 * Math.min(1, this.yawAssist * 4 + .4)) * dt), d = (target - yaw) * k;
-    this.body.setAngvel({x: w.x + up.x * d, y: w.y + up.y * d, z: w.z + up.z * d}, true);
+    const beta = this.beta, assist = this.yawAssist * 2;   // slider .5 = the mode's own strength
+    // A slide the driver asked for: the handbrake (and a moment after it),
+    // a drift mode, or the rear spun up with nothing to stop it.
+    const tc = M.tc === null ? this.tc : M.tc;
+    const meant = Math.max(this.handbrake ? 1 : Math.max(0, 1 - this.handT / 1.4), M.drift ? 1 : 0, !tc && this.rearUse > .95 ? .8 : 0);
+    let d = 0;
+    if (M.esc > 0) {
+      const ay = 9.81 * M.muF;
+      let target = tyreCurve(this.intent, 1, 1) * ay / along;
+      const cap = along * Math.tan(.58) / this.wheelbase; target = Math.max(-cap, Math.min(cap, target));
+      const out = Math.max(0, Math.abs(beta) - .06) / .12;              // body slip past ~3.5 degrees
+      const k = M.esc * assist * (2.2 + Math.min(1.5, out) * 9) * (1 - meant * .85);
+      d = (target - yaw) * Math.min(1, k * dt);
+    }
+    // Drift assist: once the car is properly sideways, the driver's hands
+    // and right foot set the ANGLE of the slide rather than the yaw rate —
+    // steering into the corner and throttle open it up, countersteer or a
+    // lift close it, hands off and a lift straightens the car out. That is
+    // what makes a slide holdable on keys instead of a coin toss.
+    const da = M.driftAssist * Math.min(1, this.yawAssist * 2 + .25);
+    if (da > 0 && Math.abs(beta) > .1 && along > 4) {
+      const turn = -Math.sign(beta);                         // the way the car is turning (left +)
+      const into = this.intent * turn, gas = this.throttle;
+      let want = .3 + .32 * into + .3 * (gas - .45);
+      if (Math.abs(this.intent) < .12 && gas < .2) want = 0;  // let go: straighten up
+      want = Math.max(0, Math.min(.85, want));
+      const vel = this.body.linvel(), sp = Math.hypot(vel.x, vel.z);
+      const path = (this.latAcc || 0) / Math.max(sp, 4);    // the yaw rate that just follows the curve
+      const target = turn * (Math.abs(path) + 2.6 * Math.max(-.28, Math.min(.35, want - Math.abs(beta))));
+      d += (target - yaw) * Math.min(1, da * 5 * dt);
+    }
+    // The spin guard: past ~60-70 degrees the nose comes back.
+    const over = Math.abs(beta) - (M.drift ? 1.0 : 1.2);
+    if (over > 0) d += Math.sign(beta) * Math.min(1, over * 4) * 3 * dt * Math.min(1, along / 8) * assist;
+    if (d) this.body.setAngvel({x: w.x + up.x * d, y: w.y + up.y * d, z: w.z + up.z * d}, true);
   }
 
   get position() { return this.body.translation(); }

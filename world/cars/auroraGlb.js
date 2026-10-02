@@ -36,7 +36,13 @@ export function auroraGlbBody(K, M, coarse = false) {
     return gap(P.z, doorF).add(gap(P.z, doorR)).mul(side)
       .add(gap(P.z, zf - .5).mul(step(ax, .5)).mul(step(deck(zf) - .08, P.y)));
   });
-  const byMat = new Map(), signals = {left: [], right: []};
+  // Merged per material AND per swappable part (2026-10-01, the workshop):
+  // the wing, splitter, exhausts, diffuser, skirts and each headlamp stay
+  // separate meshes tagged `userData.part`, so a build can hide or recolour them.
+  const byKey = new Map(), signals = {left: [], right: []};
+  const partOf = n => /^(wing|flap|endplate|neck)/.test(n) ? 'wing' : /^fin/.test(n) ? 'fin' : /^(splitter|splitedge)/.test(n) ? 'splitter'
+    : /^exhaust/.test(n) ? 'exhaust' : /^(diffuser|strake)/.test(n) ? 'diffuser' : /^skirt/.test(n) ? 'skirt' : /^projl?-/.test(n) ? 'lampR' : /^projl?\d/.test(n) ? 'lampL' : null;
+  const put = (m, part, g) => { const k = m.uuid + '|' + (part || ''); (byKey.get(k) || byKey.set(k, {m, part, gs: []}).get(k)).gs.push(g); };
   scene.traverse(o => {
     if (!o.isMesh) return;
     const name = (o.name + ' ' + (o.parent?.name || '')).toLowerCase();
@@ -58,16 +64,33 @@ export function auroraGlbBody(K, M, coarse = false) {
       for (let i = 0; i < p.count; i++) uv[i * 2 + 1] = Math.min(1, Math.max(0, (Z0 + .06 - p.getZ(i)) / .19));
       g.setAttribute('uv', new T.BufferAttribute(uv, 2));
     }
-    (byMat.get(m) || byMat.set(m, []).get(m)).push(g);
+    const lower = o.name.toLowerCase();
+    // The front lamps (the lens and the LED outline) split down the middle, one per side.
+    if (!coarse && (lower === 'lens' || m === M.head && o.parent?.name === 'Body')) {
+      for (const [part, keep] of [['lampL', x => x > 0], ['lampR', x => x <= 0]]) { const h = splitTris(g, keep); if (h) put(m, part, h); }
+      return;
+    }
+    put(m, coarse ? null : partOf(lower), g);
   });
   const group = new T.Group();
-  for (const [m, gs] of byMat) {
+  for (const {m, part, gs} of byKey.values()) {
     for (const g of gs) g.attributes.uv || g.setAttribute('uv', new T.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
     const mesh = new T.Mesh(mergeGeometries(gs), m);
-    mesh.name = m.name || ''; mesh.castShadow = m !== M.glass && m !== M.lamp; mesh.receiveShadow = true;
+    mesh.name = (m.name || '') + (part ? ':' + part : ''); mesh.userData.part = part;
+    mesh.castShadow = m !== M.glass && m !== M.lamp; mesh.receiveShadow = true;
     if (m === M.glass || m === M.lamp) mesh.renderOrder = 1;
     mesh.matrixAutoUpdate = false;
     group.add(mesh);
   }
   return {group, exhausts: [[-.11, .56, Z0 - .12], [.11, .56, Z0 - .12]]};
+}
+
+/** The triangles of a non-indexed geometry whose centroid's x passes `keep`, or null. */
+function splitTris(g, keep) {
+  const P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv, idx = [];
+  for (let t = 0; t < P.count; t += 3) if (keep((P.getX(t) + P.getX(t + 1) + P.getX(t + 2)) / 3)) idx.push(t, t + 1, t + 2);
+  if (!idx.length) return null;
+  const out = new T.BufferGeometry(), pick = (A, n) => { const a = new Float32Array(idx.length * n); idx.forEach((v, i) => { for (let k = 0; k < n; k++) a[i * n + k] = A.array[v * n + k]; }); return new T.BufferAttribute(a, n); };
+  out.setAttribute('position', pick(P, 3)); if (N) out.setAttribute('normal', pick(N, 3)); if (U) out.setAttribute('uv', pick(U, 2));
+  return out;
 }

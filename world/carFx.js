@@ -167,7 +167,9 @@ export class CarFx {
       const burn = car.handbrake && (state.in?.gas || 0) > .6 && speed < 4 && (state.rpm || 0) > 2500 ? 1.3 : 0;
       this.vehicle.wheels.forEach((w, i) => {
         const ws = car.wheelState(i); if (!ws.contact) return;
-        let k = w.front ? front * Math.min(1, speed / 6) + lock * .6 : Math.min(1.4, rear * Math.min(1, speed / 3) + spin + lock + hand + burn);
+        // The tyre's own slide (vehicle.js `skid`): drifts pour smoke off the rears.
+        const sk = car.skid ? Math.max(0, car.skid[i] - .25) * 1.3 : 0;
+        let k = w.front ? Math.max(front * Math.min(1, speed / 6), sk * .6) + lock * .6 : Math.min(1.4, Math.max(rear * Math.min(1, speed / 3), sk) + spin + lock + hand + burn);
         k = Math.min(1.4, k); if (k < .05) return;
         const n = k * dt * 40;
         for (let e = 0; e < n; e += 1) {

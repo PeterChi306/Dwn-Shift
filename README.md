@@ -6,6 +6,14 @@ The supplied Los Santerra map now drives a connected street graph, replacing the
 
 Run `python3 -m http.server 8080 --bind 127.0.0.1` and open `http://127.0.0.1:8080`. See [WORLD.md](WORLD.md) for controls, the reference-map tracing method, Blender sources, validation and current limits. **Drive → Original simulator** returns to the full existing interface.
 
+## Online, the workshop and handling (2026-10-01)
+
+**Play with friends.** Start the game with `python3 play.py --share` (friends on the same Wi-Fi open the address it prints), then **Menu → Online → Create lobby**. The creator is the host and sets traffic, time of day, how time passes, collisions and the car-meet point; up to 10 drivers per lobby. Others join with the 5-letter code, from the open-lobby list, or with the invite link (`?lobby=CODE`). **Enter** opens chat. Plain `python3 play.py` keeps lobbies on this computer. For friends elsewhere, put the server behind a tunnel (e.g. `cloudflared tunnel --url http://localhost:8080`); the lobby WebSocket rides the same address. Everyone needs a WebGPU browser.
+
+**DWN Works** is a real garage on Sunset Boulevard, a few hundred metres from the Strip (Menu → Garage → Travel). Drive into the open bay, stop on the blue ring and press **E**: wings (including an Absolut-style longtail and an Attack boomerang), GT3 splitter and canards, widebody or riveted overfenders, exhausts, headlights (one-eye red laser included), wheels, rim and caliper colours, stance and camber, paint, livery, underglow, engine sound and handling. Presets: GT3 R, Drift Missile, 2,000 HP One-Eye, Absolut. The Aurora is the only player car; every engine fits it.
+
+**Handling** (Menu → Settings): *Grip* (planted, slides on the handbrake), *Drift* (throttle and steering hold the angle), *Simulation* (fewer aids), plus a traction-control switch — off lets a rear-driver step out under power. `node tools/handling-lab.mjs` measures the car headlessly.
+
 An immersive interface driving simulator. Every engine is synthesized in the
 browser — no samples — so each car has its own firing order, its own crank,
 and its own voice.

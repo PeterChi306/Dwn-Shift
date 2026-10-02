@@ -6906,7 +6906,7 @@ function audioTick() {
   // lower, more tonal, and far louder, because there is so much more rubber
   // doing it. `tire` is that difference (1 = road rubber, ~1.6 = slicks).
   const tg = CC.tire || 1;
-  AU.scG.gain.setTargetAtTime(Math.min(0.44 * tg, scAmt * 0.36 * tg) * scAudible, t, 0.04);
+  AU.scG.gain.setTargetAtTime(S.extTyres ? 0 : Math.min(0.44 * tg, scAmt * 0.36 * tg) * scAudible, t, 0.04);
   // the squeal climbs as the rubber shears harder, and never sits still
   // a slide pulls the band DOWN — the wail sits under the scrub, not over it
   AU.scBp.frequency.setTargetAtTime(
@@ -18728,7 +18728,10 @@ window.DwnDrive = {
   pauseAudio(on) { if (AU.ctx) { const operation = on ? AU.ctx.suspend() : AU.ctx.resume(); operation.catch(() => {}); } },
   get audioReady() { return AU.ready; },
   /** The world's sound bus (ambience, footsteps): the context and the ambience input. */
-  get audio() { return AU.ready ? { ctx: AU.ctx, out: AU.amb } : null; },
+  get audio() { return AU.ready ? { ctx: AU.ctx, out: AU.amb, sfx: AU.sfx } : null; },
+  /** The world drives the tyre sounds from its own 3D tyres: mutes the 1D screech. */
+  set extTyres(on) { S.extTyres = !!on; },
+  get inCabin() { return AU.ready ? inCabin() : false; },
   /** On foot: the microphone leaves the car; `r` metres away, `pan` -1..1 to the right. */
   setWalk(w) {
     if (w && !S.walk) { S._listenBefore = S.listen; S.listen = "street"; if (AU.ready) applyListen(); }

@@ -307,5 +307,5 @@ export function buildModel(id, {paint = null, ambient = null, coarse = false} = 
   if (!coarse) { interior = model.cabin(K, amb); interior.group.add(interior.wheel); group.add(interior.group); }
   const dims = {...K.dims, exhausts: extra.exhausts, signals: extra.signals};
   const signals = K.signals.left.length ? K.signals : null;
-  return {group, wheels, paint: mats.paint, head: mats.head, tail: mats.tail, reverse: mats.reverse, grille: mats.grille, glass: mats.glass, dims, signals, ambient: amb, interior, model, radius, mass: model.mass};
+  return {group, wheels, wheelsSpec, mats, paint: mats.paint, head: mats.head, tail: mats.tail, reverse: mats.reverse, grille: mats.grille, glass: mats.glass, dims, signals, ambient: amb, interior, model, radius, mass: model.mass};
 }
