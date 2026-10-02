@@ -75,7 +75,7 @@ function paint(out, i, y, slope, x, z, nz, hill) {
 }
 
 /** Grid arrays for an n x n cell patch at `step` metres, with optional skirt and tunnel holes. */
-export function gridArrays(ground, x0, z0, step, n, extra, {skirt = 0, holes = false} = {}) {
+export function gridArrays(ground, x0, z0, step, n, extra, {skirt = 0, holes = false, grassy = holes} = {}) {
   const m = n + 3, H = new Float32Array(m * m);
   for (let j = 0; j < m; j++) for (let i = 0; i < m; i++) H[j * m + i] = ground.height(x0 + (i - 1) * step, z0 + (j - 1) * step, extra);
   const N = n + 1, count = N * N + (skirt ? 4 * n : 0);
@@ -95,13 +95,13 @@ export function gridArrays(ground, x0, z0, step, n, extra, {skirt = 0, holes = f
     for (let k = 0; k < N * N; k++) hole[k] = ground.tunnelCover(pos[k * 3], pos[k * 3 + 2], pos[k * 3 + 1]);
   // Grass density per grid vertex (detailed tiles only): wild ground, off the
   // road and its verge, off junctions and pads, not on rock-steep slopes.
-  const grass = holes ? new Float32Array(N * N) : null;
+  const grass = grassy ? new Float32Array(N * N) : null;
   if (grass) for (let k = 0; k < N * N; k++) {
     if (wild[k] < .05 || (hole && hole[k])) continue;
     const x = pos[k * 3], z = pos[k * 3 + 2], ny = nor[k * 3 + 1];
     let d = wild[k] * Math.min(1, Math.max(0, (ny - .6) / .12));
     if (d <= 0) continue;
-    const r = ground.model.nearest(x, z);
+    const r = ground.model.nearest(x, z, null, true);
     if (r) d *= Math.min(1, Math.max(0, (r.d - r.h - (VERGE[r.seg.kind] ?? 1.5) - .4) / 2.5));
     if (d > 0) for (const j of ground.model.junctionsNear(x, z)) if (Math.hypot(x - j.x, z - j.z) < j.radius + 4) { d = 0; break; }
     if (d > 0 && ground.onPad(x, z)) d = 0;
@@ -132,8 +132,14 @@ export function gridArrays(ground, x0, z0, step, n, extra, {skirt = 0, holes = f
       col[v * 3] = col[r * 3] * .8; col[v * 3 + 1] = col[r * 3 + 1] * .8; col[v * 3 + 2] = col[r * 3 + 2] * .8; wild[v] = wild[r];
       v++;
     }
+    // A skirt is a curtain hung 6-14 m down from the tile's edge: where that
+    // edge crosses a tunnel it hung straight into the tube as a wall of earth
+    // (the block inside the Cahuenga bore). Not there.
+    const nearTunnel = ground.anyTunnelNear(x0 + n * step / 2, z0 + n * step / 2, n * step);
+    const curtain = nearTunnel ? rim.map(r => (hole && hole[r]) || ground.tunnelCover(pos[r * 3], pos[r * 3 + 2], pos[r * 3 + 1] - skirt) ? 1 : 0) : null;
     for (let k = 0; k < rim.length; k++) {
-      const a = rim[k], b = rim[(k + 1) % rim.length], a2 = base + k, b2 = base + (k + 1) % rim.length;
+      const k2 = (k + 1) % rim.length, a = rim[k], b = rim[k2], a2 = base + k, b2 = base + k2;
+      if (curtain && (curtain[k] || curtain[k2])) continue;
       index.push(a, b, a2, b, b2, a2);
     }
   }
@@ -141,10 +147,12 @@ export function gridArrays(ground, x0, z0, step, n, extra, {skirt = 0, holes = f
     index: new Uint32Array(index), solid: new Uint32Array(solid), vertices: pos.slice(0, N * N * 3), grass};
 }
 
-/** A detailed tile. lod 0 carries physics triangles and tunnel holes. */
+/** A detailed tile. lod 0 carries physics triangles and grass; every lod has
+ *  the tunnel holes (a coarse tile without them plugged the far end of a long
+ *  straight bore with hillside until you drove up to it). */
 export function tileArrays(ground, tx, tz, lod) {
   const step = LOD_STEP[lod], n = TILE / step;
-  return gridArrays(ground, tx * TILE, tz * TILE, step, n, lod ? step * .75 : 0, {skirt: 6 + step, holes: lod === 0});
+  return gridArrays(ground, tx * TILE, tz * TILE, step, n, lod ? step * .75 : 0, {skirt: 6 + step, holes: true, grassy: lod === 0});
 }
 
 /** The 32 m far mesh, in bands. */

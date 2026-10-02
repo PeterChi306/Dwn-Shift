@@ -556,11 +556,17 @@ export class RoadModel {
   near(x, z) { return this.grid.get(Math.floor(x / this.cell) * 65536 + Math.floor(z / this.cell)) || EMPTY; }
 
   /** Nearest road surface to (x, z): which segment, how far, and its deck height. */
-  nearest(x, z, y = null) {
+  /** Is piece i of a segment inside the hill (a bored tunnel stretch)? */
+  buried(seg, i) { return seg.kind === 'tunnel' && !!seg.pts[i].bore && !!seg.pts[i + 1]?.bore; }
+
+  /** Nearest piece; `open` skips bored tunnel stretches (scenery on the hill above). */
+  nearest(x, z, y = null, open = false) {
     const list = this.near(x, z);
     let best = null, score = Infinity;
     for (let k = 0; k < list.length; k += 2) {
-      const seg = this.segments[list[k]], i = list[k + 1], r = projectPiece(seg, i, x, z);
+      const seg = this.segments[list[k]], i = list[k + 1];
+      if (open && this.buried(seg, i)) continue;
+      const r = projectPiece(seg, i, x, z);
       const value = r.d + (y === null ? 0 : Math.max(0, Math.abs(r.y - y) - 2) * 4);
       if (value < score) { score = value; best = {seg, ...r}; }
     }

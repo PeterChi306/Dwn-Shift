@@ -360,7 +360,7 @@ export class Plants {
   street(x, z) {
     const m = this.model;
     for (const j of m.junctionsNear(x, z)) if (Math.hypot(x - j.x, z - j.z) < j.radius + 3) return false;
-    const r = m.nearest(x, z);
+    const r = m.nearest(x, z, null, true);
     if (r && r.d < r.h + .6) return false;
     if (this.buildings.occupied.hasAt(x, z)) return false;
     const key = Math.floor(x / 3) * 100000 + Math.floor(z / 3);

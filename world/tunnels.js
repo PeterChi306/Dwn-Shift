@@ -9,7 +9,10 @@
  *     face with the arch cut out, wide and tall enough to close the hillside
  *     round the tube, with a darker coping band;
  *   - wall colliders (the road ribbon underneath is already solid).
- * Everything is built once at load: there are only a couple of km of bores.
+ * 2026-10-02: one mesh per bore (they are km apart, so each can be culled),
+ * the tunnel's name on a plate over every mouth, and pairs of jet fans
+ * under the crown of the long bores.
+ * Everything is built once at load: there are ~7.5 km of bores.
  */
 import * as T from 'three';
 import {Fn, uv, vec3, float, fract, step, mix, smoothstep, abs, texture, positionWorld} from 'three/tsl';
@@ -17,8 +20,10 @@ import {VERGE} from './roads.js';
 
 const WALL = 4.3, RISE = 2.3, TILE_TOP = 3;          // wall height, arch rise, tiled band
 
+const FAN_EVERY = 180, FAN_MIN = 400;               // jet fan pairs in bores longer than FAN_MIN
+
 export function buildTunnels({model, ground, scene, physics, textures}) {
-  const tubes = {pos: [], nor: [], uv: [], index: []}, portals = [];
+  const tubeList = [], portals = [], fans = [];
   const colliders = {v: [], i: []};
   let bores = 0, length = 0;
   for (const seg of model.segments) {
@@ -38,29 +43,42 @@ export function buildTunnels({model, ground, scene, physics, textures}) {
       const mouth0 = openAt(r0, true), mouth1 = openAt(r1, false);
       // Extend the tube a little out of the hill at each mouth, under the headwall.
       const s0 = Math.max(0, r0 - (mouth0 ? 2 : 0)), s1 = Math.min(seg.L, r1 + (mouth1 ? 2 : 0));
+      const tubes = {pos: [], nor: [], uv: [], index: []};
       tube(model, seg, s0, s1, tubes, colliders);
+      tubeList.push(tubes);
       if (mouth0) portals.push({sec: model.sectionAt(seg, s0), dir: -1, seg});
       if (mouth1) portals.push({sec: model.sectionAt(seg, s1), dir: 1, seg});
+      if (r1 - r0 > FAN_MIN) for (let s = r0 + 120; s < r1 - 100; s += FAN_EVERY) fans.push(model.sectionAt(seg, s));
     }
   }
   const group = new T.Group();
-  if (tubes.index.length) {
+  const tubeMat = tubeMaterial(textures);
+  for (const tubes of tubeList) {
+    if (!tubes.index.length) continue;
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.Float32BufferAttribute(tubes.pos, 3));
     g.setAttribute('normal', new T.Float32BufferAttribute(tubes.nor, 3));
     g.setAttribute('uv', new T.Float32BufferAttribute(tubes.uv, 2));
     g.setIndex(tubes.index);
-    const mesh = new T.Mesh(g, tubeMaterial(textures));
+    g.computeBoundingSphere();
+    const mesh = new T.Mesh(g, tubeMat);
     mesh.receiveShadow = true;
     group.add(mesh);
   }
+  if (fans.length) group.add(jetFans(fans));
   const concrete = new T.MeshStandardNodeMaterial({roughness: .9, metalness: 0, side: T.DoubleSide});
   concrete.colorNode = vec3(.63, .6, .56).mul(textures?.concrete ? texture(textures.concrete.color, positionWorld.xy.add(positionWorld.zy).div(3)).r.mul(.35).add(.72) : float(1));
   const coping = new T.MeshStandardMaterial({color: '#4a4845', roughness: .8, side: T.DoubleSide});
+  const plates = new Map();
   for (const p of portals) {
     const {geo, cap} = portal(p, ground);
     const m = new T.Mesh(geo, concrete); m.castShadow = m.receiveShadow = true; group.add(m);
     const c = new T.Mesh(cap, coping); c.castShadow = true; group.add(c);
+    const name = (p.seg.name || '').toUpperCase();
+    if (name) {
+      if (!plates.has(name)) plates.set(name, namePlate(name));
+      group.add(placePlate(plates.get(name), p));
+    }
     const pos = geo.attributes.position.array, base = colliders.v.length / 3, count = pos.length / 3;
     colliders.v.push(...pos);
     if (geo.index) for (const k of geo.index.array) colliders.i.push(base + k);
@@ -68,7 +86,53 @@ export function buildTunnels({model, ground, scene, physics, textures}) {
   }
   scene.add(group);
   if (physics && colliders.i.length) physics.setMesh('tunnels', new Float32Array(colliders.v), new Uint32Array(colliders.i));
-  return {group, bores, length: Math.round(length), portals: portals.length};
+  return {group, bores, length: Math.round(length), portals: portals.length, fans: fans.length * 2};
+}
+
+/** The tunnel's name, white on dark green, as a canvas-textured plate. */
+function namePlate(name) {
+  const H = 96, ctx0 = document.createElement('canvas').getContext('2d');
+  ctx0.font = '600 58px Outfit, Arial, sans-serif';
+  const W = Math.ceil(ctx0.measureText(name).width + 90);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#1f5a3c'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#e8efe9'; ctx.lineWidth = 5; ctx.strokeRect(9, 9, W - 18, H - 18);
+  ctx.fillStyle = '#f2f5f2'; ctx.font = '600 58px Outfit, Arial, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name, W / 2, H / 2 + 3);
+  const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
+  const mat = new T.MeshStandardMaterial({map: tex, roughness: .6, emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: .12});
+  return {mat, aspect: W / H};
+}
+
+/** A plate on the headwall's outer face, centred over the arch. */
+function placePlate({mat, aspect}, {sec, dir, seg}) {
+  const W = halfOf(seg, sec), h = .95, w = Math.min(2 * W - 1, h * aspect), out = [sec.tx * dir, sec.tz * dir];
+  const mesh = new T.Mesh(new T.PlaneGeometry(w, Math.min(h, w / aspect)), mat);
+  // Right-handed frame facing out of the hill: X = up x out, so the text reads left to right.
+  const m = new T.Matrix4().makeBasis(new T.Vector3(out[1], 0, -out[0]), new T.Vector3(0, 1, 0), new T.Vector3(out[0], 0, out[1]));
+  m.setPosition(sec.x + out[0] * .66, sec.y + WALL + RISE + .62, sec.z + out[1] * .66);
+  mesh.applyMatrix4(m);
+  return mesh;
+}
+
+/** Pairs of jet fans hung under the crown: a drum with a darker intake ring, on a hanger. */
+function jetFans(sections) {
+  const drum = new T.CylinderGeometry(.56, .56, 3.2, 16, 1, false); drum.rotateX(Math.PI / 2);
+  const hanger = new T.BoxGeometry(.12, .7, 1.6); hanger.translate(0, .85, 0);
+  const g = mergeSimple([drum, hanger]);
+  const mat = new T.MeshStandardMaterial({color: '#8d9296', metalness: .6, roughness: .45});
+  const n = sections.length * 2, mesh = new T.InstancedMesh(g, mat, n);
+  const m = new T.Matrix4(), q = new T.Quaternion(), up = new T.Vector3(0, 1, 0), one = new T.Vector3(1, 1, 1);
+  let k = 0;
+  for (const sec of sections) for (const side of [-1, 1]) {
+    q.setFromAxisAngle(up, Math.atan2(sec.tx, sec.tz));
+    const u = side * 2.6;
+    m.compose(new T.Vector3(sec.x + sec.nx * u, sec.y + sec.cs * u + WALL + RISE - 1.25, sec.z + sec.nz * u), q, one);
+    mesh.setMatrixAt(k++, m);
+  }
+  mesh.computeBoundingSphere();
+  return mesh;
 }
 
 /** Half-width of the tube for a section: carriageway, verge, a walkway ledge. */

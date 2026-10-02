@@ -223,7 +223,11 @@ export class Ground {
       // the cutting meets the hill.
       const inTube = r.d < r.h + 1.4 && (m.boredAt(seg, r.s) || m.boredAt(seg, r.s + 1.9) || m.boredAt(seg, r.s - 1.9));
       if (inTube && g > r.y - 1.5 && g < r.y + 7) return 2;
-      if ((seg.pts[i].bore || seg.pts[i + 1].bore) && g > r.y + 2) state = 1;
+      // Over the bore: drawn, but not solid where the hill is thin (portals),
+      // so no triangle cuts into the tube. Deep in the hill (above the crown
+      // with room to spare) it stays solid ground: you can drive and walk over
+      // a long tunnel, and the grass grows there.
+      if ((seg.pts[i].bore || seg.pts[i + 1].bore) && g > r.y + 2 && g < r.y + 11) state = 1;
     }
     return state;
   }

@@ -255,6 +255,7 @@ export class Buildings {
   indexRoads() {
     const C = 16, grid = new Map();
     for (const seg of this.model.segments) for (let i = 0; i < seg.pts.length - 1; i++) {
+      if (this.model.buried(seg, i)) continue;               // a bored tunnel is under the hill, not on it
       const a = seg.pts[i], b = seg.pts[i + 1], pad = Math.max(a.h, b.h) + (VERGE[seg.kind] ?? 2) + 2;
       for (let gx = Math.floor((Math.min(a.x, b.x) - pad) / C); gx <= Math.floor((Math.max(a.x, b.x) + pad) / C); gx++)
         for (let gz = Math.floor((Math.min(a.z, b.z) - pad) / C); gz <= Math.floor((Math.max(a.z, b.z) + pad) / C); gz++) {

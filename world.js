@@ -232,6 +232,7 @@ async function setModel(id){
  car=tuneCar(new Car(physics,vehicle.wheels,{radius:vehicle.body.radius,mass:vehicle.body.mass}));car.place(x,y+.3,z,heading);carFx=new CarFx({scene,vehicle});syncSound();drive.resetMotion();setModel.busy=false;
  notify(modelById(id).name+' · '+modelById(id).tag);}
 function lighting(on){if(on!==isDark(clockSeconds/3600))setTimeOfDay(on?'night':'golden');else syncNight();}
+const audioView={ck:null,r:-1};
 let works=null,inWorks=false,online=null,life=null,fireLights=[],soundscape=new Soundscape(),stepIdx=0,wasSwim=false,airT=0,carWet=false,carWetT=0,indoor=0,indoorT=0,stillT=0,walkYaw=0,fpPitch=0,walker=null,onFoot=false,timing=null,lastExterior=0,carFx=null,places=null,wadeT=0,lastX=0,lastZ=0,flipped=0,tunnelMix=0,displayCars=null,npcs=null,fwySigns=null,parked=null;
 const trafficLabel=d=>d<.02?'Off':d<.3?'Light':d<.6?'Normal':d<.85?'Busy':'Rush hour';
 /** Traffic density 0..1, kept per browser. */
@@ -256,7 +257,7 @@ function botStep(dt,s){
 /** Is there a road deck 3.5-16 m overhead? (an underpass, or under a bridge) */
 function underDeck(px,py,pz){const list=model.near(px,pz);for(let k=0;k<list.length;k+=2){const seg=model.segments[list[k]];if(seg.kind==='tunnel')continue;const i=list[k+1],a=seg.pts[i],b=seg.pts[i+1];const dx=b.x-a.x,dz=b.z-a.z,l2=dx*dx+dz*dz;if(l2<1e-6)continue;const t=Math.max(0,Math.min(1,((px-a.x)*dx+(pz-a.z)*dz)/l2));const d=Math.hypot(px-a.x-dx*t,pz-a.z-dz*t),h=a.h+(b.h-a.h)*t+1,dy=a.y+(b.y-a.y)*t-py;if(d<h&&dy>3.5&&dy<16)return true;}return false;}
 /** The underside of a tunnel roof or road deck over (px, pz) near the road level ry, or null. */
-function roofOver(px,pz,ry){const r=model.nearest(px,pz,ry);if(r&&r.seg.kind==='tunnel'&&r.d<r.h+2.5&&model.boredAt(r.seg,r.s))return r.y+6;if(underDeck(px,ry,pz))return ry+4.4;return null;}
+function roofOver(px,pz,ry){const r=model.nearest(px,pz,ry);if(r&&r.seg.kind==='tunnel'&&r.d<r.h+2.5&&Math.abs(ry-r.y)<4&&model.boredAt(r.seg,r.s))return r.y+6;if(underDeck(px,ry,pz))return ry+4.4;return null;}
 function step(dt){
  if(!active||paused||!loaded)return;simTime+=dt;{const rate=TIME_FLOWS.find(f=>f[0]===timeFlow)[2];if(rate){clockSeconds=(clockSeconds+dt*rate)%86400;if(timeOfDay!=='custom'&&rate>2)timeOfDay='custom';syncNight();}}const s=drive.state;
  let raw=onFoot?0:(keys.has('KeyA')||keys.has('ArrowLeft')?1:0)-(keys.has('KeyD')||keys.has('ArrowRight')?1:0);
@@ -289,7 +290,7 @@ function step(dt){
  // Off the edge of the world, or somehow under it: back to the nearest road.
  if(Math.abs(x)>7600||Math.abs(z)>5050||y<ground.height(x,z)-25){if(bot)bot.metrics.respawns.push([Math.round(x),Math.round(y),Math.round(z)]);spawn();bot?.pilot.attach(x,z,y,heading);}
  // Inside a bored tunnel, or under a deck (an underpass): tunnel light and acoustics.
- const tunnel=(hit?.seg.kind==='tunnel'&&hit.d<hit.h+1&&model.boredAt(hit.seg,hit.s))||underDeck(x,y,z);if(s.tunnel!==tunnel)drive.setTunnel(tunnel);
+ const tunnel=(hit?.seg.kind==='tunnel'&&hit.d<hit.h+1&&Math.abs(y-hit.y)<4&&model.boredAt(hit.seg,hit.s))||underDeck(x,y,z);if(s.tunnel!==tunnel)drive.setTunnel(tunnel);
  npcs?.update(dt,{x,y,z,heading,v:s.v},{x:camera.position.x,z:camera.position.z,fx:Math.sin(cameraHeading),fz:Math.cos(cameraHeading)});parked?.update(dt,{x:camera.position.x,z:camera.position.z},{x,z});
  timing?.update(dt,{x,z,v:s.v,kmh:Math.abs(s.v)*3.6});stillT=Math.abs(s.v)<.5?stillT+dt:0;
  navInfo=nav&&destination?nav.update(dt,{x,z,heading},hit?.edge):null;if(navInfo?.arrived){notify('You have arrived · '+navInfo.arrived);destination=null;navInfo=null;}navPath=nav?.dest?nav.path:[];
@@ -384,6 +385,8 @@ function render(now){requestAnimationFrame(render);if(!active)return;const dt=Ma
  if(hostTravel){const h=lobbyHost(),st=h&&online.sample(h,performance.now()/1000);if(st){hostTravel=false;travelBehind(st,h.name);}}
  if(inWorks){const c=works.camera(dt),o=vehicle.object;camOverride=[o.localToWorld(V(...c.from)).toArray(),o.localToWorld(V(...c.to)).toArray()];}
  updateCamera(dt,s,position,forward,cam);if(inWorks){camera.fov=42;camera.updateProjectionMatrix();blurAmount.value=0;}
+ // The engine's microphone follows the camera: cockpit = driver's seat, cabin sealed; every outside view = outside the car, as far off as the camera is.
+ if(!onFoot){const ck=!!cam.cockpit&&!inWorks,r=ck?0:Math.round(camera.position.distanceTo(position)*2)/2;if(ck!==audioView.ck||Math.abs(r-audioView.r)>.4){audioView.ck=ck;audioView.r=r;drive.setView?.({cockpit:ck,r});}}
  {const L=WORKSHOP.lights;if(L){const d=Math.hypot(camera.position.x-WORKSHOP.x,camera.position.z-WORKSHOP.z),n=sky.night?1:0;for(const l of L)l.intensity=d<120?(inWorks?140:60+n*60):0;}}
  {const n=nightUniform?.value??0;
   if(!soundscape.ready&&drive.audio)soundscape.init(drive.audio);

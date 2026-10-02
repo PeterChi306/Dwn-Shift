@@ -4912,6 +4912,18 @@ const LISTEN = {
              inside: false, eng: 1.1, lo: +2, hi: -1, lp: 16000,
              gain: 1.15, sub: 2.5, subHz: 80, wide: 0.4, haas: 0.015, gas: 0.35,
              pop: 1.5, intake: 0.7, turbo: 1.1, wind: 0 },
+  /* THE CHASE CAMERA (2026-10-02, the world). Every outside view — chase,
+     far chase, hood, bumper, cinematic, helicopter — is a microphone OUTSIDE
+     the car, a few metres off its tail and travelling with it. Before this
+     the world left the ear in the driver's seat whatever the camera did, so
+     the chase view sounded like the inside of the car. Exhaust-forward (you
+     are behind the pipes), the whole body ringing, no cabin, little wind
+     (the mic rides in the car's own slipstream). Distance is the flyby
+     stage's job (S.chase.r), like on foot. */
+  chase:   { name: "CHASE CAMERA", tag: "outside, behind the car: the pipes and the whole body.",
+             inside: false, eng: 1.2, lo: +3.5, hi: +1, lp: 16000,
+             gain: 1.35, sub: 3.5, subHz: 82, wide: 0.42, haas: 0.017, gas: 0.45,
+             pop: 2.0, intake: 0.55, turbo: 1.05, wind: 0.3 },
 };
 
 function ear() { return LISTEN[S.listen] || LISTEN.driver; }
@@ -6327,6 +6339,21 @@ function audioTick() {
     // and more as the direct path lengthens. This gap is heard as depth.
     spPreS = clamp((r / 343) * 0.35, 0.004, 0.09);
   }
+  else if (S.chase && !S.walk) {
+    /* OUTSIDE CAMERAS: the car a few metres ahead and going away from you
+       at your own speed (no Doppler). The same distance cues as on foot,
+       on a gentler law — the chase cam is meant to be the best seat for
+       the engine, not a distant one. */
+    const r = Math.max(2, S.chase.r);
+    const direct = clamp(6 / (r + 2), 0.3, 1);       // the helicopter cam still hears the car
+    flyR = r; flyG = direct;
+    flyDir = clamp(0.25 + r / 60, 0.25, 0.5);       // tailpipes-on
+    flyLp = clamp(30 / r, 0.6, 1);
+    flyAirHz = clamp(22000 / (1 + r / 40), 3000, 20000);
+    const wet = clamp(Math.pow(direct, 0.3), 0.3, 1.1);
+    spDist = clamp(wet / Math.max(flyG, 1e-4), 1, 4);
+    spPreS = clamp((r / 343) * 0.35, 0.004, 0.09);
+  }
   else if (S.walk) {
     /* ON FOOT: the car idling where you left it. The same three cues as a
        flyby — level, air, and a reverberant field that holds up while the
@@ -6412,8 +6439,8 @@ function audioTick() {
   AU.flyHi.gain.setTargetAtTime(-flyDir * 6, t, 0.05);
   // …and the level half. Intake noise leaves the front of the car, exhaust
   // and every overrun bang leave the back, so they swap places as it goes by.
-  const dirIntake = S.flyby ? 1 - flyDir * 0.7 : 1;
-  const dirEx     = S.flyby ? 1 + flyDir * 0.85 : 1;
+  const dirIntake = S.flyby || S.chase ? 1 - flyDir * 0.7 : 1;
+  const dirEx     = S.flyby || S.chase ? 1 + flyDir * 0.85 : 1;
 
   // firing freq × per-car octave drop (f0Mul, which can climb — see f0MulAt)
   // × pitch mod × Doppler
@@ -17830,7 +17857,7 @@ function save() {
       theme: document.body.dataset.theme, units: S.units, mode: S.mode, muted: S.muted,
       voice: S.voice,
       car: CC.id, tunnel: S.tunnel, flyby: S.flyby, cabin: S.cabin, stock: S.stock, mods: S.mods,
-      listen: S.listen === "street" ? (S._listenBefore || "driver") : S.listen, space: S.space,
+      listen: S.listen === "street" || S.listen === "chase" ? (S._listenBefore || "driver") : S.listen, space: S.space,
       traffic: S.traffic, rain: S.rain, wind: S.wind, lt: S.ltTgt, ltBest: LT.best,
       dmgOn: S.dmgOn, softLim: S.softLim, lcOn: S.lcOn,
       evV8: S.evV8, batt: S.batt, fuel: S.fuel,
@@ -18734,8 +18761,22 @@ window.DwnDrive = {
   get inCabin() { return AU.ready ? inCabin() : false; },
   /** On foot: the microphone leaves the car; `r` metres away, `pan` -1..1 to the right. */
   setWalk(w) {
-    if (w && !S.walk) { S._listenBefore = S.listen; S.listen = "street"; if (AU.ready) applyListen(); }
-    if (!w && S.walk) { S.listen = S._listenBefore || "driver"; if (AU.ready) applyListen(); }
+    if (w && !S.walk) { if (S.listen !== "street") S._listenBefore = S.listen; S.listen = "street"; if (AU.ready) applyListen(); }
+    if (!w && S.walk) { S.listen = S.chase ? "chase" : (S._listenBefore || "driver"); if (AU.ready) applyListen(); }
     S.walk = w || null;
+  },
+  /** The world's camera: `cockpit` puts the ear in the driver's seat with the
+   *  cabin sealed; any outside view is the chase microphone `r` metres off. */
+  setView({cockpit = false, r = 6} = {}) {
+    if (cockpit) {
+      S.chase = null;
+      if (S.listen === "chase") S.listen = "driver";
+      if (!S.walk && !LISTEN[S.listen]?.inside) S.listen = "driver";
+      if (!S.cabin) { S.cabin = true; $("cabinBtn")?.classList.toggle("on", true); }
+    } else {
+      S.chase = {r};
+      if (!S.walk && S.listen !== "chase") { if (S.listen !== "street") S._listenBefore = S.listen; S.listen = "chase"; }
+    }
+    if (AU.ready) applyListen();
   }
 };
