@@ -147,7 +147,22 @@ function makeOnline(){return new Online({scene,physics,root:ui,notify,
  disposeCar:v=>v.object.traverse(o=>{if(o.isMesh){o.geometry.dispose();for(const m of [o.material].flat())m.dispose?.();}}),
  local:()=>{const s=drive.state,r=car.rotation,w=onFoot?walker.pos:null;let flags=(s.in.brake>.05||s.brake>.1?1:0)|(s.autoSel==='R'&&s.v<-.2?4:0)|(onFoot?8:0)|(car.handbrake?16:0);
   return{hour:clockSeconds/3600,buildInfo:buildInfo(),state:[+x.toFixed(2),+y.toFixed(2),+z.toFixed(2),+r.x.toFixed(4),+r.y.toFixed(4),+r.z.toFixed(4),+r.w.toFixed(4),+s.v.toFixed(2),+steer.toFixed(3),flags,Math.round((s.rpm||0)/100),+Math.max(...car.skid).toFixed(2),w?+w.x.toFixed(2):0,w?+w.y.toFixed(2):0,w?+w.z.toFixed(2):0,+walkYaw.toFixed(2)]};},
- apply:applyLobby,onChange:()=>{if($('worldDialog').open&&tab==='online')panel('online');},audio:()=>drive.audio?{ctx:drive.audio.ctx,out:drive.audio.out}:null});}
+ apply:applyLobby,onChange:onlineChanged,audio:()=>drive.audio?{ctx:drive.audio.ctx,out:drive.audio.out}:null});}
+/* The Online panel is drawn once and only redrawn when what it shows has really
+ * changed (status, lobbies, drivers, settings) — never while a button is held —
+ * and a redraw keeps what you were typing, the caret and the focus. (2026-10-02:
+ * it used to rebuild on every server message, and many times a second while the
+ * server was unreachable, so you could neither type a name nor hit CREATE.) */
+let olSig='',olPending=false,olPointer=false;
+function onlineSig(){const O=online;if(!O)return '';const L=O.lobby;return JSON.stringify([O.status,O.error,O.lobbies,O.shareOn,O.share,L&&[L.code,L.host,L.name,L.max,L.players.map(q=>[q.id,q.name,q.build?.name]),O.isHost?L.settings?.meet||null:L.settings]]);}
+function onlineChanged(){if(!$('worldDialog').open||tab!=='online')return;if(onlineSig()===olSig)return;if(olPointer){olPending=true;return;}redrawOnline();}
+function redrawOnline(){const p=$('worldPanel'),keep={};p.querySelectorAll('input[id],select[id]').forEach(el=>{if(!el.disabled)keep[el.id]=el.type==='checkbox'?el.checked:el.value;});const f=document.activeElement,fid=f&&p.contains(f)?f.id:null,sel=fid&&typeof f.selectionStart==='number'?[f.selectionStart,f.selectionEnd]:null;
+ panel('online');
+ for(const [id,v] of Object.entries(keep)){const el=$(id);if(el&&!el.disabled){if(el.type==='checkbox')el.checked=v;else el.value=v;}}
+ if($('olTraffic'))$('olTraffic').nextElementSibling.textContent=trafficLabel(+$('olTraffic').value);
+ if(fid&&$(fid)){$(fid).focus({preventScroll:true});if(sel)try{$(fid).setSelectionRange(sel[0],sel[1]);}catch(_){}}}
+addEventListener('pointerdown',e=>{if(e.target.closest?.('#worldPanel'))olPointer=true;},true);
+addEventListener('pointerup',()=>{if(!olPointer)return;olPointer=false;if(olPending){olPending=false;setTimeout(onlineChanged,60);}},true);
 /** The lobby's settings, from its host: traffic, the clock, collisions, the meet point. */
 function applyLobby(set,why){
  if(why==='clock'){if(set.hour!=null&&Math.abs(((set.hour-clockSeconds/3600+36)%24)-12)>.05)setHour(+set.hour);return;}
@@ -508,21 +523,26 @@ function panel(page){tab=page;document.querySelectorAll('.world-tabs button').fo
    <label>Time passes<select id="olFlow" ${dis}>${TIME_FLOWS.map(f=>`<option value="${f[0]}" ${(S.flow||timeFlow)===f[0]?'selected':''}>${f[1]}</option>`).join('')}</select></label>
    <label>Collisions between players<input id="olCollide" type="checkbox" ${S.collisions===false?'':'checked'} ${dis}></label></div>`;
   const readForm=()=>({traffic:+$('olTraffic').value,hour:$('olTime').value===''?clockSeconds/3600:+$('olTime').value,flow:$('olFlow').value,collisions:$('olCollide').checked});
-  const status=O.connected?'<span class="online-pill on">LOBBY SERVER CONNECTED</span>':O.status==='connecting'?'<span class="online-pill">CONNECTING…</span>':'<span class="online-pill off">OFFLINE</span>';
+  const status=O.connected?'<span class="online-pill on">LOBBY SERVER CONNECTED</span>':O.status==='connecting'?'<span class="online-pill">CONNECTING…</span>':'<span class="online-pill off">OFFLINE</span> <button id="olRetry" class="online-mini">RETRY</button>';
   const invite=O.lobby?(O.share||location.origin+'/')+'?lobby='+O.lobby.code:'';
+  queueMicrotask(()=>{olSig=onlineSig();});
   if(!O.inLobby){p.innerHTML=`<div class="online-wrap"><div class="online-top">${status}<label class="online-name">Your name<input id="olName" maxlength="20" value="${esc(O.name)}"></label></div>${O.error?`<p class="online-error">${esc(O.error)}</p>`:''}
    <div class="online-cols"><section><h4 class="world-sub">CREATE A LOBBY</h4><label class="online-field">Lobby name<input id="olLobbyName" maxlength="32" value="${esc(O.name)}'s cruise"></label><div class="online-row"><label class="online-field">Players<select id="olMax">${[2,3,4,5,6,7,8,9,10].map(n=>`<option ${n===10?'selected':''}>${n}</option>`).join('')}</select></label><label class="online-check"><input id="olPrivate" type="checkbox"> Private · code only</label></div>
     <span class="world-eyebrow">WORLD SETTINGS · YOU ARE THE HOST</span>${setForm({hour:null,collisions:true},'')}<button class="world-primary" id="olCreate">CREATE LOBBY</button></section>
    <section><h4 class="world-sub">JOIN WITH A CODE</h4><div class="online-row"><input id="olCode" class="online-code-in" maxlength="5" placeholder="ABCDE"><button id="olJoin">JOIN</button></div>
     <h4 class="world-sub">OPEN LOBBIES <button id="olRefresh" class="online-mini">REFRESH</button></h4><div class="online-list">${O.lobbies.length?O.lobbies.map(l=>`<div class="online-item"><div><b>${esc(l.name)}</b><small>${esc(l.host)} · ${l.players}/${l.max}</small></div><button data-join="${l.code}" ${l.players>=l.max?'disabled':''}>${l.players>=l.max?'FULL':'JOIN'}</button></div>`).join(''):'<p class="world-tip">No open lobbies yet. Create one, or join a private one with its code.</p>'}</div>
     <p class="world-tip">${O.shareOn?`Friends on your network open <b>${esc(O.share||location.origin)}</b>, then Menu › Online.`:`Lobbies are on this computer only. To let friends join, start the game with <b>python3 play.py --share</b> (same Wi-Fi), or put it online through a tunnel such as cloudflared.`}</p></section></div></div>`;
-   $('olName').onchange=e=>O.setName(e.target.value);$('olRefresh').onclick=()=>O.refresh();
+   $('olName').onchange=e=>O.setName(e.target.value);$('olRefresh').onclick=()=>O.refresh();if($('olRetry'))$('olRetry').onclick=()=>O.connect(true);
+   $('olLobbyName').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('olCreate').click();}};
+   $('olCode').oninput=e=>{const c=e.target.selectionStart;e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'');try{e.target.setSelectionRange(c,c);}catch(_){}};
+   $('olCode').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('olJoin').click();}};
    $('olTraffic').oninput=e=>e.target.nextElementSibling.textContent=trafficLabel(+e.target.value);
    $('olCreate').onclick=()=>{O.setName($('olName').value);O.create({name:$('olLobbyName').value,max:+$('olMax').value,private:$('olPrivate').checked,settings:readForm()});};
    $('olJoin').onclick=()=>{const c=$('olCode').value.trim().toUpperCase();if(c.length>=4){O.setName($('olName').value);O.join(c);}};
    document.querySelectorAll('[data-join]').forEach(b=>b.onclick=()=>{O.setName($('olName').value);O.join(b.dataset.join);});
    if(!O.connected&&O.status!=='connecting')O.connect();
   }else{const L=O.lobby,S=L.settings||{},host=O.isHost;
+   queueMicrotask(()=>{olSig=onlineSig();});
    p.innerHTML=`<div class="online-wrap"><div class="online-lobby"><div><span class="world-eyebrow">${host?'YOUR LOBBY · YOU ARE THE HOST':'LOBBY'}${L.private?' · PRIVATE':''}</span><h3>${esc(L.name)}</h3><small>${L.players.length}/${L.max} drivers · press <b>Enter</b> in the world to chat</small></div><div class="online-code"><span class="world-eyebrow">INVITE CODE</span><b>${L.code}</b><button id="olCopy">COPY INVITE LINK</button></div></div>
     <div class="online-cols"><section><h4 class="world-sub">DRIVERS</h4><div class="online-list">${L.players.map(pl=>`<div class="online-item"><i class="online-dot" style="background:${O.color(pl.id)}"></i><div><b>${esc(pl.name)}${pl.id===O.id?' <em>YOU</em>':''}${pl.id===L.host?' <em class="host">HOST</em>':''}</b><small>Aurora · ${esc(pl.build?.name||'Factory')}</small></div>${pl.id!==O.id?`<button data-goto="${pl.id}">GO TO</button>`:''}${host&&pl.id!==O.id?`<button data-kick="${pl.id}" class="online-mini">KICK</button>`:''}</div>`).join('')}</div>
      <h4 class="world-sub">CAR MEET</h4>${S.meet?`<div class="online-item"><div><b>${esc(S.meet.name)}</b><small>${fmtDist(Math.hypot(S.meet.x-x,S.meet.z-z))} away</small></div><button id="olMeetRoute">ROUTE</button><button id="olMeetGo">TRAVEL</button></div>`:`<p class="world-tip">${host?'Pick a spot and everyone gets a route to it.':'The host has not set a meet point.'}</p>`}

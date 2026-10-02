@@ -42,11 +42,15 @@ export class Online {
   color(id) { const i = this.players.findIndex(p => p.id === id); return COLORS[(i < 0 ? 0 : i) % COLORS.length]; }
 
   /* ------------------------------------------------------------ connection */
-  connect() {
-    if (this.ws && this.ws.readyState <= 1) return Promise.resolve();
+  /** Connect to play.py's lobby server. Automatic retries back off (every 6 s at most); `now` (the Retry button) skips that. */
+  connect(now = false) {
+    if (this.ws && this.ws.readyState === 1) return Promise.resolve();
+    if (this.ws && this.ws.readyState === 0 && this.pending) return this.pending;      // already dialling: wait for it
+    if (!now && performance.now() - (this.lastTry || -1e9) < 6000) return Promise.resolve();
+    this.lastTry = performance.now();
     this.status = 'connecting'; this.h.onChange();
     const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/lobby';
-    return new Promise(resolve => {
+    return this.pending = new Promise(resolve => {
       let ws;
       try { ws = new WebSocket(url); } catch { this.status = 'offline'; this.error = 'This server has no lobby support (start the game with play.py).'; this.h.onChange(); resolve(); return; }
       this.ws = ws;
@@ -62,9 +66,16 @@ export class Online {
   }
   send(m) { if (this.ws?.readyState === 1) this.ws.send(JSON.stringify(m)); }
   setName(n) { this.name = (n || '').slice(0, 20).trim() || this.name; save('dwnName', this.name); this.send({t: 'name', name: this.name}); this.send({t: 'hello', name: this.name, build: this.h.local().buildInfo}); }
-  async create(opts) { await this.connect(); this.send({t: 'create', ...opts}); }
-  async join(code) { await this.connect(); this.send({t: 'join', code}); }
-  async refresh() { await this.connect(); this.send({t: 'list'}); }
+  async create(opts) { if (await this.ready()) this.send({t: 'create', ...opts}); }
+  async join(code) { if (await this.ready()) this.send({t: 'join', code}); }
+  async refresh() { if (await this.ready()) this.send({t: 'list'}); }
+  /** Connected (trying now if not); says so when the server cannot be reached. */
+  async ready() {
+    await this.connect(true);
+    if (this.connected) return true;
+    this.error = 'Could not reach the lobby server. Open the game from the Dwn SHIFT app or with python3 play.py.';
+    this.h.notify('Online · the lobby server is not reachable'); this.h.onChange(); return false;
+  }
   leave() { this.send({t: 'leave'}); this.lobby = null; this.clearPeers(); this.badge.hidden = true; this.h.onChange(); }
   setSettings(settings) { if (!this.isHost) return; this.lobby.settings = settings; this.send({t: 'settings', settings}); this.h.apply(settings, 'host'); this.h.onChange(); }
   kick(id) { this.send({t: 'kick', id}); }
