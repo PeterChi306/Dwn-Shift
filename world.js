@@ -123,16 +123,19 @@ function spawnHome(id,quiet=false){
 function waterAt(px,pz){const W=places?.kit?.waters;if(!W)return null;for(const w of W){const dx=px-w.x,dz=pz-w.z;if(w.r!==undefined){if(dx*dx+dz*dz<w.r*w.r)return w;continue;}if(Math.abs(dx*w.fx+dz*w.fz)<w.hl&&Math.abs(-dx*w.fz+dz*w.fx)<w.hw)return w;}return null;}
 function nearestHome(px,pz){let best=null,bd=Infinity;for(const h of HOMES){if(!h.pad)continue;const d=Math.hypot(h.pad.cx-px,h.pad.cz-pz);if(d<bd){bd=d;best=h;}}return bd<200?best:null;}
 /** Out of the car and back in (F). */
+let doorT=0;
+/** The driver's door swings up as someone gets out or in, and shuts behind them. */
+function swingDoor(){carFx?.setDoors?.(true,'L');clearTimeout(doorT);doorT=setTimeout(()=>carFx?.setDoors?.(false,'L'),1900);}
 function toggleOnFoot(){
  if(!walker)return;
  if(!onFoot){
   if(Math.abs(drive.state.v)>1.5){notify('Stop the car to get out');return;}
   // Out through the driver's door (the car's left, +x in its own frame).
   const o=vehicle.object,d=o.localToWorld(V(1.55,0,-.1));const gy=physics.groundAt(d.x,y+3,d.z,8)??y;
-  drive.release();walker.enter(d.x,gy,d.z,heading+Math.PI/2);onFoot=true;walkYaw=heading;fpPitch=0;orbit=orbitTarget=0;document.body.classList.add('on-foot');keys.clear();keySteer=0;
+  drive.release();swingDoor();walker.enter(d.x,gy,d.z,heading+Math.PI/2);onFoot=true;walkYaw=heading;fpPitch=0;orbit=orbitTarget=0;document.body.classList.add('on-foot');keys.clear();keySteer=0;
  }else{
   const p=walker.pos;if(Math.hypot(p.x-x,p.z-z)>4.5){notify('Walk back to the car to get in');return;}
-  walker.leave();onFoot=false;drive.setWalk?.(null);document.body.classList.remove('on-foot');keys.clear();cameraHeading=heading;if(document.pointerLockElement)document.exitPointerLock();
+  swingDoor();walker.leave();onFoot=false;drive.setWalk?.(null);document.body.classList.remove('on-foot');keys.clear();cameraHeading=heading;if(document.pointerLockElement)document.exitPointerLock();
  }
 }
 /* Online lobbies (world/online.js, the server is play.py): the hooks it needs

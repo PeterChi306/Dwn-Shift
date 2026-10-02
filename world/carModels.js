@@ -304,8 +304,15 @@ export function buildModel(id, {paint = null, ambient = null, coarse = false} = 
   const group = glb ? extra.group : K.finish();
   const wheels = buildWheels(wheelsSpec, radius, model.wheelStyle, {coarse});
   let interior = null;
-  if (!coarse) { interior = model.cabin(K, amb); interior.group.add(interior.wheel); group.add(interior.group); }
+  if (!coarse) {
+    interior = model.cabin(K, amb); interior.group.add(interior.wheel); group.add(interior.group);
+    // Door cards ride on the doors (their pivots sit at the hinges), or stay in the cabin.
+    for (const [k, g] of Object.entries(interior.doors || {})) {
+      const d = extra.doors?.[k];
+      if (d) { g.position.set(-d.hinge.x, -d.hinge.y, -d.hinge.z); d.pivot.add(g); } else interior.group.add(g);
+    }
+  }
   const dims = {...K.dims, exhausts: extra.exhausts, signals: extra.signals};
   const signals = K.signals.left.length ? K.signals : null;
-  return {group, wheels, wheelsSpec, mats, paint: mats.paint, head: mats.head, tail: mats.tail, reverse: mats.reverse, grille: mats.grille, glass: mats.glass, dims, signals, ambient: amb, interior, model, radius, mass: model.mass};
+  return {group, doors: extra.doors || null, wheels, wheelsSpec, mats, paint: mats.paint, head: mats.head, tail: mats.tail, reverse: mats.reverse, grille: mats.grille, glass: mats.glass, dims, signals, ambient: amb, interior, model, radius, mass: model.mass};
 }

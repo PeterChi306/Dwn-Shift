@@ -56,6 +56,29 @@ const STYLE = {
 };
 export const WHEEL_STYLES = Object.keys(STYLE);
 
+/* The Blender wheels (2026-10-02, tools/blender/aurora_wheel.py): a semi-slick
+ * with real grooves and raised lettering, the forged twin-spoke rim, two-piece
+ * carbon-ceramic rotors and lettered six-piston calipers. Set once the GLB has
+ * loaded (cars/auroraGlb.js); the aero style uses all of it, the other rims
+ * (except the classic's) get its brakes. Built as left wheels: the right-hand
+ * ones are turned round, not mirrored, so the lettering reads. */
+let GLBW = null;
+export function setWheelParts(scene) {
+  const parts = {};
+  scene.traverse(o => { if (!o.isMesh) return; const node = (o.parent && o.parent !== scene ? o.parent : o).name; (parts[node] ||= []).push(o); });
+  GLBW = parts;
+}
+/** The named GLB parts merged into one mesh per material (only the tyre and rim cast shadows). */
+function glbPart(names, mats) {
+  const by = new Map();
+  for (const name of names) for (const o of GLBW[name] || []) {
+    const m = mats[o.material.name] || mats.black, g = o.geometry.clone().applyMatrix4(o.matrixWorld);
+    for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k);
+    (by.get(m) || by.set(m, []).get(m)).push(g.index ? g.toNonIndexed() : g);
+  }
+  return [...by].map(([m, gs]) => { const mesh = new T.Mesh(mergeGeometries(gs), m); mesh.castShadow = m === mats.tyre || m === mats.rim; mesh.receiveShadow = true; return mesh; });
+}
+
 export function buildWheels(wheels, radius, style = 'aero', {coarse = false, rimColor = null, caliper = null} = {}) {
   const S = {...(STYLE[style] || STYLE.aero)}, seg = coarse ? 16 : 48;
   if (!STYLE[style]) style = 'aero';
@@ -93,10 +116,20 @@ export function buildWheels(wheels, radius, style = 'aero', {coarse = false, rim
   }
   const calMat = S.caliper ? new T.MeshPhysicalMaterial({color: S.caliper, roughness: .3, metalness: .3, clearcoat: 1}) : null;
 
+  let gm = null;
+  const glbMats = () => gm ||= {
+    tyre: new T.MeshStandardMaterial({color: '#141516', roughness: .9}), tyreText: new T.MeshStandardMaterial({color: '#3a3c40', roughness: .62}),
+    rim: rimMat, lip: lipMat, chrome, caliper: calMat || new T.MeshPhysicalMaterial({color: '#1c1d20', roughness: .3, metalness: .3, clearcoat: 1}), rotor: rotorMat,
+    ti: new T.MeshStandardMaterial({color: '#9a958c', roughness: .25, metalness: 1}), white: new T.MeshStandardMaterial({color: '#f2f4f6', roughness: .4}),
+    alu: new T.MeshStandardMaterial({color: '#b9bdc2', roughness: .3, metalness: 1}), steel: new T.MeshStandardMaterial({color: '#2a2c2f', roughness: .38, metalness: .9}),
+    black: new T.MeshStandardMaterial({color: '#0b0c0d', roughness: .6, metalness: .2}),
+  };
   const out = [];
   for (const w of wheels) {
     const width = w.front ? S.width[0] : S.width[1], hw = width / 2, R = radius, rim = S.rim;
-    const spin = [], still = [];
+    const spin = [], still = [], key = w.front ? 'F' : 'R';
+    const glbRim = !!GLBW && !coarse && style === 'aero', glbBrake = !!GLBW && !coarse && style !== 'classic';
+    if (!glbRim) {
     // Tyre: tread, rounded shoulders, sidewall down to the bead.
     const side = R - rim, prof = [];
     const sh = Math.min(.035, side * .35);
@@ -138,8 +171,9 @@ export function buildWheels(wheels, radius, style = 'aero', {coarse = false, rim
       }
       if (style === 'rugged') for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, bolt = new T.CylinderGeometry(.009, .009, .02, 6); bolt.applyMatrix4(X); bolt.translate(face + .01, Math.cos(a) * .05, Math.sin(a) * .05); spin.push([bolt, chrome]); }
     }
+    }
     // Brake: rotor with a hat, and the caliper at the back-top of it (still).
-    if (!coarse) {
+    if (!coarse && !glbBrake) {
       const rot = lathe([[S.rotor * .45, .02], [S.rotor, .02], [S.rotor, -.02], [S.rotor * .45, -.02]], seg);
       rot.translate(hw * .2, 0, 0); spin.push([rot, rotorMat]);
       if (calMat) {
@@ -157,6 +191,15 @@ export function buildWheels(wheels, radius, style = 'aero', {coarse = false, rim
     const stillG = new T.Group(); byMat(still).forEach(m => stillG.add(m));
     if (w.x < 0) { spinG.scale.x = -1; stillG.scale.x = -1; }
     const holder = new T.Group(); holder.add(spinG);
+    if (glbBrake) {
+      const mats = glbMats();
+      const spinB = new T.Group(), stillB = new T.Group();
+      for (const m of glbPart([...(glbRim ? ['Tyre_' + key, 'Rim_' + key] : []), 'Rotor_' + key], mats)) spinB.add(m);
+      for (const m of glbPart(['Caliper_' + key + (w.x < 0 ? 'R' : 'L')], mats)) stillB.add(m);
+      if (w.x < 0) spinB.rotation.y = Math.PI;          // turned round: the right-hand calipers are built mirrored already
+      holder.add(spinB);
+      pivot.add(stillB);
+    }
     pivot.add(holder, stillG); pivot.position.set(w.x, w.y, w.z);
     pivot.name = w.name || '';
     out.push({pivot, spin: holder, x: w.x, y: w.y, z: w.z, front: w.front});

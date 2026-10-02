@@ -1,9 +1,16 @@
-/* AURORA exterior from Blender (2026-09-29): tools/blender/aurora.py builds one
- * continuous subdivision-surface shell with the lamps, intakes and vents cut
- * into it, plus the wing, mirrors, splitter, diffuser and exhausts, and exports
- * assets/cars/aurora.glb. Here each Blender material is swapped by name for the
- * game's own (so paint swatches, lamps and night lighting keep working), the
- * parts are merged per material, and the signal guides become carFx signals.
+/* AURORA exterior from Blender (v1 2026-09-29, v3 2026-10-02).
+ *
+ * tools/blender/aurora.py builds the body as real panels with thickness and shut
+ * lines (the body, two dihedral doors with their windows, the frunk lid and the
+ * engine cover with its glass), the detail parts (aurora_parts.py: lamps,
+ * grilles, vents, aero, mirrors, exhausts...) and the engine bay
+ * (aurora_engine.py), and exports assets/cars/aurora.glb. aurora_wheel.py makes
+ * the tyres, rims and brakes (aurora-wheel.glb, used by carWheels.js).
+ *
+ * Here each Blender material is swapped by name for the game's own (so paint
+ * swatches, lamps and night lighting keep working), the parts are merged per
+ * material, the signal guides become carFx signals, and each door hangs on a
+ * pivot at its hinge (`body.doors`, opened by carFx).
  *
  * aurora-lod.glb (the cage unsubdivided, no small parts) dresses the dealer fleet.
  * The GLBs load once at boot (preloadAurora); until they have, or if they fail,
@@ -12,77 +19,147 @@
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {shutLines, gap, step, abs} from '../carBody.js';
+import {positionLocal, normalLocal, abs, fract, smoothstep, mix, vec3, float, step, sin, uv} from 'three/tsl';
+import {setWheelParts} from '../carWheels.js';
 
 const scenes = {full: null, lod: null};
 let loading = null;
 const load = (file, key) => new GLTFLoader().loadAsync(new URL(`../../assets/cars/${file}`, import.meta.url).href)
   .then(g => { g.scene.updateMatrixWorld(true); scenes[key] = g.scene; });
 export function preloadAurora() {
-  return loading ||= Promise.all([load('aurora.glb', 'full'), load('aurora-lod.glb', 'lod')])
-    .catch(e => console.warn('aurora.glb failed, using the lofted body', e));
+  return loading ||= Promise.all([
+    load('aurora.glb', 'full'), load('aurora-lod.glb', 'lod'),
+    load('aurora-wheel.glb', 'wheel').then(() => setWheelParts(scenes.wheel)).catch(e => console.warn('aurora-wheel.glb failed, procedural wheels', e)),
+  ]).catch(e => console.warn('aurora.glb failed, using the lofted body', e));
 }
 /** Ready for the player car (full) or the dealer fleet (lod). */
 export const auroraGlbReady = (coarse = false) => !!scenes[coarse ? 'lod' : 'full'];
 
+/** The materials the car's own set (carMaterials) does not have, made once per car. */
+function extraMaterials(M) {
+  if (M._aurora) return M._aurora;
+  const std = (o) => new T.MeshStandardMaterial(o), phys = (o) => new T.MeshPhysicalMaterial(o);
+  const X = {
+    // Matte forged carbon: the liners, the under-tray, the panels' inner faces.
+    carbonM: new T.MeshStandardNodeMaterial({roughness: .62, metalness: .2}),
+    // The engine window: much clearer than the cabin glass, so the V8 shows.
+    glassE: phys({color: '#0d1013', metalness: .1, roughness: .02, clearcoat: 1, clearcoatRoughness: .02, transparent: true, opacity: .22, depthWrite: false, envMapIntensity: 1.6}),
+    tailLens: phys({color: '#5a0a10', metalness: 0, roughness: .04, clearcoat: 1, transparent: true, opacity: .42, depthWrite: false, envMapIntensity: 1.6}),
+    heat: new T.MeshPhysicalNodeMaterial({metalness: 1, roughness: .28}),
+    foil: new T.MeshStandardNodeMaterial({metalness: 1, roughness: .22}),
+    alu: std({color: '#b9bdc2', metalness: 1, roughness: .3}),
+    steel: std({color: '#2a2c2f', metalness: .9, roughness: .38}),
+    engine: std({color: '#3a3d42', metalness: .75, roughness: .42}),
+    red: phys({color: '#b8121b', metalness: .2, roughness: .3, clearcoat: .6}),
+    blue: phys({color: '#1f47ff', metalness: .6, roughness: .22, clearcoat: .5}),
+    yellow: std({color: '#f0b916', roughness: .45}),
+    white: std({color: '#e6e8ea', roughness: .45}),
+    bay: std({color: '#0b0c0d', metalness: .2, roughness: .75, side: T.DoubleSide}),
+    mesh: std({color: '#121315', metalness: .85, roughness: .38, side: T.DoubleSide}),
+    radiator: new T.MeshStandardNodeMaterial({roughness: .5, metalness: .7, side: T.DoubleSide}),
+    amber: phys({color: '#6a3a05', roughness: .1, clearcoat: 1}),
+  };
+  {
+    // Forged carbon: marbled flakes instead of a weave.
+    const P = positionLocal.mul(38), n = sin(P.x.mul(1.7).add(sin(P.y.mul(2.3)).mul(1.4))).mul(sin(P.z.mul(1.9).add(sin(P.x.mul(1.3)).mul(1.2))));
+    X.carbonM.colorNode = mix(vec3(.012, .012, .014), vec3(.05, .052, .056), smoothstep(-.2, .6, n));
+  }
+  {
+    // Heat-blued pipework: straw, purple and blue bands along the pipe.
+    const t = fract(positionLocal.x.mul(3.1).add(positionLocal.z.mul(2.3)).add(positionLocal.y.mul(1.7)));
+    X.heat.colorNode = mix(mix(vec3(.7, .55, .3), vec3(.38, .22, .5), smoothstep(.2, .5, t)), vec3(.2, .3, .72), smoothstep(.55, .9, t));
+  }
+  {
+    // Gold foil: crinkled, so it catches the light in facets.
+    const P = positionLocal.mul(60), c = fract(sin(P.x.floor().mul(12.9).add(P.y.floor().mul(78.2)).add(P.z.floor().mul(37.7))).mul(43758.5));
+    X.foil.colorNode = mix(vec3(.75, .55, .22), vec3(.95, .78, .4), c);
+    X.foil.roughnessNode = float(.12).add(c.mul(.25));
+  }
+  {
+    // Cooler cores: fine fins across the core.
+    const P = positionLocal, N = abs(normalLocal), u = mix(P.x, P.z, step(N.z, N.x));
+    X.radiator.colorNode = vec3(.03, .032, .036).mul(fract(u.mul(260)).sub(.5).abs().mul(1.4).add(.5)).add(vec3(.01).mul(step(.94, fract(P.y.mul(28)))));
+  }
+  return M._aurora = X;
+}
+
+const SIDE = {l: 1, r: -1};
+
 /** The exterior as a group of merged meshes, one per game material (`coarse`: the dealer-fleet LOD). */
 export function auroraGlbBody(K, M, coarse = false) {
   const scene = scenes[coarse ? 'lod' : 'full'];
-  const {Z0, zf, GZ1, deck, belt} = K;
-  // Door and bonnet shut lines, drawn on the paint where the panels meet.
-  const doorF = GZ1 - .06, doorR = K.zr + .47;
-  shutLines(M.paint, P => {
-    const ax = abs(P.x), side = step(.6, ax).mul(step(P.y, belt(0) - .02)).mul(step(.3, P.y));
-    return gap(P.z, doorF).add(gap(P.z, doorR)).mul(side)
-      .add(gap(P.z, zf - .5).mul(step(ax, .5)).mul(step(deck(zf) - .08, P.y)));
-  });
-  // Merged per material AND per swappable part (2026-10-01, the workshop):
-  // the wing, splitter, exhausts, diffuser, skirts and each headlamp stay
-  // separate meshes tagged `userData.part`, so a build can hide or recolour them.
-  const byKey = new Map(), signals = {left: [], right: []};
-  const partOf = n => /^(wing|flap|endplate|neck)/.test(n) ? 'wing' : /^fin/.test(n) ? 'fin' : /^(splitter|splitedge)/.test(n) ? 'splitter'
-    : /^exhaust/.test(n) ? 'exhaust' : /^(diffuser|strake)/.test(n) ? 'diffuser' : /^skirt/.test(n) ? 'skirt' : /^projl?-/.test(n) ? 'lampR' : /^projl?\d/.test(n) ? 'lampL' : null;
+  const {Z0} = K, X = extraMaterials(M);
+  // Merged per material AND per swappable part (2026-10-01, the workshop): the
+  // wing, splitter, exhausts, diffuser, skirts and each headlamp stay separate
+  // meshes tagged `userData.part`, so a build can hide or recolour them.
+  const byKey = new Map(), doors = {};
+  const partOf = n => /^door_[lr]/.test(n) ? 'door' + n[5].toUpperCase() : /^wing/.test(n) ? 'wing' : /^fin/.test(n) ? 'fin' : /^splitter/.test(n) ? 'splitter'
+    : /^exhaust/.test(n) ? 'exhaust' : /^(diffuser)/.test(n) ? 'diffuser' : /^skirt/.test(n) ? 'skirt' : /^lamp_r/.test(n) ? 'lampR' : /^lamp_l/.test(n) ? 'lampL' : null;
   const put = (m, part, g) => { const k = m.uuid + '|' + (part || ''); (byKey.get(k) || byKey.set(k, {m, part, gs: []}).get(k)).gs.push(g); };
   scene.traverse(o => {
     if (!o.isMesh) return;
-    const name = (o.name + ' ' + (o.parent?.name || '')).toLowerCase();
+    const node = o.userData.hinge ? o : o.parent?.userData?.hinge ? o.parent : null;
+    const lower = (o.parent && o.parent !== scene ? o.parent.name : o.name).toLowerCase();
     let g = o.geometry.clone().applyMatrix4(o.matrixWorld);
     g = g.index ? g.toNonIndexed() : g;
     for (const k of Object.keys(g.attributes)) if (!['position', 'normal'].includes(k)) g.deleteAttribute(k);
-    if (name.includes('signal')) {
+    const part = coarse ? null : partOf(lower);
+    if (node && part?.startsWith('door')) {
+      const d = doors[part[4]] ||= {hinge: new T.Vector3(...node.userData.hinge), axis: new T.Vector3(...node.userData.axis).normalize()};
+      d.side = SIDE[part[4].toLowerCase()];
+    }
+    if (lower.includes('signal')) {
       // Model-built indicators: `seq` runs along the lamp for the sequential sweep.
-      const left = name.includes('signall');
-      const mirror = name.includes('mirror');
-      K.signal(left ? 1 : -1, g, mirror ? [left ? 1 : -1, 0, -1] : [left ? 1 : -1, 0, -.6]);
+      const m = lower.match(/signal([lr])/) || lower.match(/door_([lr])/);
+      const left = m?.[1] === 'l', mirror = lower.includes('mirror');
+      if (part?.startsWith('door')) g.userData.door = part[4];
+      K.signal(left ? 1 : -1, g, mirror ? [left ? 1 : -1, 0, -1] : lower.includes('rear') ? [left ? 1 : -1, 0, 0] : [left ? 1 : -1, 0, -.6]);
       return;
     }
+    const name = o.material.name;
     // The dealer fleet has no cabin: tinted glass, so nobody sees the empty tub.
-    const m = coarse && o.material.name === 'glass' ? M.gloss : M[o.material.name] || M.black;
+    let m = coarse && (name === 'glass' || name === 'glassE') ? M.gloss : M[name] || X[name] || M.black;
+    if (name === 'head' && lower.startsWith('lamp_')) m = M.head;
     if (m === M.ti) {
       // The titanium tint runs along the tip (uv.y), from the body out.
-      const p = g.attributes.position, uv = new Float32Array(p.count * 2);
-      for (let i = 0; i < p.count; i++) uv[i * 2 + 1] = Math.min(1, Math.max(0, (Z0 + .06 - p.getZ(i)) / .19));
-      g.setAttribute('uv', new T.BufferAttribute(uv, 2));
+      const p = g.attributes.position, a = new Float32Array(p.count * 2);
+      for (let i = 0; i < p.count; i++) a[i * 2 + 1] = Math.min(1, Math.max(0, (Z0 + .06 - p.getZ(i)) / .19));
+      g.setAttribute('uv', new T.BufferAttribute(a, 2));
     }
-    const lower = o.name.toLowerCase();
-    // The front lamps (the lens and the LED outline) split down the middle, one per side.
-    if (!coarse && (lower === 'lens' || m === M.head && o.parent?.name === 'Body')) {
-      for (const [part, keep] of [['lampL', x => x > 0], ['lampR', x => x <= 0]]) { const h = splitTris(g, keep); if (h) put(m, part, h); }
+    // The headlamp lens splits down the middle, one per side.
+    if (!coarse && lower === 'lens') {
+      for (const [pt, keep] of [['lampL', x => x > 0], ['lampR', x => x <= 0]]) { const h = splitTris(g, keep); if (h) put(m, pt, h); }
       return;
     }
-    put(m, coarse ? null : partOf(lower), g);
+    put(m, part, g);
   });
   const group = new T.Group();
+  // Each door swings on a pivot at its hinge: its meshes are moved into the pivot's frame.
+  for (const [k, d] of Object.entries(doors)) {
+    d.pivot = new T.Group(); d.pivot.name = 'door' + k; d.pivot.position.copy(d.hinge); d.open = 0; d.angle = 1.18;
+    group.add(d.pivot);
+  }
   for (const {m, part, gs} of byKey.values()) {
     for (const g of gs) g.attributes.uv || g.setAttribute('uv', new T.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
-    const mesh = new T.Mesh(mergeGeometries(gs), m);
+    const geo = mergeGeometries(gs), door = part?.startsWith('door') ? doors[part[4]] : null;
+    if (door) geo.translate(-door.hinge.x, -door.hinge.y, -door.hinge.z);
+    const mesh = new T.Mesh(geo, m);
     mesh.name = (m.name || '') + (part ? ':' + part : ''); mesh.userData.part = part;
-    mesh.castShadow = m !== M.glass && m !== M.lamp; mesh.receiveShadow = true;
-    if (m === M.glass || m === M.lamp) mesh.renderOrder = 1;
+    const clear = m === M.glass || m === M.lamp || m === X.glassE || m === X.tailLens;
+    // Only the big surfaces cast shadows (the small dressings would only cost shadow-pass draws).
+    mesh.castShadow = !clear && [M.paint, M.carbon, M.black, M.gloss, X.carbonM].includes(m) && !part?.startsWith('lamp'); mesh.receiveShadow = true;
+    if (clear) mesh.renderOrder = 1;
     mesh.matrixAutoUpdate = false;
-    group.add(mesh);
+    (door ? door.pivot : group).add(mesh);
   }
-  return {group, exhausts: [[-.11, .56, Z0 - .12], [.11, .56, Z0 - .12]]};
+  return {group, doors: Object.keys(doors).length ? doors : null, exhausts: [[-.12, .47, Z0 - .12], [.12, .47, Z0 - .12]]};
+}
+
+/** Swing the doors: open 0 (shut) .. 1 (fully up), per side key 'L' / 'R'. */
+export function setDoor(door, open) {
+  door.open = open;
+  const e = open * open * (3 - 2 * open);
+  door.pivot.quaternion.setFromAxisAngle(door.axis, e * door.angle);
 }
 
 /** The triangles of a non-indexed geometry whose centroid's x passes `keep`, or null. */

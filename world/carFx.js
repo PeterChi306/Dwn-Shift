@@ -121,8 +121,12 @@ export class CarFx {
         m.userData = {on, phase}; return m;
       };
       this.sigMat = {left: mk(), right: mk()}; this.sigMeshes = [];
+      const doors = this.vehicle.body.doors;
       for (const side of ['left', 'right']) for (const g of S[side]) {
-        const mesh = new T.Mesh(g, this.sigMat[side]); this.vehicle.body.group.add(mesh); this.sigMeshes.push(mesh);
+        // Mirror repeaters ride on their door.
+        const d = g.userData.door && doors?.[g.userData.door];
+        if (d && !g.userData.moved) { g.translate(-d.hinge.x, -d.hinge.y, -d.hinge.z); g.userData.moved = true; }
+        const mesh = new T.Mesh(g, this.sigMat[side]); (d ? d.pivot : this.vehicle.body.group).add(mesh); this.sigMeshes.push(mesh);
       }
       return;
     }
@@ -155,9 +159,26 @@ export class CarFx {
     } catch { /* no audio: silent indicators */ }
   }
 
+  /* ------------------------------------------------------------ doors */
+  /** Open (1) or shut (0) a door ('L' the driver's, 'R', or 'both'); they swing up over ~1.2 s. */
+  setDoors(open, which = 'both') {
+    this.doorTarget ||= {L: 0, R: 0};
+    for (const k of which === 'both' ? ['L', 'R'] : [which]) this.doorTarget[k] = open ? 1 : 0;
+  }
+  updateDoors(dt) {
+    const D = this.vehicle.body?.doors; if (!D || !this.doorTarget) return;
+    for (const [k, d] of Object.entries(D)) {
+      const t = this.doorTarget[k] ?? 0; if (d.open === t) continue;
+      d.open = t > d.open ? Math.min(t, d.open + dt / 1.2) : Math.max(t, d.open - dt / 1.0);
+      const e = d.open * d.open * (3 - 2 * d.open);
+      d.pivot.quaternion.setFromAxisAngle(d.axis, e * d.angle);
+    }
+  }
+
   /* ------------------------------------------------------------ per frame */
   update(dt, {car, state, day, cockpit, steer, dialCanvas, hour = null, info = null, beam = false}) {
     this.day.value = day;
+    this.updateDoors(dt);
     const o = this.vehicle.object, v = car.body.linvel(), speed = Math.hypot(v.x, v.z);
     // Smoke from each tyre that is sliding, spinning or locked.
     if (o.visible || cockpit) {

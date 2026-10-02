@@ -7,7 +7,7 @@
 <!-- A studio for the player cars (world/carModels.js): turntable views, the
      cabin from the driver's seat, day or night. Serve the project root and open
      /tools/car-lab.html?model=aurora&night=1  (drag to orbit, 1-4 picks a car,
-     C sits in the cockpit, N toggles night). -->
+     C sits in the cockpit, N toggles night, O opens the doors). -->
 <style>
   html,body{margin:0;height:100%;background:#0b0c0e;color:#cfd3d8;font:12px/1.4 system-ui,sans-serif;overflow:hidden}
   canvas{display:block;width:100%;height:100%}
@@ -79,6 +79,7 @@ window.lab = {
   seat(on = true, lookYaw = 0, lookPitch = -8) { cockpit = on; this.lookYaw = lookYaw; this.lookPitch = lookPitch; },
   night(on) { night = on; },
   steer(v) { steer = v; },
+  doors(open = true, which = 'both') { fx.setDoors(open, which); },
   lookYaw: 0, lookPitch: -8,
 };
 build(q.get('model') || 'aurora');
@@ -86,6 +87,7 @@ addEventListener('keydown', e => {
   const i = '1234'.indexOf(e.key); if (i >= 0) build(MODELS[i].id);
   if (e.key === 'n') night = !night;
   if (e.key === 'c') cockpit = !cockpit;
+  if (e.key === 'o') { lab.doorsOpen = !lab.doorsOpen; fx.setDoors(lab.doorsOpen); }
 });
 let drag = null;
 addEventListener('pointerdown', e => drag = [e.clientX, e.clientY]);

@@ -31,12 +31,12 @@ const guide = (w, h) => () => superLoop(h, w, 5, 14);
 const along = (g, p, n) => g.applyMatrix4(new T.Matrix4().compose(new T.Vector3(...p), new T.Quaternion().setFromUnitVectors(new T.Vector3(1, 0, 0), new T.Vector3(...n).normalize()), new T.Vector3(1, 1, 1)));
 
 export function auroraSpec({zf, zr}) {
-  // Matches tools/blender/aurora.py (the GLB body); the cabin is placed from these curves.
+  // Matches tools/blender/aurora_shape.py (the GLB body); the cabin is placed from these curves.
   const Z0 = zr - .78, Z1 = zf + 1.12, GZ1 = zf - .43, GZ0 = zr + .26;
   return {
     Z0, Z1, archFlat: 1,
     halfW: [[Z0, .87], [Z0 + .1, 1.01], [-1.85, 1.08], [zr, 1.105], [-1, 1.065], [-.72, .98], [-.45, .915], [.35, .905], [.62, .94], [1, 1.02], [zf - .1, 1.07], [1.6, 1.065], [1.9, 1.01], [2.1, .95], [2.3, .84], [Z1 - .08, .7], [Z1, .6]],
-    belt: [[Z0, .74], [Z0 + .1, .83], [-1.85, .865], [-1.6, .9], [zr, .925], [-1.1, .9], [-.8, .86], [-.5, .8], [.3, .775], [.66, .8], [1, .84], [zf, .83], [1.65, .79], [1.85, .72], [2.05, .6], [Z1 - .1, .5], [Z1, .44]],
+    belt: [[Z0, .74], [Z0 + .1, .83], [-1.85, .865], [-1.6, .9], [zr, .925], [-1.1, .9], [-.8, .86], [-.5, .8], [.3, .775], [.66, .805], [1, .855], [zf, .86], [1.65, .82], [1.85, .745], [2.05, .615], [Z1 - .1, .5], [Z1, .44]],
     deck: [[Z0, .8], [Z0 + .1, .93], [-1.95, .995], [-1.6, 1.015], [GZ0, 1.035], [0, .9], [GZ1, .87], [1.25, .8], [1.45, .78], [1.65, .74], [1.85, .69], [2.05, .61], [2.25, .52], [Z1 - .1, .45], [Z1, .42]],
     sill: [[Z0, .24], [Z0 + .2, .2], [Z0 + .45, .165], [-1, .15], [1.95, .15], [Z1 - .3, .16], [Z1, .17]],
     // A crisp shoulder: two close points make the highlight break sharply over the fender crest.
@@ -282,18 +282,21 @@ export function auroraCabin(K, amb) {
   for (let i = -1; i <= 1; i++) C.soft('piano', .07 + i * 0, top(-.25) + .008, -.25 + i * .045, .045, .012, .034, .006);
 
   /* ---- doors: sculpted cards, armrest, speaker, pull strap, release, window switches */
+  // Each card is its own cabin (sharing the materials and the light), so it can ride on its door.
+  const Dc = {};
   for (const s of SIDES) {
+    const Cd = Dc[s] = new Cabin(amb, {...C.P, _mats: C.m}, C.strips);
     const armEnv = z => Math.max(0, Math.min(1, (z + .95) / .15, (.0 - z) / .2));
     const card = z => roundPoly([[0, .26], [.025, .26], [.03, .44], [.03 + .055 * armEnv(z), .48], [.03 + .055 * armEnv(z), .53], [.03 + .02 * armEnv(z), .57], [.025, .72], [.04, .8], [0, .82]], [0, .01, .01, .015, .015, .015, .02, .01, 0], 3);
-    C.add(loftSolid(range(.25, -1.05, 30), card, (z, a, b) => [s * (W + .045 - a), b, z]), 'carbon');
-    C.soft('alcantara', s * (W + .012), .67, -.38, .012, .1, .88, .005, {deform: (x, y, z) => [x, y, z]});
-    C.soft('alcantara', s * (W - .03), .535, -.45, .075, .022, .6, .01);
-    C.stitch(range(-.73, -.17, 12).map(z => [s * (W - .066), .546, z]), 'stitch2', .003);
-    C.add(place(lathe([[.001, 0], [.052, 0], [.056, .004], [.05, .008], [.001, .006]], 40), s * (W + .015), .38, -.05, 0, 0, s > 0 ? Math.PI : 0), 'speaker');
-    C.add(place(new T.TorusGeometry(.056, .003, 6, 40), s * (W + .01), .38, -.05, 0, Math.PI / 2, 0), 'aluR');
-    C.add(ribbon(resample([[s * (W + .005), .7, .05], [s * (W - .03), .67, -.02], [s * (W + .005), .64, -.1]], 20), .022, .003, [s, 0, 0]), 'accent');
-    C.add(place(prism(roundPoly([[0, 0], [.07, .006], [.07, .016], [0, .014]], .004, 2), .012, 'x', .002), s * (W - .005), .72, .08), 'aluR');
-    C.soft('piano', s * (W - .045), .55, -.16, .06, .008, .09, .004);
+    Cd.add(loftSolid(range(.25, -1.05, 30), card, (z, a, b) => [s * (W + .045 - a), b, z]), 'carbon');
+    Cd.soft('alcantara', s * (W + .012), .67, -.38, .012, .1, .88, .005, {deform: (x, y, z) => [x, y, z]});
+    Cd.soft('alcantara', s * (W - .03), .535, -.45, .075, .022, .6, .01);
+    Cd.stitch(range(-.73, -.17, 12).map(z => [s * (W - .066), .546, z]), 'stitch2', .003);
+    Cd.add(place(lathe([[.001, 0], [.052, 0], [.056, .004], [.05, .008], [.001, .006]], 40), s * (W + .015), .38, -.05, 0, 0, s > 0 ? Math.PI : 0), 'speaker');
+    Cd.add(place(new T.TorusGeometry(.056, .003, 6, 40), s * (W + .01), .38, -.05, 0, Math.PI / 2, 0), 'aluR');
+    Cd.add(ribbon(resample([[s * (W + .005), .7, .05], [s * (W - .03), .67, -.02], [s * (W + .005), .64, -.1]], 20), .022, .003, [s, 0, 0]), 'accent');
+    Cd.add(place(prism(roundPoly([[0, 0], [.07, .006], [.07, .016], [0, .014]], .004, 2), .012, 'x', .002), s * (W - .005), .72, .08), 'aluR');
+    Cd.soft('piano', s * (W - .045), .55, -.16, .06, .008, .09, .004);
     for (const dzs of [-.02, .02]) C.soft('black', s * (W - .045), .557, -.16 + dzs, .03, .006, .022, .003);
   }
 
@@ -317,12 +320,13 @@ export function auroraCabin(K, amb) {
   /* ---- the light: across the dash lip into both doors, down the bridge, under it, footwells, overhead */
   C.strip(xs.map(x => [x, .64, lip(x) - .026]));
   for (const s of SIDES) {
-    C.strip([[s * .69, .64, .12], [s * (W + .005), .62, -.1], [s * (W + .005), .6, -.55], [s * (W + .005), .54, -1.0]]);
+    C.strip([[s * .69, .64, .12], [s * (W - .02), .63, .02]]);
+    Dc[s].strip([[s * (W - .02), .63, .02], [s * (W + .005), .62, -.1], [s * (W + .005), .6, -.55], [s * (W + .005), .54, -1.0]]);
     C.strip(range(.14, -.9, 12).map(z => [s * .128, top(z) - .006, z]));
     C.strip([[s * .15, .43, .44], [s * .6, .43, .44]], .003);
   }
   C.strip([[-.1, .255, .1], [.1, .255, .1]], .0025);
   C.strip([[-.08, roof(-.1) - .068, -.18], [.08, roof(-.1) - .068, -.18]], .0025);
   const wheel = steeringWheel(C, 'aero', {x: .36, y: .66, z: -.2, tilt: -.28});
-  return {group: C.finish(), wheel, cluster, clusterStyle: 'race', eye};
+  return {group: C.finish(), wheel, cluster, clusterStyle: 'race', eye, doors: {L: Dc[1].finish(), R: Dc[-1].finish()}};
 }
