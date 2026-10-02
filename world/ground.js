@@ -88,6 +88,15 @@ export class Ground {
    *  ground, so roads still seat and cut exactly as before. The terrain
    *  worker gets the same list (world.js posts it). */
   addPad(p) { (this.pads ||= []).push(p); }
+  /** True inside any pad's level rectangle (a building's ground, a stadium). */
+  onPad(x, z) {
+    if (!this.pads) return false;
+    for (const p of this.pads) {
+      const dx = x - p.cx, dz = z - p.cz;
+      if (Math.abs(dx * p.fx + dz * p.fz) < p.hl + 1 && Math.abs(-dx * p.fz + dz * p.fx) < p.hw + 1) return true;
+    }
+    return false;
+  }
   padded(x, z, nat) {
     if (!this.pads) return nat;
     for (const p of this.pads) {

@@ -15,6 +15,7 @@ export function geometryFrom(a) {
   g.setAttribute('position', new T.BufferAttribute(a.pos, 3));
   g.setAttribute('normal', new T.BufferAttribute(a.nor, 3));
   g.setAttribute('color', new T.BufferAttribute(a.col, 3));
+  g.setAttribute('wild', new T.BufferAttribute(a.wild, 1));
   g.setIndex(new T.BufferAttribute(a.index, 1));
   g.computeBoundingSphere();
   return g;

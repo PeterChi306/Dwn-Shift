@@ -206,9 +206,11 @@ export class Stream {
     if (old) this.dropTile(key, old);
     this.tiles.set(key, {mesh, lod});
     if (lod === 0) this.physics.setMesh('t' + key, vertices, solid, true);
+    if (lod === 0) this.grass?.addTile(key, arrays, mesh);
   }
 
   dropTile(key, tile) {
+    this.grass?.dropTile(key, tile.mesh);
     this.scene.remove(tile.mesh);
     tile.mesh.geometry.dispose();
     this.tiles.delete(key);

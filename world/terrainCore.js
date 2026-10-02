@@ -3,7 +3,7 @@
  * terrain worker (world/terrainWorker.js). terrain.js turns the arrays into
  * meshes.
  */
-import {TILE} from './roads.js';
+import {TILE, VERGE} from './roads.js';
 import {terrainHeight} from './network.js';
 import {beachAt, SEA_Y} from './coast.js';
 
@@ -39,6 +39,9 @@ const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a
  *  moister north-facing slopes), golden dry grass on open sunny slopes, pale
  *  soil on the ridge tops, and rock where it is too steep for anything. */
 const pnoise = (x, z, s) => { const v = Math.sin(x * s + Math.sin(z * s * 1.3) * 1.7) * Math.cos(z * s * .9 - Math.sin(x * s * .7) * 1.3); return v * .5 + .5; };
+/** Writes the vertex colour at out[i..i+2]; returns how wild the ground is
+ *  (0 lawn/city/beach .. 1 open hillside), which the ground shader uses to lay
+ *  chaparral, dry grass and bare soil over it at metre scale. */
 function paint(out, i, y, slope, x, z, nz, hill) {
   const patch = pnoise(x, z, .011) * .6 + pnoise(x + 400, z - 300, .037) * .4;
   let c;
@@ -68,6 +71,7 @@ function paint(out, i, y, slope, x, z, nz, hill) {
   }
   const v = .92 + .1 * Math.sin(x * .0021) * Math.cos(z * .0017) + .05 * Math.sin(x * .011 + z * .009);
   out[i] = c[0] * v; out[i + 1] = c[1] * v; out[i + 2] = c[2] * v;
+  return hill * (1 - b);
 }
 
 /** Grid arrays for an n x n cell patch at `step` metres, with optional skirt and tunnel holes. */
@@ -75,7 +79,7 @@ export function gridArrays(ground, x0, z0, step, n, extra, {skirt = 0, holes = f
   const m = n + 3, H = new Float32Array(m * m);
   for (let j = 0; j < m; j++) for (let i = 0; i < m; i++) H[j * m + i] = ground.height(x0 + (i - 1) * step, z0 + (j - 1) * step, extra);
   const N = n + 1, count = N * N + (skirt ? 4 * n : 0);
-  const pos = new Float32Array(count * 3), nor = new Float32Array(count * 3), col = new Float32Array(count * 3);
+  const pos = new Float32Array(count * 3), nor = new Float32Array(count * 3), col = new Float32Array(count * 3), wild = new Float32Array(count);
   const at = (i, j) => H[(j + 1) * m + (i + 1)];
   let v = 0;
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++, v++) {
@@ -84,11 +88,25 @@ export function gridArrays(ground, x0, z0, step, n, extra, {skirt = 0, holes = f
     const l = Math.hypot(nx, ny, nz);
     pos[v * 3] = x; pos[v * 3 + 1] = y; pos[v * 3 + 2] = z;
     nor[v * 3] = nx / l; nor[v * 3 + 1] = ny / l; nor[v * 3 + 2] = nz / l;
-    paint(col, v * 3, y, 1 - ny / l, x, z, nz / l, hillMask(x, z));
+    wild[v] = paint(col, v * 3, y, 1 - ny / l, x, z, nz / l, hillMask(x, z));
   }
   const hole = holes ? new Uint8Array(N * N) : null;
   if (holes && ground.anyTunnelNear(x0 + n * step / 2, z0 + n * step / 2, n * step))
     for (let k = 0; k < N * N; k++) hole[k] = ground.tunnelCover(pos[k * 3], pos[k * 3 + 2], pos[k * 3 + 1]);
+  // Grass density per grid vertex (detailed tiles only): wild ground, off the
+  // road and its verge, off junctions and pads, not on rock-steep slopes.
+  const grass = holes ? new Float32Array(N * N) : null;
+  if (grass) for (let k = 0; k < N * N; k++) {
+    if (wild[k] < .05 || (hole && hole[k])) continue;
+    const x = pos[k * 3], z = pos[k * 3 + 2], ny = nor[k * 3 + 1];
+    let d = wild[k] * Math.min(1, Math.max(0, (ny - .6) / .12));
+    if (d <= 0) continue;
+    const r = ground.model.nearest(x, z);
+    if (r) d *= Math.min(1, Math.max(0, (r.d - r.h - (VERGE[r.seg.kind] ?? 1.5) - .4) / 2.5));
+    if (d > 0) for (const j of ground.model.junctionsNear(x, z)) if (Math.hypot(x - j.x, z - j.z) < j.radius + 4) { d = 0; break; }
+    if (d > 0 && ground.onPad(x, z)) d = 0;
+    grass[k] = d;
+  }
   const index = [], solid = [];
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const a = j * N + i, b = a + 1, c = a + N, d = c + 1;
@@ -111,7 +129,7 @@ export function gridArrays(ground, x0, z0, step, n, extra, {skirt = 0, holes = f
     for (const r of rim) {
       pos[v * 3] = pos[r * 3]; pos[v * 3 + 1] = pos[r * 3 + 1] - skirt; pos[v * 3 + 2] = pos[r * 3 + 2];
       nor[v * 3] = nor[r * 3]; nor[v * 3 + 1] = nor[r * 3 + 1]; nor[v * 3 + 2] = nor[r * 3 + 2];
-      col[v * 3] = col[r * 3] * .8; col[v * 3 + 1] = col[r * 3 + 1] * .8; col[v * 3 + 2] = col[r * 3 + 2] * .8;
+      col[v * 3] = col[r * 3] * .8; col[v * 3 + 1] = col[r * 3 + 1] * .8; col[v * 3 + 2] = col[r * 3 + 2] * .8; wild[v] = wild[r];
       v++;
     }
     for (let k = 0; k < rim.length; k++) {
@@ -119,8 +137,8 @@ export function gridArrays(ground, x0, z0, step, n, extra, {skirt = 0, holes = f
       index.push(a, b, a2, b, b2, a2);
     }
   }
-  return {pos: pos.slice(0, v * 3), nor: nor.slice(0, v * 3), col: col.slice(0, v * 3),
-    index: new Uint32Array(index), solid: new Uint32Array(solid), vertices: pos.slice(0, N * N * 3)};
+  return {pos: pos.slice(0, v * 3), nor: nor.slice(0, v * 3), col: col.slice(0, v * 3), wild: wild.slice(0, v),
+    index: new Uint32Array(index), solid: new Uint32Array(solid), vertices: pos.slice(0, N * N * 3), grass};
 }
 
 /** A detailed tile. lod 0 carries physics triangles and tunnel holes. */

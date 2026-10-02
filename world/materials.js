@@ -8,12 +8,12 @@
 import * as T from 'three';
 import {Fn, attribute, uv, vec2, vec3, float, abs, fract, step, smoothstep, mix, max, min, round, fwidth, texture,
   positionWorld, uniform, If, Discard, vertexColor, normalMap, normalWorld} from 'three/tsl';
-import {asphalt, concrete, grass, groundDetail} from './textures.js';
+import {asphalt, concrete, grass, groundDetail, wildland, lawn, noise} from './textures.js';
 import {exp} from 'three/tsl';
 export const LAMP = 36;             // metres between street lamps on one side
 
 export function makeMaterials() {
-  const A = asphalt(), C = concrete(), grassTex = grass(), G = groundDetail();
+  const A = asphalt(), C = concrete(), grassTex = grass(), G = groundDetail(), W = wildland(), L = lawn(), N = noise();
 
   /* ---- road surface + markings */
   const info = attribute('rinfo', 'vec3');
@@ -48,8 +48,17 @@ export function makeMaterials() {
 
   const roadUV = uv().div(12);
   const road = new T.MeshStandardNodeMaterial({metalness: 0});
+  // The masks (tar snakes, repairs) are sampled rotated and at other scales
+  // than the surface, so their 12 m repeat never lines up down a long street.
+  const rot = (s, a) => vec2(u.mul(Math.cos(a)).sub(v.mul(Math.sin(a))), u.mul(Math.sin(a)).add(v.mul(Math.cos(a)))).div(s);
+  const snakes = texture(A.mask, rot(17, .61)).r, patches = texture(A.mask, rot(43, -.37).add(.29)).b;
+  const patchIn = smoothstep(.32, .5, patches), patchEdge = smoothstep(.12, .3, patches).mul(float(1).sub(smoothstep(.34, .5, patches)));
   road.colorNode = Fn(() => {
-    let c = texture(A.color, roadUV).rgb;
+    // Two samples of the surface, one rotated, mixed by a slow noise: no grid.
+    const mixer = smoothstep(.35, .65, texture(N, positionWorld.xz.div(140)).b);
+    let c = mix(texture(A.color, roadUV).rgb, texture(A.color, rot(15, 1.13)).rgb, mixer);
+    // Sealed cracks and saw-cut repairs: darker, the repair ringed by its cut.
+    c = c.mul(float(1).sub(snakes.mul(.42))).mul(float(1).sub(patchIn.mul(.2))).mul(float(1).sub(patchEdge.mul(.3)));
     // Large-scale variation: sun fade and grime drift across the city.
     const drift = texture(G.color, positionWorld.xz.div(170)).r;
     c = c.mul(drift.mul(.35).add(.8)).mul(.74);   // aged LA asphalt is mid-grey, not chalk
@@ -64,7 +73,7 @@ export function makeMaterials() {
     c = mix(c, vec3(.86, .64, .2), min(yellow, 1).mul(wear));
     return c;
   })();
-  road.roughnessNode = mix(texture(A.rough, roadUV).g, float(.55), paint);
+  road.roughnessNode = mix(texture(A.mask, roadUV).g.sub(snakes.mul(.4)).sub(patchIn.mul(.08)), float(.55), paint);
   // Street lighting after dark: pools under lamps every 36 m, staggered side
   // to side (lamps.js puts the posts in the same places, from the same arc
   // length). Junctions are lit all over. Night fades this in.
@@ -122,29 +131,59 @@ export function makeMaterials() {
   skirt.side = T.DoubleSide;
 
   /* ---- ground: vertex colour (altitude/slope/biome palette) x detail */
+  const wild = attribute('wild', 'float');
+  // Mosaic weights for the hillside cover, shared by colour and normal.
+  const cover = () => {
+    const p = positionWorld.xz, vc = vertexColor().rgb;
+    // The vertex palette already says how much chaparral a slope carries
+    // (dark olive vs golden grass); noise at 20-60 m breaks it into stands.
+    const vBrush = vc.r.sub(.39).div(-.3).clamp(0, 1);
+    const a = texture(N, p.div(90)), b = texture(N, p.div(31).add(.37));
+    const m = a.r.mul(.5).add(b.g.mul(.5));
+    // Height blend: the edge of a stand follows the shrub mounds in the brush
+    // texture, so it is ragged close up instead of a soft smear.
+    const mound = texture(W.brush.color, p.div(7)).g.sub(.08).mul(1.6);
+    const brush = smoothstep(.5, .545, m.add(vBrush.mul(.45)).sub(.1).add(mound.mul(fwidth(p.x).mul(-4).add(1).clamp(0, 1))));
+    const soil = smoothstep(.58, .7, b.b.mul(.6).add(a.g.mul(.4))).mul(float(1).sub(brush)).mul(.85);
+    return {brush, soil};
+  };
   const groundColor = Fn(() => {
-    const p = positionWorld.xz;
+    const p = positionWorld.xz, vc = vertexColor().rgb;
     const fine = texture(G.color, p.div(6)).r;
     const mid = texture(G.color, p.div(37)).r;
     const broad = texture(G.color, p.div(230)).r;
-    const base = vertexColor().rgb.mul(fine.mul(.45).add(.62)).mul(mid.mul(.3).add(.85)).mul(broad.mul(.35).add(.82));
+    let base = vc.mul(fine.mul(.45).add(.62)).mul(mid.mul(.3).add(.85)).mul(broad.mul(.35).add(.82));
+    // Irrigated lawn (flat, green, not wild): blades close up, keeping its hue.
+    const lawnish = float(1).sub(wild).mul(smoothstep(0, .06, vc.g.sub(vc.r)));
+    base = base.mul(mix(float(1), texture(L.color, p.div(2)).g.mul(2.6), lawnish.mul(.7)));
+    // Hillsides: golden grass, chaparral stands and bare decomposed granite,
+    // each a real texture, mixed at metre scale.
+    const {brush, soil} = cover();
+    const gr = texture(W.grass.color, p.div(4)).rgb, so = texture(W.soil.color, p.div(3)).rgb;
+    // Two brush samples (one turned and larger) crossfaded by noise: the
+    // mounds never line up into a repeating pattern of scales.
+    const br = mix(texture(W.brush.color, p.div(7)).rgb, texture(W.brush.color, vec2(p.x.mul(.6).sub(p.y.mul(.8)), p.x.mul(.8).add(p.y.mul(.6))).div(10.3)).rgb,
+      smoothstep(.35, .65, texture(N, p.div(47)).g));
+    const wildC = mix(mix(gr.mul(vec3(.84, .8, .78)), so, soil), br, brush).mul(broad.mul(.3).add(.85)).mul(mid.mul(.2).add(.9));
+    base = mix(base, wildC, wild);
     // Steep ground is rock, not smeared soil: road cuts and ridge faces get
     // layered sandstone bands (warped, so they are not rulered), darker in
     // the recesses, fading in from ~45 degrees.
-    const steep = float(1).sub(smoothstep(.6, .78, normalWorld.y));
+    const steep = float(1).sub(smoothstep(.5, .62, normalWorld.y));
     const warp = texture(G.color, p.div(19)).r.mul(3.5);
     const band = fract(positionWorld.y.add(warp).div(1.7));
-    const strata = mix(vec3(.46, .4, .33), vec3(.62, .55, .45), smoothstep(.15, .5, band).mul(float(1).sub(smoothstep(.7, .95, band))))
-      .mul(texture(G.color, vec2(p.x.add(p.y), positionWorld.y).div(5)).r.mul(.45).add(.7));
-    // Chaparral speckle on gentler hill ground: tiny dark shrub crowns, so a
-    // hillside reads as brush from a distance instead of flat sand.
-    const hillish = smoothstep(.02, .12, base.r.sub(base.g).add(.06)).mul(float(1).sub(steep));
-    const speck = smoothstep(.62, .78, texture(G.color, p.div(2.3)).r).mul(hillish).mul(.35);
-    return mix(base.mul(float(1).sub(speck)), strata, steep.mul(.9));
+    const strata = mix(vec3(.2, .155, .11), vec3(.34, .27, .19), smoothstep(.15, .5, band).mul(float(1).sub(smoothstep(.7, .95, band))))
+      .mul(texture(G.color, vec2(p.x.add(p.y), positionWorld.y).div(5)).r.mul(.45).add(.7))
+      .mul(texture(W.soil.color, vec2(p.x.add(p.y), positionWorld.y).div(3)).r.mul(.8).add(.55));
+    return mix(base, strata, steep.mul(.9));
   });
   const ground = new T.MeshStandardNodeMaterial({roughness: 1, metalness: 0});
   ground.colorNode = groundColor();
-  ground.normalNode = normalMap(texture(G.normal, positionWorld.xz.div(6)), vec2(.8, .8));
+  ground.normalNode = Fn(() => {
+    const p = positionWorld.xz, {brush, soil} = cover();
+    const wildN = mix(mix(texture(W.grass.normal, p.div(4)).rgb, texture(W.soil.normal, p.div(3)).rgb, soil), texture(W.brush.normal, p.div(7)).rgb, brush);
+    return normalMap(mix(texture(G.normal, p.div(6)).rgb, wildN, wild), vec2(1, 1));
+  })();
   ground.side = T.DoubleSide;             // tile skirts face either way
 
   // The far terrain is one coarse mesh under everything; where detailed tiles

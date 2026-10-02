@@ -29,10 +29,10 @@ function handle(data) {
   if (data.type === 'tile') {
     const a = tileArrays(ground, data.tx, data.tz, data.lod);
     self.postMessage({type: 'tile', key: data.key, lod: data.lod, arrays: a},
-      [a.pos.buffer, a.nor.buffer, a.col.buffer, a.index.buffer, a.solid.buffer, a.vertices.buffer]);
+      [a.pos.buffer, a.nor.buffer, a.col.buffer, a.wild.buffer, a.index.buffer, a.solid.buffer, a.vertices.buffer, ...(a.grass ? [a.grass.buffer] : [])]);
   } else if (data.type === 'far') {
     const bands = farBands(ground), transfer = [];
-    for (const a of bands) transfer.push(a.pos.buffer, a.nor.buffer, a.col.buffer, a.index.buffer);
+    for (const a of bands) transfer.push(a.pos.buffer, a.nor.buffer, a.col.buffer, a.wild.buffer, a.index.buffer);
     self.postMessage({type: 'far', bands}, transfer);
   }
 }
