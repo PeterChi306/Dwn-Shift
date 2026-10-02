@@ -3,9 +3,11 @@
  *   - the Hollywood sign, on the south face of Mount Lee above Mulholland,
  *     nine sheet-metal letters on their scaffolds, each seated on the slope
  *     at its own height like the real one, floodlit after dark;
- *   - the Mount Lee overlook at the top of Mount Lee Summit Road: a levelled
- *     plaza with parking, a stone parapet, coin binoculars, benches, shade
- *     pavilions and lamps, and the summit's antenna mast;
+ *   - the Mount Lee overlook at the top of Mount Lee Summit Road (rebuilt
+ *     2026-10-02): a graded, kerbed and lit access drive, a striped parking
+ *     lot under light poles, a picnic lawn with tables, grills, shade trees
+ *     and string lights, and the view terrace with its stone parapet, coin
+ *     binoculars and benches; and the summit's antenna mast;
  *   (the race track, drag strip and player houses are added by their own
  *   modules through the same kit and the same RESERVED list).
  *
@@ -14,7 +16,7 @@
  * `build()` makes the meshes and colliders once the scene exists.
  */
 import * as T from 'three';
-import {Kit, kitMaterials} from './kit.js';
+import {Kit, kitMaterials, washDisc, washFan} from './kit.js';
 
 /** Footprints kept free of lots and gardens: circles {x, z, r}. */
 export const RESERVED = [];
@@ -24,6 +26,12 @@ export const reserved = (x, z, pad = 0) => RESERVED.some(c => (x - c.x) ** 2 + (
 const SIGN = {x: -1258, z: -3187, dir: [.934, -.358], H: 21, pitch: 14.6};
 const OVERLOOK = {x: -1075, z: -3262, y: 539.5, hl: 32, hw: 34, road: [-1070, -3392]};
 const MAST = {x: -1228, z: -3418};
+/** The overlook drive at t (0 road end .. 1 lot edge): [x, y, z, dirx, dirz]. */
+function drivePoint(t) {
+  const [rx, rz] = OVERLOOK.road, ex = OVERLOOK.x, ez = OVERLOOK.z - OVERLOOK.hl + 1, L = Math.hypot(ex - rx, ez - rz);
+  const u = Math.min(1, t / .45), y = 535.9 + (OVERLOOK.y - 535.9) * u * u * (3 - 2 * u);
+  return [rx + (ex - rx) * t, y, rz + (ez - rz) * t, (ex - rx) / L, (ez - rz) / L];
+}
 
 export class Places {
   constructor({model, ground}) {
@@ -33,6 +41,10 @@ export class Places {
     this.extras = [];        // other modules' build hooks
     RESERVED.push({x: SIGN.x, z: SIGN.z, r: 95}, {x: OVERLOOK.x, z: OVERLOOK.z, r: 70}, {x: OVERLOOK.x, z: OVERLOOK.z - 80, r: 30});
     ground.addPad({cx: OVERLOOK.x, cz: OVERLOOK.z, fx: 0, fz: 1, hl: OVERLOOK.hl, hw: OVERLOOK.hw, y: OVERLOOK.y, margin: 22});
+    // The access drive: graded in short level steps that climb smoothly from
+    // the road's turning circle to the lot (the hill had ±1 m bumps on it).
+    for (const t of [.05, .2]) { const p = drivePoint(t); RESERVED.push({x: p[0], z: p[2], r: 16}); }
+    for (let k = 0; k < 12; k++) { const t = (k + .5) / 12, p = drivePoint(t); ground.addPad({cx: p[0], cz: p[2], fx: p[3], fz: p[4], hl: 5.2, hw: 7, y: p[1], margin: 7}); }
     this.pois.push({name: 'Santerra Beach', kind: 'beach', x: -1400, z: 3890}, {name: 'Hollywood Sign', kind: 'view', x: SIGN.x, z: SIGN.z + 60}, {name: 'Mount Lee Overlook', kind: 'view', x: OVERLOOK.x, z: OVERLOOK.z - 60});
   }
 
@@ -99,63 +111,157 @@ export class Places {
   /* ------------------------------------------------------ Mount Lee overlook */
   overlook(kit) {
     const {x: cx, z: cz, y: Y, hl, hw} = OVERLOOK, g = this.ground;
-    const y = Y + .06, s0 = cz - hl, s1 = cz + hl - 2;                 // north (drive) to south (view) edge
-    // The drive up from the road's turning circle: asphalt laid on the ground.
-    {
-      const [rx, rz] = OVERLOOK.road, pts = [];
-      for (let t = 0; t <= 1.0001; t += 1 / 24) { const px = rx + (cx - rx) * t, pz = rz + (s0 + 2 - rz) * t; pts.push([px, g.height(px, pz) + .02, pz]); }
-      kit.ribbon('line', pts, 8, '#57544f', .04);
-      for (const side of [-1, 1]) kit.ribbon('line', pts.map(([px, py, pz]) => [px + side * 3.7, py, pz]), .14, '#e8e4d8', .06);
+    const y = Y + .02, s0 = cz - hl, s1 = cz + hl - 2;                 // north (drive) to south (view) edge
+    const ASPH = '#34363a', LINE = '#efefe9', KERB = '#b9b3a7', PAVER = '#b6a98f', WARM = '#ffe2b0';
+    const pool = (x, z, r, I = .5) => kit.add('wash', washDisc(r, I), x, g.height(x, z) + .08, z, 0, '#ffffff', {keep: true});
+    /** A lamp post: pole, arm(s) and lit head(s), with the pool it throws. */
+    const lamp = (x, z, yaw, {arms = 1, h = 6, r = 10} = {}) => {
+      const gy = g.height(x, z);
+      kit.cyl('metal', x, gy, z, .09, h, '#2a2c2f', 8, true, .07);
+      for (let k = 0; k < arms; k++) {
+        const a = yaw + k * Math.PI, dx = Math.sin(a) * 1.1, dz = Math.cos(a) * 1.1;
+        kit.rod('metal', [x, gy + h - .15, z], [x + dx, gy + h, z + dz], .045, '#2a2c2f');
+        kit.box('metal', x + dx, gy + h, z + dz, .55, .14, .32, -a, '#2a2c2f');
+        kit.box('glow', x + dx, gy + h - .09, z + dz, .44, .04, .24, -a, WARM);
+        pool(x + dx * 2.2, z + dz * 2.2, r);
+      }
+    };
+
+    /* ---- the drive: asphalt, kerbs, lines, reflectors, lamps */
+    const N = 40, D = [];
+    for (let k = 0; k <= N; k++) D.push(drivePoint(k / N));
+    const side = (p, o, lift = 0) => [p[0] - p[4] * o, p[1] + lift, p[2] + p[3] * o];
+    kit.ribbon('line', D.map(p => [p[0], g.height(p[0], p[2]), p[2]]), 9.4, ASPH, .05);
+    for (const o of [-4.25, 4.25]) kit.ribbon('line', D.map(p => { const q = side(p, o); return [q[0], g.height(q[0], q[2]), q[2]]; }), .16, LINE, .07);
+    for (let k = 0; k < N; k += 2) { const a = D[k], b = D[k + 1]; kit.ribbon('line', [[a[0], g.height(a[0], a[2]), a[2]], [b[0], g.height(b[0], b[2]), b[2]]], .14, '#e7b93a', .075); }
+    for (const o of [-4.95, 4.95]) for (let k = 0; k < N; k++) {
+      const a = side(D[k], o), b = side(D[k + 1], o), ya = g.height(a[0], a[2]), yb = g.height(b[0], b[2]);
+      kit.beam('stone', a[0], a[2], b[0], b[2], (ya + yb) / 2 + .07, .22, .3, KERB);
     }
-    // Plaza: warm pavers with darker joints, parking along the north end.
-    kit.box('line', cx, y, (s0 + s1) / 2, hw * 2 - 4, .08, s1 - s0, 0, '#a99c86');
-    for (let k = -6; k <= 6; k++) kit.box('line', cx + k * 4.8, y + .012, (s0 + s1) / 2 + 8, .1, .08, s1 - s0 - 18, 0, '#978a74');
-    for (let x = cx - hw + 6; x < cx + hw - 5; x += 2.8) kit.box('line', x, y + .014, s0 + 5, .12, .08, 5.2, 0, '#f2f2ee');
+    for (let k = 1; k < N; k += 3) for (const o of [-5.4, 5.4]) {           // reflector posts, cat's eyes on top
+      const q = side(D[k], o), gy = g.height(q[0], q[2]);
+      kit.box('paint', q[0], gy + .45, q[2], .12, .9, .12, 0, '#f2f2ee');
+      kit.box('glow', q[0], gy + .82, q[2], .13, .1, .13, 0, o > 0 ? '#ff5a3c' : '#fff1d0');
+    }
+    for (let k = 3, i = 0; k < N; k += 7, i++) { const o = i % 2 ? 6.2 : -6.2, q = side(D[k], o), p = D[k]; lamp(q[0], q[2], Math.atan2(p[0] - q[0], p[2] - q[2]), {r: 8.5}); }
+    { // entrance sign: OVERLOOK · PARKING · PICNIC, lit at night
+      const q = side(D[6], -8.5), gy = g.height(q[0], q[2]), yaw = Math.atan2(D[6][3], D[6][4]) + Math.PI / 2;
+      kit.box('paint', q[0], gy + 1.3, q[2], 4.6, 2.2, .3, yaw, '#24342c', true);
+      kit.box('lit', q[0] - Math.cos(yaw) * .17 * 0, gy + 1.7, q[2], 4.0, .55, .34, yaw, '#e8e2cf');
+      kit.box('lit', q[0], gy + 1.05, q[2], 1.1, .55, .34, yaw, '#2e6fd6');
+      for (const o of [-2.1, 2.1]) kit.post('paint', q[0] + Math.cos(yaw) * o, gy - .5, gy + .2, q[2] - Math.sin(yaw) * o, .3, .3, yaw, '#8e8272');
+      kit.add('wash', washFan(5, 2.6, .7), q[0] - Math.sin(yaw) * .9, gy, q[2] - Math.cos(yaw) * .9, yaw, '#ffffff', {keep: true});
+    }
+
+    /* ---- the parking lot (west and middle, by the drive) */
+    const lx0 = cx - 32, lx1 = cx + 6, lz0 = s0 + 1, lz1 = s0 + 21;
+    kit.box('line', (lx0 + lx1) / 2, y, (lz0 + lz1) / 2, lx1 - lx0, .04, lz1 - lz0, 0, ASPH);
+    kit.box('line', cx, y, s0 - .2, 9.4, .04, 3, 0, ASPH);                                  // mouth onto the drive
+    const bay = (x, za, zb, color = LINE) => kit.box('line', x, y + .01, (za + zb) / 2, .12, .03, Math.abs(zb - za), 0, color);
+    for (let x = lx0 + 1; x <= cx - 5.4; x += 2.7) bay(x, lz0, lz0 + 5.4);                    // north row, noses to the hill
+    for (let x = lx0 + 1; x <= lx1 - .8; x += 2.7) bay(x, lz1 - 5.6, lz1);                    // south row, noses to the view
+    kit.box('line', (lx0 + 1 + cx - 5.4) / 2, y + .01, lz0 + 5.4, cx - 5.4 - lx0 - 1, .03, .12, 0, LINE);
+    kit.box('line', (lx0 + lx1) / 2 + .1, y + .01, lz1 - 5.6, lx1 - lx0 - 1.8, .03, .12, 0, LINE);
+    for (let x = lx0 + 2.35; x < cx - 5.4; x += 2.7) kit.box('stone', x, y + .07, lz0 + .7, 1.7, .12, .2, 0, KERB);   // wheel stops
+    for (let x = lx0 + 2.35; x < lx1 - .8; x += 2.7) kit.box('stone', x, y + .07, lz1 - .7, 1.7, .12, .2, 0, KERB);
+    // Two accessible bays (blue, with the symbol as a white square), arrows down the aisle.
+    for (const x of [lx0 + 2.35, lx0 + 5.05]) { kit.box('line', x, y + .008, lz1 - 2.8, 2.5, .03, 5.4, 0, '#2a5cb8'); kit.box('line', x, y + .02, lz1 - 2.8, .9, .03, .9, 0, LINE); }
+    for (const x of [cx - 20, cx - 8]) { kit.box('line', x, y + .01, (lz0 + lz1) / 2, 2.2, .03, .25, 0, LINE); kit.add('line', new T.ConeGeometry(.45, .9, 3).rotateZ(-Math.PI / 2).scale(1, .05, 1), x - 1.5, y + .02, (lz0 + lz1) / 2, 0, LINE); }
+    // Kerbs round the lot's west and south edges, light poles on the south kerb line.
+    kit.box('stone', lx0 - .15, y + .1, (lz0 + lz1) / 2, .3, .2, lz1 - lz0, 0, KERB);
+    kit.box('stone', (lx0 + lx1) / 2, y + .1, lz1 + .15, lx1 - lx0, .2, .3, 0, KERB);
+    for (const x of [cx - 26, cx - 13, cx]) lamp(x, lz1 + .8, 0, {arms: 2, h: 7, r: 10.5});
+    for (const x of [cx - 26, cx - 13]) lamp(x, lz0 - .6, 0, {h: 6.5, r: 9});
+    { // P sign at the mouth
+      const px = cx + 5.5, pz = s0 - .5;
+      kit.cyl('metal', px, y, pz, .05, 2.6, '#8c9196', 8);
+      kit.box('lit', px, y + 2.75, pz, .8, .8, .06, 0, '#1f55c4');
+      kit.box('lit', px, y + 2.75, pz - .035, .38, .5, .02, 0, '#ffffff');
+    }
+
+    /* ---- picnic lawn (east of the lot, down to the terrace) */
+    const px0 = cx + 9, px1 = cx + hw - 1, pz0 = s0 + 1, pz1 = s1 - 17;
+    kit.box('grass', (px0 + px1) / 2, y, (pz0 + pz1) / 2, px1 - px0, .04, pz1 - pz0, 0, '#5f7d45');
+    kit.box('line', cx + 7.5, y + .005, (s0 + s1) / 2, 3, .04, s1 - s0, 0, PAVER);              // path from the lot to the terrace
+    for (let z = s0 + 1.5; z < s1; z += 1.2) kit.box('line', cx + 7.5, y + .01, z, 3, .03, .05, 0, '#9c8f77');
+    const table = (x, z, yaw) => {
+      const c = Math.cos(yaw), sn = Math.sin(yaw), at = (u, v) => [x + c * u + sn * v, z - sn * u + c * v];
+      { const [ax, az] = at(0, 0); kit.box('wood', ax, y + .75, az, 2, .06, .82, yaw, '#8a6242', true); }
+      for (const v of [-.68, .68]) { const [ax, az] = at(0, v); kit.box('wood', ax, y + .45, az, 2, .05, .28, yaw, '#7d5839'); }
+      for (const u of [-.75, .75]) for (const v of [-.42, .42]) { const [ax, az] = at(u, v); kit.rod('metal', [ax, y, az], [x + c * u * .98, y + .74, z - sn * u * .98], .03, '#3b3d40'); }
+    };
+    const tables = [];
+    for (const tz of [pz0 + 7, pz0 + 16, pz0 + 25]) for (const tx of [px0 + 6, px0 + 16]) { table(tx, tz, .12 * Math.sin(tx + tz)); tables.push([tx, tz]); }
+    for (const [gx, gz] of [[px1 - 2.2, pz0 + 4], [px1 - 2.2, pz0 + 21]]) {         // charcoal grills
+      kit.cyl('metal', gx, y, gz, .06, .8, '#2b2b2b', 8);
+      kit.box('metal', gx, y + .86, gz, .75, .16, .5, 0, '#1d1e20');
+      kit.box('metal', gx, y + .95, gz, .7, .02, .45, 0, '#55585c');
+    }
+    for (const [bx, bz] of [[px0 + 1, pz0 + 2], [px0 + 1, pz1 - 2], [px1 - 1, pz1 - 4]]) kit.cyl('paint', bx, y, bz, .3, .95, '#3f5a46', 10, true);   // bins
+    const tree = (x, z, h) => {
+      kit.cyl('wood', x, y, z, .18, h * .55, '#5b4632', 7, true, .13);
+      kit.add('paint', new T.IcosahedronGeometry(h * .32, 1), x, y + h * .7, z, 0, '#4d6b38', {scale: new T.Vector3(1.15, .8, 1.15)});
+      kit.add('paint', new T.IcosahedronGeometry(h * .22, 1), x + h * .18, y + h * .62, z - h * .1, 0, '#577743');
+    };
+    for (const [tx, tz, h] of [[px0 + 11, pz0 + 2.5, 7], [px1 - 3, pz0 + 12, 8], [px0 + 2.5, pz0 + 31, 6.5], [px1 - 4, pz1 - 1.5, 7.5]]) tree(tx, tz, h);
+    // String lights: poles round the tables, warm bulbs on sagging wires, pools under them.
+    const poles = [[px0 + 1, pz0 + 3], [px1 - 1, pz0 + 3], [px0 + 1, pz0 + 20], [px1 - 1, pz0 + 20], [px0 + 1, pz0 + 31], [px1 - 1, pz0 + 31]];
+    for (const [qx, qz] of poles) kit.cyl('wood', qx, y, qz, .09, 4.4, '#6b5440', 8, true);
+    const strings = [[0, 1], [2, 3], [4, 5], [0, 3], [1, 2], [2, 5], [3, 4]];
+    for (const [i, j] of strings) {
+      const [ax, az] = poles[i], [bx, bz] = poles[j], L = Math.hypot(bx - ax, bz - az), n = Math.round(L / 1.1);
+      let prev = null;
+      for (let k = 0; k <= n; k++) {
+        const t = k / n, sag = Math.sin(Math.PI * t) * L * .045, p = [ax + (bx - ax) * t, y + 4.25 - sag, az + (bz - az) * t];
+        if (prev) kit.rod('metal', prev, p, .008, '#1b1b1b', 3);
+        if (k && k < n) kit.add('glow', new T.SphereGeometry(.11, 6, 4), p[0], p[1] - .1, p[2], 0, '#ffd590');
+        prev = p;
+      }
+    }
+    for (const [tx, tz] of tables) pool(tx, tz, 6, .4);
+
+    /* ---- the view terrace */
+    const pz = s1, tx0 = cx - hw + 5, tx1 = cx + hw - 5, tz0 = s1 - 16;
+    kit.box('line', cx, y, (tz0 + s1) / 2, hw * 2 - 4, .04, s1 - tz0, 0, PAVER);
+    for (let k = -6; k <= 6; k++) kit.box('line', cx + k * 4.8, y + .006, (tz0 + s1) / 2, .1, .03, s1 - tz0, 0, '#9c8f77');
+    kit.box('line', (lx0 + cx + 6) / 2, y, (lz1 + tz0) / 2, cx + 6 - lx0, .04, tz0 - lz1, 0, '#6d8a52');   // lawn between the lot and the terrace
     // Stone parapet with a steel railing round the view end.
-    const px0 = cx - hw + 5, px1 = cx + hw - 5, pz = s1;
-    kit.box('paint', cx, y + .5, pz, px1 - px0, 1, .8, 0, '#b8ab94', true);
-    kit.box('metal', cx, y + 1.15, pz, px1 - px0, .06, .06, 0, '#474a4d');
-    kit.box('paint', cx, y - 4, pz + .2, px1 - px0 + .8, 8, .8, 0, '#a89c86');          // its retaining face, down the slope
-    for (let x = px0; x <= px1; x += 2) kit.post('metal', x, y + 1, y + 1.15, pz, .05, .05, 0, '#474a4d');
-    for (const side of [-1, 1]) {
-      kit.box('paint', cx + side * (hw - 5), y + .5, s1 - 22, .8, 1, 44, 0, '#b8ab94', true);
-      kit.box('metal', cx + side * (hw - 5), y + 1.15, s1 - 22, .06, .06, 44, 0, '#474a4d');
+    kit.box('paint', cx, y + .5, pz, tx1 - tx0, 1, .8, 0, '#b8ab94', true);
+    kit.box('metal', cx, y + 1.15, pz, tx1 - tx0, .06, .06, 0, '#474a4d');
+    kit.box('paint', cx, y - 4, pz + .2, tx1 - tx0 + .8, 8, .8, 0, '#a89c86');          // its retaining face, down the slope
+    for (let x = tx0; x <= tx1; x += 2) kit.post('metal', x, y + 1, y + 1.15, pz, .05, .05, 0, '#474a4d');
+    for (const sd of [-1, 1]) {
+      kit.box('paint', cx + sd * (hw - 5), y + .5, s1 - 8, .8, 1, 16, 0, '#b8ab94', true);
+      kit.box('metal', cx + sd * (hw - 5), y + 1.15, s1 - 8, .06, .06, 16, 0, '#474a4d');
     }
-    // Coin binoculars along the parapet.
+    // Coin binoculars along the parapet, benches facing the view.
     for (const x of [cx - 21, cx - 7, cx + 7, cx + 21]) {
       kit.cyl('metal', x, y, pz - 1.3, .09, 1.15, '#3d4245', 8);
       kit.box('metal', x, y + 1.3, pz - 1.3, .5, .32, .3, 0, '#e2b33c');
-      for (const s of [-1, 1]) kit.cyl('metal', x + s * .12, y + 1.28, pz - 1.1, .07, .22, '#2b2b2b', 8);
+      for (const sd of [-1, 1]) kit.cyl('metal', x + sd * .12, y + 1.28, pz - 1.1, .07, .22, '#2b2b2b', 8);
     }
-    // Benches facing the view, planters with agaves.
     for (const x of [cx - 28, cx - 14, cx, cx + 14, cx + 28]) {
       kit.box('paint', x, y + .45, pz - 6, 2.6, .12, .5, 0, '#8a6242');
       kit.box('paint', x, y + .75, pz - 6.25, 2.6, .5, .08, 0, '#8a6242');
-      for (const s of [-1, 1]) kit.box('metal', x + s * 1.1, y + .22, pz - 6, .08, .44, .5, 0, '#333');
+      for (const sd of [-1, 1]) kit.box('metal', x + sd * 1.1, y + .22, pz - 6, .08, .44, .5, 0, '#333');
     }
-    for (const x of [cx - 34, cx - 21, cx + 21, cx + 34]) {
-      kit.box('paint', x, y + .4, pz - 12, 2.4, .8, 2.4, 0, '#9f9383', true);
-      for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2; kit.add('paint', new T.ConeGeometry(.12, 1.1, 4), x + Math.cos(a) * .4, y + 1.2, pz - 12 + Math.sin(a) * .4, a, '#5c7a5a', {rx: .5 * Math.cos(a), rz: .5 * Math.sin(a)}); }
-    }
-    // Shade pavilions: slender steel columns, thin roofs.
-    for (const x of [cx - 24, cx + 24]) {
-      const z = pz - 24;
+    // Bollard lights along the terrace and the path, a glow along the parapet's foot.
+    for (let x = tx0 + 2; x <= tx1 - 2; x += 7) { kit.cyl('metal', x, y, tz0 + .5, .1, .9, '#2d2f31', 8); kit.box('glow', x, y + .82, tz0 + .5, .16, .1, .16, 0, WARM); pool(x, tz0 + .5, 3.2, .5); }
+    for (let z = s0 + 4; z < tz0; z += 8) { kit.cyl('metal', cx + 5.7, y, z, .1, .9, '#2d2f31', 8); kit.box('glow', cx + 5.7, y + .82, z, .16, .1, .16, 0, WARM); pool(cx + 7, z, 3, .45); }
+    kit.box('glow', cx, y + .08, pz - .45, tx1 - tx0 - 1, .05, .05, 0, '#ffd9a0');
+    for (let x = tx0 + 4; x < tx1; x += 8) kit.add('wash', washFan(5, 1.2, .5), x, y, pz - .42, Math.PI, '#ffffff', {keep: true});
+    // One shade pavilion on the lawn by the lot.
+    { const x = cx - 22, z = (lz1 + tz0) / 2 + 1;
       for (const dx of [-5, 5]) for (const dz of [-3.5, 3.5]) kit.cyl('metal', x + dx, y, z + dz, .12, 3.2, '#2f3134', 8, true);
       kit.box('paint', x, y + 3.35, z, 12.5, .3, 8.4, 0, '#f1efe8');
       kit.box('glow', x, y + 3.18, z, 9, .04, .3, 0, '#fff1d6');
-      for (const dz of [-1.5, 1.5]) kit.box('paint', x, y + .45, z + dz, 4, .1, .45, 0, '#8a6242');
+      pool(x, z, 7, .6);
+      for (const dz of [-1.5, 1.5]) kit.box('paint', x, y + .45, z + dz, 4, .1, .45, 0, '#8a6242'); }
+    for (const x of [cx - 34 + 3, cx - 9]) {                                        // agave planters
+      const z = tz0 - 3;
+      kit.box('paint', x, y + .4, z, 2.4, .8, 2.4, 0, '#9f9383', true);
+      for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2; kit.add('paint', new T.ConeGeometry(.12, 1.1, 4), x + Math.cos(a) * .4, y + 1.2, z + Math.sin(a) * .4, a, '#5c7a5a', {rx: .5 * Math.cos(a), rz: .5 * Math.sin(a)}); }
     }
-    // Lamps round the plaza and along the drive.
-    for (let z = s0 + 10; z < s1; z += 18) for (const side of [-1, 1]) {
-      const x = cx + side * (hw - 6.5);
-      kit.cyl('metal', x, y, z, .08, 4.6, '#2d2f31', 8);
-      kit.box('glow', x, y + 4.7, z, .5, .18, .5, 0, '#ffe6bd');
-    }
-    // A sign board at the entrance.
-    { const bx = cx - 9, bz = s0 - 14, by = g.height(bx, bz);
-      kit.box('paint', bx, by + 1.1, bz, 5.5, 2.2, .3, 0, '#2c3a33', true);
-      kit.box('lit', bx, by + 1.5, bz + .17, 4.6, .7, .05, 0, '#e8e2cf');
-      for (const s of [-2.4, 2.4]) kit.post('paint', bx + s, by - .5, by, bz, .3, .3, 0, '#8e8272'); }
     // The summit's antenna mast: a tapering lattice with red beacons.
     const my = g.height(MAST.x, MAST.z), MH = 72;
     kit.box('paint', MAST.x, my + .5, MAST.z, 9, 1.4, 9, 0, '#9a968e', true);

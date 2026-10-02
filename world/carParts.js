@@ -11,7 +11,7 @@
  *            for an intake, a red laser out of the hole (the 2,000 hp street-build look)
  *   wheels   aero · forged · mesh · dish · lux, with rim and caliper colours
  *   stance   stock · lowered · slammed with camber
- *   glow     underglow colour or off;  livery: clean · twin stripes · side stripe · black roof
+ *   glow     underglow colour or off, glowMode steady · breathing · colour cycle · chase;  livery: clean · twin stripes · side stripe · black roof
  *
  * applyBuild(vehicle, build) hides the stock pieces the build replaces (the
  * GLB keeps them as tagged meshes, see cars/auroraGlb.js), adds the new ones
@@ -22,6 +22,7 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {uniform, mix, positionLocal, abs, smoothstep, float, vec3, step, materialColor} from 'three/tsl';
 import {buildWheels} from './carWheels.js';
+import {rebuildCabin} from './carModels.js';
 
 export const OPTIONS = {
   wing: [['stock', 'Swan-neck', 'The Aurora\'s own carbon wing'], ['none', 'No wing', 'Clean tail, top-speed trim'], ['ducktail', 'Ducktail', 'A kicked-up lip in body colour'],
@@ -33,14 +34,25 @@ export const OPTIONS = {
   lights: [['stock', 'LED white', ''], ['yellow', 'Selective yellow', ''], ['ice', 'Ice blue', ''], ['oneeye', 'One-eye laser', 'One lamp out for an intake, a red laser in its place']],
   wheels: [['aero', 'Aero centre-lock', ''], ['forged', 'Forged five-spoke', ''], ['mesh', 'Cross mesh', ''], ['dish', 'Deep dish', ''], ['lux', 'Multi-spoke', '']],
   stance: [['stock', 'Stock', ''], ['low', 'Lowered', '-25 mm'], ['slammed', 'Slammed + camber', '-45 mm, wheels tucked, negative camber']],
+  seats: [['bucket', 'Carbon buckets', 'Bolstered shells, 4-point harness'], ['comfort', 'Comfort seats', 'Quilted leather armchairs, piped edges']],
+  finish: [['carbon', 'Carbon fibre', 'Gloss weave on the dash and tub'], ['alu', 'Brushed aluminium', 'Machined metal'], ['piano', 'Piano black', 'Deep gloss black'], ['paint', 'Body colour', 'Painted to match the car']],
+  cage: [['none', 'No cage', ''], ['half', 'Half cage', 'Main hoop, diagonal, harness bar, door bars'], ['full', 'Full cage', 'Adds roof rails and A-pillar bars']],
+  screen: [['gmeter', 'G-meter', 'Live g-forces, peaks and speed on the centre screen'], ['nav', 'Navigation', 'The map display']],
+  glowMode: [['steady', 'Steady', 'Always on'], ['breathe', 'Breathing', 'Slow fade in and out'], ['cycle', 'Colour cycle', 'Rolls through the spectrum'], ['chase', 'Chase', 'Light runs round the car']],
   livery: [['none', 'Clean', ''], ['stripes', 'Twin stripes', ''], ['side', 'Side stripe', ''], ['twotone', 'Black roof', '']],
 };
 export const RIMS = [['Black', '#0b0c0e'], ['Gunmetal', '#3b3f45'], ['Silver', '#c4c8cd'], ['Bronze', '#a7854b'], ['Gold', '#c9a24a'], ['White', '#e8e8e4'], ['Red', '#b3141a']];
 export const CALIPERS = [['Blue', '#1f47ff'], ['Red', '#d3191c'], ['Yellow', '#f2c21a'], ['Black', '#1c1d20'], ['Orange', '#ff6a1a'], ['Lime', '#9bff2a']];
-export const GLOWS = [['Off', null], ['Ice', '#36c8ff'], ['Violet', '#9b3cff'], ['Red', '#ff2238'], ['Green', '#2bff7a'], ['White', '#e8f0ff']];
+export const GLOWS = [['Off', null], ['Ice', '#36c8ff'], ['Violet', '#9b3cff'], ['Red', '#ff2238'], ['Green', '#2bff7a'], ['White', '#e8f0ff'],
+  ['Pink', '#ff3ccf'], ['Amber', '#ff9a1a'], ['Teal', '#16f2c4'], ['Royal', '#2a4bff']];
+export const LEATHERS = [['Onyx', '#161618'], ['Rosso', '#7a1416'], ['Saddle', '#8a5a34'], ['Cream', '#d6cab0'], ['Bianco', '#e2e0da'], ['Navy', '#1a2442'], ['Verde', '#1f3b2d'], ['Arancio', '#c4561a']];
+export const INSERTS = [['Graphite', '#19191c'], ['Carbon grey', '#3a3b3f'], ['Rosso', '#8e1a1c'], ['Ice', '#b9c7d2'], ['Cream', '#d6cab0'], ['Blue', '#1d3fbf'], ['Yellow', '#d9a51a']];
+export const STITCHES = [['Blue', '#2448ff'], ['Red', '#d3191c'], ['Yellow', '#f2c21a'], ['White', '#ecebe6'], ['Orange', '#ff6a1a'], ['Lime', '#9bff2a'], ['Black', '#1c1d20']];
+export const CAGES = [['Black', '#1c1d20'], ['Silver', '#b9bec4'], ['Red', '#c8141c'], ['Yellow', '#e8b512'], ['Blue', '#1f47ff']];
 export const STRIPES = [['White', '#f2f2ee'], ['Black', '#0b0c0e'], ['Red', '#c8141c'], ['Blue', '#1f47ff'], ['Gold', '#c9a24a']];
 
-export const DEFAULT_BUILD = {wing: 'stock', front: 'stock', kit: 'stock', exhaust: 'stock', lights: 'stock', wheels: 'aero', rim: null, caliper: null, stance: 'stock', glow: null, livery: 'none', stripe: '#f2f2ee'};
+export const DEFAULT_BUILD = {wing: 'stock', front: 'stock', kit: 'stock', exhaust: 'stock', lights: 'stock', wheels: 'aero', rim: null, caliper: null, stance: 'stock', glow: null, glowMode: 'steady', livery: 'none', stripe: '#f2f2ee',
+  seats: 'bucket', finish: 'carbon', cage: 'none', screen: 'gmeter', leather: null, insert: null, stitch: null, cageColor: null};
 export const PRESETS = [
   {id: 'stock', name: 'Factory', blurb: 'The Aurora as it left the line', build: {...DEFAULT_BUILD}},
   {id: 'gt3', name: 'GT3 R', blurb: 'Race car: widebody, big wing, splitter, forged wheels, stripes', paint: '#eeeeea',
@@ -223,16 +235,55 @@ function addLaser(P, add, group) {
   group.userData.laser = [mesh, sheath, halo];
 }
 
-function addGlow(group, color) {
-  const c = document.createElement('canvas'); c.width = c.height = 64;
-  const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 2, 32, 32, 32);
-  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.5, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+/** Underglow (2026-10-02): LED tubes along the sills and both bumpers, and
+ *  the pool they throw on the road, a soft car-shaped halo well wider than
+ *  the body so it reads from the chase cam. A real light under the car
+ *  (owned by the world, see updateGlow) lights the road, tyres and rockers. */
+function addGlow(group, color, mode) {
+  const c = document.createElement('canvas'); c.width = 128; c.height = 256;
+  const x = c.getContext('2d');
+  // A rounded rectangle blurred out: brightest under the sills, soft to the rim.
+  x.filter = 'blur(18px)'; x.fillStyle = '#fff';
+  x.beginPath(); x.roundRect(28, 34, 72, 188, 30); x.fill();
+  x.filter = 'blur(6px)'; x.globalAlpha = .55; x.beginPath(); x.roundRect(36, 46, 56, 164, 22); x.fill();
   const tex = new T.CanvasTexture(c);
-  const m = new T.Mesh(new T.PlaneGeometry(3.2, 6), new T.MeshBasicMaterial({color, map: tex, transparent: true, opacity: .9, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false}));
-  m.rotation.x = -Math.PI / 2; m.position.set(0, .04, .1); m.renderOrder = 2; group.add(m);
-  const tube = new T.Mesh(new T.BoxGeometry(1.7, .02, 3.9), new T.MeshBasicMaterial({color, toneMapped: false})); tube.position.set(0, .13, .15); group.add(tube);
-  group.userData.glow = m;
+  const poolMat = new T.MeshBasicMaterial({color, map: tex, transparent: true, opacity: 1, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4});
+  const pool = new T.Mesh(new T.PlaneGeometry(4.3, 8.2), poolMat);
+  pool.rotation.x = -Math.PI / 2; pool.position.set(0, .05, .05); pool.renderOrder = 2; group.add(pool);
+  // Tubes: two sills and two cross pieces, each its own mesh so the chase mode can run round them.
+  const tubeMat = () => new T.MeshBasicMaterial({color, toneMapped: false});
+  const tubes = [];
+  const tube = (sx, sz, px, pz, order) => { const m = new T.Mesh(new T.BoxGeometry(sx, .028, sz), tubeMat()); m.position.set(px, .15, pz); m.userData.order = order; group.add(m); tubes.push(m); };
+  tube(.03, 1.6, .84, .95, 0); tube(.03, 1.6, .84, -.75, 1); tube(1.5, .03, 0, -1.75, 2);
+  tube(.03, 1.6, -.84, -.75, 3); tube(.03, 1.6, -.84, .95, 4); tube(1.5, .03, 0, 1.85, 5);
+  group.userData.glow = {pool, tubes, color: new T.Color(color), mode: mode || 'steady'};
+}
+
+const _gc = new T.Color(), _hsl = {};
+/** Animate the underglow and drive its light: call every frame.
+ *  night 0..1 (day it is a faint tint, after dark the full pool), light a PointLight the world owns. */
+export function updateGlow(vehicle, {time = 0, night = 0, light = null} = {}) {
+  const G = vehicle?.parts?.userData.glow;
+  if (!G) { if (light) light.intensity = 0; return; }
+  const n = Math.max(0, Math.min(1, night));
+  let k = 1;
+  _gc.copy(G.color);
+  if (G.mode === 'breathe') k = .35 + .65 * (.5 + .5 * Math.sin(time * 2.2));
+  if (G.mode === 'cycle') { G.color.getHSL(_hsl); _gc.setHSL((_hsl.h + time * .08) % 1, Math.max(.85, _hsl.s), .55); }
+  const day = .28 + .72 * n;                                   // a sunlit road drowns most of it
+  G.pool.material.color.copy(_gc).multiplyScalar(k * (.55 + 1.25 * n));
+  G.pool.material.opacity = day;
+  for (const m of G.tubes) {
+    let t = k;
+    if (G.mode === 'chase') { const ph = (time * 1.6 - m.userData.order / 6) % 1; t = .2 + .8 * Math.pow(1 - ph, 3); }
+    m.material.color.copy(_gc).multiplyScalar(t * (1.2 + 1.8 * n));
+  }
+  if (light) {
+    vehicle.object.localToWorld(light.position.set(0, .28, .1));
+    light.color.copy(_gc);
+    light.intensity = k * (2 + 26 * n);
+  }
 }
 
 /** Stripes / two-tone, painted in the shader on top of the body colour (positionLocal). */
@@ -294,12 +345,19 @@ export function applyBuild(vehicle, raw) {
     addLaser(P, add, group);
   }
   for (const [m, gs] of byMat) { const mesh = new T.Mesh(mergeGeometries(gs), m); mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); }
-  if (build.glow) addGlow(group, build.glow);
+  if (build.glow) addGlow(group, build.glow, build.glowMode);
   vehicle.object.add(group);
   // Lamp colour.
   const lamp = {stock: '#e8f2ff', yellow: '#ffd23a', ice: '#9fd6ff', oneeye: '#e8f2ff'}[build.lights];
   body.head.emissive.set(lamp); body.head.color.set(build.lights === 'yellow' ? '#ffe9a0' : '#dfe9f5');
   setLivery(vehicle, build);
+  // Interior: the cabin is rebuilt when its trim changes (colours are baked into its materials).
+  const trim = {leather: build.leather, insert: build.insert, stitch: build.stitch, finish: build.finish, seats: build.seats, cage: build.cage, cageColor: build.cageColor, screen: build.screen,
+    paint: build.finish === 'paint' ? '#' + body.paint.color.getHexString() : null};
+  const trimKey = JSON.stringify(trim), factory = JSON.stringify({...trim, ...Object.fromEntries(['leather', 'insert', 'stitch', 'cageColor', 'paint'].map(k => [k, null])), finish: 'carbon', seats: 'bucket', cage: 'none', screen: 'gmeter'});
+  let cabin = false;
+  if (body.interior && vehicle.trimKey !== trimKey && (vehicle.trimKey !== undefined || trimKey !== factory)) { rebuildCabin(body, trim); cabin = true; }
+  vehicle.trimKey = trimKey;
   // Wheels: rebuilt in the chosen style, pushed out under wide arches, tucked and cambered when low.
   const style = build.wheels, key = [style, build.rim, build.caliper].join('|');
   if (vehicle.wheelKey !== key && body.wheelsSpec) {
@@ -316,5 +374,5 @@ export function applyBuild(vehicle, raw) {
   vehicle.wheels.forEach(w => { w.pivot.position.x = w.x + Math.sign(w.x) * push; w.pivot.rotation.z = Math.sign(w.x) * (w.front ? camber[0] : camber[1]); });
   body.group.position.y = -drop; group.position.y = -drop;
   if (body.interior?.group) body.interior.group.position.y = 0;
-  return {build, aero: (build.wing === 'gt3' || build.wing === 'attack' || build.wing === 'drift' ? .7 : build.wing === 'stock' ? .35 : build.wing === 'longtail' ? .1 : 0) + (build.front === 'gt3' ? .3 : 0)};
+  return {build, cabin, aero: (build.wing === 'gt3' || build.wing === 'attack' || build.wing === 'drift' ? .7 : build.wing === 'stock' ? .35 : build.wing === 'longtail' ? .1 : 0) + (build.front === 'gt3' ? .3 : 0)};
 }

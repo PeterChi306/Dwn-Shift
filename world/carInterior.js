@@ -183,6 +183,8 @@ export class Cabin {
       glassDark: () => new T.MeshPhysicalMaterial({color: '#040506', roughness: .05, metalness: .2, clearcoat: 1}),
       enamel: () => lit(amb, {color: P.enamel || '#f3efe6', roughness: .2, clearcoat: 1}, null, .5, true),
     };
+    // The dash/tub finish (DWN Works): 'carbon' parts take brushed aluminium, piano black or body colour instead.
+    if (key === 'carbon' && P.finish && P.finish !== 'carbon') return (this.m[key] = this.mat({alu: 'alu', piano: 'piano', paint: 'paint'}[P.finish] || 'piano'));
     if (key.startsWith('#')) return (this.m[key] = lit(amb, {color: key, roughness: .35, clearcoat: .6, side: D}, null, .6, true));
     if (!R[key]) throw new Error('cabin material ' + key);
     return (this.m[key] = R[key]());

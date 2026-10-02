@@ -16,7 +16,7 @@
  *            rises at night.
  */
 import * as T from 'three';
-import {Cluster} from './carCluster.js';
+import {Cluster, GScreen} from './carCluster.js';
 import {instancedDynamicBufferAttribute, uv, vec3, vec4, float, smoothstep, mix, uniform, sin, time, attribute, step} from 'three/tsl';
 
 const SMOKE = 700, FIRE = 96;
@@ -31,11 +31,16 @@ export class CarFx {
     this.signal = null; this.blink = 0; this.turnAcc = 0; this.audio = null;
     this.buildSignals();
     // The cabin is part of the body (carModels.js): the driver's eye, the wheel, the cluster.
-    const cab = vehicle.body?.interior;
-    this.interior = cab?.group || null; this.eye = cab?.eye; this.wheel = cab?.wheel; this.cluster = cab?.cluster; this.clock = cab?.clock;
-    this.gauges = cab?.cluster ? new Cluster(cab.cluster, cab.clusterStyle || 'plain') : null;
+    this.attachCabin(vehicle.body?.interior);
     this.ambient = vehicle.body?.ambient;
     this.tmp = new T.Vector3(); this.tmp2 = new T.Vector3();
+  }
+
+  /** Hook the cabin's moving parts and screens (again after DWN Works rebuilds it). */
+  attachCabin(cab) {
+    this.interior = cab?.group || null; this.eye = cab?.eye; this.wheel = cab?.wheel; this.cluster = cab?.cluster; this.clock = cab?.clock;
+    this.gauges = cab?.cluster ? new Cluster(cab.cluster, cab.clusterStyle || 'plain') : null;
+    this.gscreen = cab?.screen ? new GScreen(cab.screen) : null;
   }
 
   /* ------------------------------------------------------------ particles */
@@ -176,7 +181,7 @@ export class CarFx {
   }
 
   /* ------------------------------------------------------------ per frame */
-  update(dt, {car, state, day, cockpit, steer, dialCanvas, hour = null, info = null, beam = false}) {
+  update(dt, {car, state, day, cockpit, steer, dialCanvas, hour = null, info = null, beam = false, g = null}) {
     this.day.value = day;
     this.updateDoors(dt);
     const o = this.vehicle.object, v = car.body.linvel(), speed = Math.hypot(v.x, v.z);
@@ -251,6 +256,10 @@ export class CarFx {
       const h = hour ?? 12, clock = `${String(Math.floor(h) % 24).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
       this.gauges.update(dt, {speed: v, units: mph ? 'mph' : 'kmh', maxSpeed: mph ? info?.mphMax : info?.kmhMax, rpm: s.rpm || 0, red: info?.max, gear,
         left: L, right: Rt, beam, brake: !!car.handbrake || s.autoSel === 'P', engine: !s.engineOn || !!s.celOn, tc: Math.abs(car.rearSlip || 0) > .09 && (s.in?.gas || 0) > .3, clock});
+    }
+    if (this.gscreen && (cockpit || this.vehicle.object.visible)) {
+      const s = state || {}, mph = s.units === 'mph';
+      this.gscreen.update(dt, {lat: g?.lat || 0, lon: g?.lon || 0, speed: Math.abs(s.v || 0) * (mph ? 2.23694 : 3.6), units: mph ? 'mph' : 'kmh'});
     }
   }
 }

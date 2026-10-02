@@ -18759,6 +18759,13 @@ window.DwnDrive = {
   /** The world drives the tyre sounds from its own 3D tyres: mutes the 1D screech. */
   set extTyres(on) { S.extTyres = !!on; },
   get inCabin() { return AU.ready ? inCabin() : false; },
+  /** How this car starts (2026-10-02, for the world's start panel): a race car's
+   *  switch panel (master, ignition, pump: in order), the red flip cover, or a key. */
+  get startInfo() {
+    return {race: !!CC.race, cap: !!CC.startCap, capOpen: !!S.capOpen, key: !!CC.ignKey, twoStage: !!CC.twoStage,
+      acc: !!S.acc, engineOn: !!S.engineOn, cranking: !!S.cranking, powered: !!S.powered, sw: {...(S.race || {})}, ready: !!CC.race && raceReady()};
+  },
+  raceSwitch(which) { raceSwitch(which); },
   /** On foot: the microphone leaves the car; `r` metres away, `pan` -1..1 to the right. */
   setWalk(w) {
     if (w && !S.walk) { if (S.listen !== "street") S._listenBefore = S.listen; S.listen = "street"; if (AU.ready) applyListen(); }

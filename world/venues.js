@@ -311,47 +311,53 @@ export class RaceTiming {
         } else this.notify('Pacific Raceway · lap started');
         this.lap = now;
       }
-      show = {title: 'PACIFIC RACEWAY', main: this.lap ? fmt(now - this.lap) : '—:——', sub: `LAST ${this.last ? fmt(this.last) : '—'} · BEST ${this.best ? fmt(this.best) : '—'}`};
+      show = {title: 'PACIFIC RACEWAY', venue: 'circuit', main: this.lap ? fmt(now - this.lap) : '—:——', sub: `LAST ${this.last ? fmt(this.last) : '—'} · BEST ${this.best ? fmt(this.best) : '—'}`};
     } else this.lap = null;
-    /* Drag strip: stage, the tree, the run. */
+    /* Drag strip: stage, the tree, the run (2026-10-02: a 3.5 m staging zone,
+     * an automatic idle creep no longer drops the stage or red-lights you;
+     * only rolling clearly through the beam before the green does). */
     const D = DRAG, d = this.drag, lane = D.lanes.findIndex(lz => Math.abs(z - lz) < 5.5);
+    let tree = {};
     if (this.inDrag(x, z)) {
-      const setTree = on => { for (const [k, arr] of Object.entries(D.lamps || {})) arr.forEach((m, i) => { m.emissiveIntensity = on[k] && (on.lane === undefined || on.lane === i) ? 5 : 0; }); };
-      const staged = lane >= 0 && x > D.x0 - 1.5 && x < D.x0 + .5 && Math.abs(v) < .4;
+      const setTree = on => { tree = on; for (const [k, arr] of Object.entries(D.lamps || {})) arr.forEach((m, i) => { m.emissiveIntensity = on[k] && (on.lane === undefined || on.lane === i) ? 5 : 0; }); };
+      const inBox = lane >= 0 && x > D.x0 - 3 && x < D.x0 + .6;
+      const staged = inBox && Math.abs(v) < 1.2;
       if (d.state === 'idle' || d.state === 'done') {
         if (d.state === 'done' && now - d.t > 6 && x < D.x0 - 3) d.state = 'idle';
         if (d.state === 'idle') {
-          setTree({pre: lane >= 0 && x > D.x0 - 6 && x < D.x0 + .5, stage: staged, lane});
+          setTree({pre: lane >= 0 && x > D.x0 - 9 && x < D.x0 + .6, stage: staged, lane});
           if (staged) { d.state = 'staged'; d.t = now; d.lane = lane; }
         }
       } else if (d.state === 'staged' || d.state === 'tree') {
         const e = now - d.t;
-        if (x > D.x0 + .8) {                                            // left before the green: red light
-          setTree({red: true, pre: true, lane: d.lane}); d.state = 'done'; d.t = now; this.notify('RED LIGHT · jumped the start');
-        } else if (!staged && d.state === 'staged') { d.state = 'idle'; }
+        if (x > D.x0 + 1.6) {                                           // rolled through before the green: red light
+          setTree({red: true, pre: true, lane: d.lane}); d.state = 'done'; d.t = now; d.result = null; this.notify('RED LIGHT · jumped the start');
+        } else if (x < D.x0 - 4 || lane !== d.lane) { d.state = 'idle'; setTree({}); }
         else {
           if (e > 1.2) d.state = 'tree';
           const a = e - 1.2;
           setTree({pre: true, stage: true, a1: a > 0, a2: a > .5, a3: a > 1, go: a > 1.5, lane: d.lane});
-          if (a > 1.5) { d.state = 'run'; d.green = now; d.left = null; d.splits = {}; }
+          if (a > 1.5) { d.state = 'run'; d.green = now; d.left = x > D.x0 + .8 ? now : null; d.splits = {}; }
         }
       } else if (d.state === 'run') {
         if (d.left === null && x > D.x0 + .8) d.left = now;
+        setTree({pre: true, stage: true, go: now - d.green < 2, lane: d.lane});
         const since = d.left ?? now;
         for (const [key, dist] of [['60ft', 18.3], ['eighth', 201.2]]) if (!d.splits[key] && x > D.x0 + dist) d.splits[key] = now - since;
         if (x > D.x0 + D.len) {
           const et = now - since, rt = since - d.green, best = !this.bestET || et < this.bestET;
           if (best) { this.bestET = et; save('dwnBestET', et); }
-          d.result = {et, rt, trap: kmh, sixty: d.splits['60ft'], eighth: d.splits.eighth};
-          this.notify(`1/4 MILE · ${et.toFixed(3)} s @ ${Math.round(kmh)} km/h · RT ${rt.toFixed(3)}${best ? ' · NEW BEST' : ''}`);
+          d.result = {et, rt, trap: kmh, sixty: d.splits['60ft'], eighth: d.splits.eighth, best};
+          this.notify(`1/4 MILE · ${et.toFixed(3)} s @ ${Math.round(kmh)} km/h${best ? ' · NEW BEST' : ''}`);
           d.state = 'done'; d.t = now; setTree({});
         } else if (x < D.x0 - 20 || lane < 0 && x < D.x0 + 30) { d.state = 'idle'; setTree({}); }
       }
-      const r = d.result;
-      show = {title: 'EASTSIDE DRAGWAY',
-        main: d.state === 'run' ? (d.left ? (now - d.left).toFixed(2) : 'GO') : d.state === 'staged' || d.state === 'tree' ? 'STAGED' : r ? `${r.et.toFixed(3)} s` : 'STAGE AT THE LINE',
-        sub: r ? `RT ${r.rt.toFixed(3)} · 60FT ${r.sixty?.toFixed(3) ?? '—'} · 1/8 ${r.eighth?.toFixed(3) ?? '—'} · ${Math.round(r.trap)} KM/H · BEST ${this.bestET ? this.bestET.toFixed(3) : '—'}`
-          : `Roll up to the line in either lane and stop · BEST ${this.bestET ? this.bestET.toFixed(3) : '—'}`};
+      const r = d.result, toLine = D.x0 - .6 - x;
+      show = {title: 'EASTSIDE DRAGWAY', tree, venue: 'drag',
+        main: d.state === 'run' ? (d.left ? (now - d.left).toFixed(2) : 'GO') : d.state === 'staged' || d.state === 'tree' ? 'STAGED' : r ? `${r.et.toFixed(3)} s` : lane >= 0 && toLine > 0 && toLine < 40 ? `${toLine.toFixed(1)} m TO THE LINE` : 'STAGE AT THE LINE',
+        sub: d.state === 'staged' || d.state === 'tree' ? 'HOLD IT ON THE BRAKE · LAUNCH ON GREEN'
+          : r ? `RT ${r.rt.toFixed(3)} · 60FT ${r.sixty?.toFixed(3) ?? '—'} · 1/8 ${r.eighth?.toFixed(3) ?? '—'} · ${Math.round(r.trap)} KM/H · BEST ${this.bestET ? this.bestET.toFixed(3) : '—'}`
+          : `Roll up to the white line in either lane and stop · BEST ${this.bestET ? this.bestET.toFixed(3) : '—'}`};
     }
     this.hud(show);
   }

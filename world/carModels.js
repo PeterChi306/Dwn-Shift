@@ -314,5 +314,23 @@ export function buildModel(id, {paint = null, ambient = null, coarse = false} = 
   }
   const dims = {...K.dims, exhausts: extra.exhausts, signals: extra.signals};
   const signals = K.signals.left.length ? K.signals : null;
-  return {group, doors: extra.doors || null, wheels, wheelsSpec, mats, paint: mats.paint, head: mats.head, tail: mats.tail, reverse: mats.reverse, grille: mats.grille, glass: mats.glass, dims, signals, ambient: amb, interior, model, radius, mass: model.mass};
+  return {group, doors: extra.doors || null, wheels, wheelsSpec, mats, paint: mats.paint, head: mats.head, tail: mats.tail, reverse: mats.reverse, grille: mats.grille, glass: mats.glass, dims, signals, ambient: amb, interior, model, radius, mass: model.mass, _K: K};
+}
+
+/** Rebuild a body's cabin with a trim spec (2026-10-02 interior options:
+ *  colours, seats, dash finish, roll cage, centre screen). Returns the new
+ *  interior, or null if this body has none. */
+export function rebuildCabin(body, trim = {}) {
+  const old = body.interior;
+  if (!old || !body.model.cabin || !body._K) return null;
+  const drop = o => { if (!o) return; o.parent?.remove(o); o.traverse(m => { if (m.isMesh) { m.geometry.dispose(); m.material.map?.dispose?.(); } }); };
+  drop(old.group); for (const g of Object.values(old.doors || {})) drop(g);
+  const interior = body.model.cabin(body._K, body.ambient, trim);
+  interior.group.add(interior.wheel); body.group.add(interior.group);
+  for (const [k, g] of Object.entries(interior.doors || {})) {
+    const d = body.doors?.[k];
+    if (d) { g.position.set(-d.hinge.x, -d.hinge.y, -d.hinge.z); d.pivot.add(g); } else interior.group.add(g);
+  }
+  body.interior = interior;
+  return interior;
 }

@@ -3,17 +3,17 @@
  * car in the middle under the bay lights with the camera framing whatever is
  * being changed. Every change applies live; "Drive out" keeps it.
  */
-import {OPTIONS, RIMS, CALIPERS, GLOWS, STRIPES, PRESETS} from './carParts.js';
+import {OPTIONS, RIMS, CALIPERS, GLOWS, STRIPES, PRESETS, LEATHERS, INSERTS, STITCHES, CAGES} from './carParts.js';
 import {PAINTS, AMBIENTS} from './carBody.js';
 
 /* Where the camera looks for each category: [yaw around the car (0 = front), pitch, distance, look height, look z]. */
 const VIEWS = {
   presets: [.75, .16, 7.2, .55, 0], wing: [2.55, .22, 6.2, .9, -1.6], front: [.5, .1, 5.2, .35, 1.8], kit: [1.25, .1, 6.2, .45, 0],
   exhaust: [2.9, .06, 4.8, .4, -1.9], lights: [.32, .06, 4.4, .55, 1.9], wheels: [1.45, .04, 4.6, .4, 1.1], stance: [1.57, .02, 6.4, .45, 0],
-  paint: [.85, .2, 7, .5, 0], livery: [.9, .48, 7, .5, 0], glow: [1.0, .02, 6.6, .2, 0], engine: [2.6, .14, 6.2, .6, -1], handling: [.75, .16, 7.2, .55, 0],
+  paint: [.85, .2, 7, .5, 0], interior: [1.2, .75, 3.6, .55, -.25], livery: [.9, .48, 7, .5, 0], glow: [1.0, .02, 6.6, .2, 0], engine: [2.6, .14, 6.2, .6, -1], handling: [.75, .16, 7.2, .55, 0],
 };
 const CATS = [['presets', 'Builds'], ['wing', 'Wing'], ['front', 'Front aero'], ['kit', 'Body kit'], ['exhaust', 'Exhaust'], ['lights', 'Headlights'],
-  ['wheels', 'Wheels'], ['stance', 'Stance'], ['paint', 'Paint'], ['livery', 'Livery'], ['glow', 'Underglow'], ['engine', 'Engine & sound'], ['handling', 'Handling']];
+  ['wheels', 'Wheels'], ['stance', 'Stance'], ['paint', 'Paint'], ['interior', 'Interior'], ['livery', 'Livery'], ['glow', 'Underglow'], ['engine', 'Engine & sound'], ['handling', 'Handling']];
 
 export class WorkshopUI {
   /** api: {build(), setBuild(b), paint(), setPaint(hex), ambient(), setAmbient(hex), sounds(), sound(), setSound(id), handling(), setHandling(id), modes, close()} */
@@ -45,8 +45,14 @@ export class WorkshopUI {
     else if (OPTIONS[cat] && cat !== 'livery') html += OPTIONS[cat].map(([v, n, s]) => card(cat, v, n, s, b[cat] === v)).join('');
     if (cat === 'wheels') html += `<h4>RIM COLOUR</h4>${sw('rim', [['Style', null], ...RIMS], b.rim)}<h4>CALIPERS</h4>${sw('caliper', [['Style', null], ...CALIPERS], b.caliper)}`;
     if (cat === 'paint') html += `${sw('paint', PAINTS, this.api.paint())}<h4>CABIN LIGHT</h4>${sw('ambient', AMBIENTS, this.api.ambient())}`;
+    if (cat === 'interior') html += `<h4>SEATS</h4>` + OPTIONS.seats.map(([v, n, s]) => card('seats', v, n, s, b.seats === v)).join('')
+      + `<h4>LEATHER</h4>${sw('leather', [['Factory', null], ...LEATHERS], b.leather)}<h4>INSERTS</h4>${sw('insert', [['Factory', null], ...INSERTS], b.insert)}<h4>STITCHING &amp; ACCENTS</h4>${sw('stitch', [['Factory', null], ...STITCHES], b.stitch)}`
+      + `<h4>DASH &amp; TRIM</h4>` + OPTIONS.finish.map(([v, n, s]) => card('finish', v, n, s, b.finish === v)).join('')
+      + `<h4>ROLL CAGE</h4>` + OPTIONS.cage.map(([v, n, s]) => card('cage', v, n, s, b.cage === v)).join('') + (b.cage !== 'none' ? sw('cageColor', [['Black', null], ...CAGES.slice(1)], b.cageColor) : '')
+      + `<h4>CENTRE SCREEN</h4>` + OPTIONS.screen.map(([v, n, s]) => card('screen', v, n, s, b.screen === v)).join('')
+      + `<h4>CABIN LIGHT</h4>${sw('ambient', AMBIENTS, this.api.ambient())}<p class="dw-tip">Press V on the road to sit inside.</p>`;
     if (cat === 'livery') html += OPTIONS.livery.map(([v, n, s]) => card('livery', v, n, s, b.livery === v)).join('') + `<h4>STRIPE COLOUR</h4>${sw('stripe', STRIPES, b.stripe)}`;
-    if (cat === 'glow') html += sw('glow', GLOWS, b.glow) + `<p class="dw-tip">Best after dark, and at a car meet.</p>`;
+    if (cat === 'glow') html += sw('glow', GLOWS, b.glow) + `<h4>MODE</h4>` + OPTIONS.glowMode.map(([v, n, s]) => card('glowMode', v, n, s, (b.glowMode || 'steady') === v)).join('') + `<p class="dw-tip">LED tubes under the sills light the road round the car. Best after dark, and at a car meet.</p>`;
     if (cat === 'engine') { const cur = this.api.sound(); html += `<p class="dw-tip">The engine and its voice. Every engine fits the Aurora.</p><div class="dw-list">${this.api.sounds().map(c => `<button class="dw-card dw-row${c.id === cur ? ' on' : ''}" data-sound="${c.id}"><b>${c.name}</b><small>${c.layout || ''}</small></button>`).join('')}</div>`; }
     if (cat === 'handling') { const cur = this.api.handling(); html += Object.entries(this.api.modes).map(([k, m]) => `<button class="dw-card${k === cur ? ' on' : ''}" data-handling="${k}"><b>${m.label}</b><small>${{grip: 'Planted and quick. Slides on the handbrake, catches itself.', drift: 'Throttle and steering hold the angle. Made for sideways.', sim: 'Fewer aids. The rear will bite if you are clumsy.'}[k]}</small></button>`).join(''); }
     p.innerHTML = html;

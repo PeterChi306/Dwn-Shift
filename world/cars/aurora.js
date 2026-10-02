@@ -209,9 +209,16 @@ export function auroraBody(K, M, amb, coarse) {
 }
 
 /* ================================================================== cabin */
-export function auroraCabin(K, amb) {
+/** `trim` (2026-10-02, DWN Works interior): {leather, insert, stitch, finish
+ *  carbon|alu|piano|paint, paint (body colour), seats bucket|comfort, cage
+ *  none|half|full, cageColor, screen gmeter|nav}. Missing keys = factory. */
+export function auroraCabin(K, amb, trim = {}) {
   const {GZ0, GZ1, roof, gw} = K;
-  const C = new Cabin(amb, {leather: '#161618', leather2: '#222226', alcantara: '#19191c', stitch: '#2448ff', thread: '#3a64ff', floor: '#0e0f11', headliner: '#141416'});
+  const shade = (hex, k) => '#' + new T.Color(hex).multiplyScalar(k).getHexString();
+  const leather = trim.leather || '#161618', stitch = trim.stitch || '#2448ff';
+  const C = new Cabin(amb, {leather, leather2: trim.leather ? shade(leather, new T.Color(leather).getHSL({}).l > .5 ? .86 : 1.25) : '#222226',
+    alcantara: trim.insert || '#19191c', stitch, thread: trim.stitch ? shade(stitch, 1.15) : '#3a64ff', floor: '#0e0f11', headliner: '#141416',
+    finish: trim.finish || 'carbon', paint: trim.paint || '#2a2c30'});
   const W = .7, eye = [.36, .92, -.64];
   const xs = range(-W + .012, W - .012, 36);
 
@@ -247,7 +254,10 @@ export function auroraCabin(K, amb) {
   C.soft('carbon', .36, .872, .085, .36, .018, .08, .008, {rx: .08});
   // Floating centre screen on a turned stem; digital rear-view mirror at the header.
   C.soft('piano', 0, .77, .13, .27, .16, .014, .012, {rx: -.28});
-  C.add(place(new T.PlaneGeometry(.25, .14), 0, .77, .122, -.28, Math.PI, 0), 'screen');
+  // The centre screen: a live G-meter (carFx draws it), or the old map.
+  let screen = null;
+  if (trim.screen === 'nav') C.add(place(new T.PlaneGeometry(.25, .14), 0, .77, .122, -.28, Math.PI, 0), 'screen');
+  else { screen = clusterScreen(.25, .14); screen.position.set(0, .77, .122); screen.rotation.x = -.28; C.mesh(screen); }
   C.add(place(lathe([[.012, 0], [.012, .06]], 16), 0, .72, .16, 0, 0, Math.PI / 2), 'aluR');
   C.soft('piano', 0, roof(.2) - .07, .2, .2, .045, .015, .01, {rx: .15});
   C.add(place(lathe([[.007, 0], [.006, .04]], 12), 0, roof(.2) - .048, .205, 0, 0, Math.PI / 2), 'carbon');
@@ -301,7 +311,10 @@ export function auroraCabin(K, amb) {
   }
 
   /* ---- seats, pedals, column */
-  for (const x of [.36, -.36]) C.seat({x, y: .25, z: -.5, w: .52, style: 'bucket', recline: .32, backH: .66, key: 'leather', insert: 'alcantara', harness: 'accent'});
+  const comfort = trim.seats === 'comfort';
+  for (const x of [.36, -.36]) C.seat(comfort ? {x, y: .25, z: -.5, w: .54, style: 'lux', recline: .26, backH: .5, key: 'leather', insert: 'alcantara'}
+    : {x, y: .25, z: -.5, w: .52, style: 'bucket', recline: .32, backH: .66, key: 'leather', insert: 'alcantara', harness: 'accent'});
+  if (trim.cage === 'half' || trim.cage === 'full') rollCage(C, K, trim.cage === 'full', trim.cageColor || '#1c1d20');
   for (const [px, w, h] of [[.47, .055, .1], [.37, .085, .08], [.27, .065, .08]]) {
     C.soft('speaker', px, .3, .68, w, h, .012, .006, {rx: -.6});
     C.soft('rubber', px, .3 - h * .2, .675, w * .9, .012, .014, .004, {rx: -.6});
@@ -328,5 +341,30 @@ export function auroraCabin(K, amb) {
   C.strip([[-.1, .255, .1], [.1, .255, .1]], .0025);
   C.strip([[-.08, roof(-.1) - .068, -.18], [.08, roof(-.1) - .068, -.18]], .0025);
   const wheel = steeringWheel(C, 'aero', {x: .36, y: .66, z: -.2, tilt: -.28});
-  return {group: C.finish(), wheel, cluster, clusterStyle: 'race', eye, doors: {L: Dc[1].finish(), R: Dc[-1].finish()}};
+  return {group: C.finish(), wheel, cluster, clusterStyle: 'race', eye, screen, doors: {L: Dc[1].finish(), R: Dc[-1].finish()}};
+}
+
+/** A bolted-in roll cage: the main hoop behind the seats with its diagonal and
+ *  harness bar, X door bars; `full` adds roof rails and A-pillar bars down the
+ *  windshield to the dash, and a header bar. Tubes keep inside the glass. */
+function rollCage(C, K, full, color) {
+  const {GZ0, GZ1, roof} = K, R = .021, key = color;
+  const tube = (pts, n = 24) => C.add(sweep(resample(pts, n), () => ring(R, R, 10)), key);
+  const zh = GZ0 + .11, top = roof(zh) - .075;
+  tube([[-.62, .2, zh], [-.655, .55, zh], [-.64, .82, zh], [-.5, top - .04, zh], [-.3, top, zh], [0, top + .005, zh], [.3, top, zh], [.5, top - .04, zh], [.64, .82, zh], [.655, .55, zh], [.62, .2, zh]], 60);
+  tube([[.62, .24, zh], [-.46, top - .03, zh]], 12);                                  // diagonal
+  tube([[-.66, .74, zh + .01], [.66, .74, zh + .01]], 10);                            // harness bar
+  for (const s of [-1, 1]) {
+    C.add(place(new T.CylinderGeometry(.06, .06, .008, 16), s * .62, .17, zh), key);   // foot plates
+    tube([[s * .645, .3, zh], [s * .645, .46, (zh + .35) / 2], [s * .64, .62, .35]], 16);   // door X
+    tube([[s * .645, .62, zh], [s * .645, .46, (zh + .35) / 2], [s * .64, .3, .35]], 16);
+    if (full) {
+      const rail = [];
+      for (let z = zh; z <= .62; z += .08) rail.push([s * .46, roof(z) - .085, z]);
+      for (let z = .66; z <= .9; z += .06) rail.push([s * (.46 + (z - .62) * .55), roof(z) - .085 - (z - .62) * .2, z]);
+      rail.push([s * .63, .7, .92]);
+      tube(rail, 40);
+    }
+  }
+  if (full) tube([[-.48, roof(.6) - .09, .6], [0, roof(.6) - .085, .6], [.48, roof(.6) - .09, .6]], 12);
 }

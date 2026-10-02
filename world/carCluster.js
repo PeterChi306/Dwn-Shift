@@ -151,3 +151,76 @@ export class Cluster {
     lamp(x + side, '#ffb23a', !!i.tc, () => { c.beginPath(); c.moveTo(-10, 12); c.bezierCurveTo(-4, 0, -14, -4, -6, -14); c.moveTo(10, 12); c.bezierCurveTo(16, 0, 6, -4, 14, -14); c.stroke(); c.strokeRect(-10, -6, 20, 10); });
   }
 }
+
+/* The centre screen's G-meter (2026-10-02). The felt g as a dot in a ring
+ * (forward = braking, back = accelerating, sideways = cornering), its last
+ * two seconds as a fading trail, the peaks of this drive in each direction,
+ * and the speed: the ring and the trail run teal -> amber -> red as the car
+ * gets faster, and the scale opens out from 1.5 g to 2 g above 200 km/h. */
+export class GScreen {
+  constructor(mesh) {
+    this.mesh = mesh;
+    this.canvas = document.createElement('canvas'); this.canvas.width = 640; this.canvas.height = 360;
+    this.ctx = this.canvas.getContext('2d');
+    this.tex = new T.CanvasTexture(this.canvas); this.tex.colorSpace = T.SRGBColorSpace; this.tex.anisotropy = 8;
+    mesh.material.map = this.tex; mesh.material.color.set('#ffffff'); mesh.material.transparent = false; mesh.material.needsUpdate = true;
+    this.trail = []; this.peak = {l: 0, r: 0, brake: 0, acc: 0}; this.acc = 1; this.t = 0;
+    this.draw({lat: 0, lon: 0, speed: 0, units: 'kmh'});
+  }
+  /** i: {lat, lon (felt g: + pushed right, + pressed back), speed (km/h or mph), units, gear} */
+  update(dt, i) {
+    this.t += dt; this.acc += dt;
+    const p = this.peak;
+    p.r = Math.max(p.r, i.lat); p.l = Math.max(p.l, -i.lat); p.acc = Math.max(p.acc, i.lon); p.brake = Math.max(p.brake, -i.lon);
+    if (this.acc < 1 / 24) return;
+    this.trail.push([i.lat, i.lon, this.t]); while (this.trail.length && this.t - this.trail[0][2] > 2) this.trail.shift();
+    this.acc = 0; this.draw(i); this.tex.needsUpdate = true;
+  }
+  draw(i) {
+    const c = this.ctx, W = 640, H = 360, kmh = i.units === 'mph' ? i.speed * 1.609 : i.speed;
+    const heat = Math.min(1, kmh / 260), col = heat < .5 ? mixHex('#58e6c1', '#ffb84a', heat * 2) : mixHex('#ffb84a', '#ff4a3c', heat * 2 - 1);
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#05080b'); g.addColorStop(1, '#0b1015'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+    // Ring.
+    const cx = 180, cy = 186, R = 138, scale = kmh > 200 ? 2 : 1.5, px = v => v / scale * R;
+    c.strokeStyle = '#ffffff12'; c.lineWidth = 1.5;
+    for (let k = 1; k <= 3; k++) { c.beginPath(); c.arc(cx, cy, R * k / 3, 0, Math.PI * 2); c.stroke(); }
+    c.beginPath(); c.moveTo(cx - R, cy); c.lineTo(cx + R, cy); c.moveTo(cx, cy - R); c.lineTo(cx, cy + R); c.stroke();
+    c.strokeStyle = col; c.lineWidth = 4; c.globalAlpha = .55; c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.stroke(); c.globalAlpha = 1;
+    c.fillStyle = '#ffffff55'; c.font = '600 15px Outfit, Arial'; c.textAlign = 'left';
+    for (let k = 1; k <= 3; k++) c.fillText((scale * k / 3).toFixed(1), cx + 4, cy - R * k / 3 + 15);
+    c.textAlign = 'center'; c.fillStyle = '#ffffff66'; c.font = '600 14px Outfit, Arial';
+    c.fillText('BRAKE', cx, cy - R - 8); c.fillText('ACCEL', cx, cy + R + 20);
+    // Peaks: ticks on the ring.
+    const tick = (a, v) => { if (v < .05) return; const r = Math.min(R, px(v)); c.save(); c.translate(cx, cy); c.rotate(a); c.fillStyle = '#ffffffaa'; c.fillRect(r - 2, -7, 4, 14); c.restore(); };
+    tick(0, this.peak.r); tick(Math.PI, this.peak.l); tick(-Math.PI / 2, this.peak.brake); tick(Math.PI / 2, this.peak.acc);
+    // Trail and dot: x = pushed right, y = down when pressed back (accelerating).
+    const clampR = (x, y) => { const d = Math.hypot(x, y); return d > R ? [x * R / d, y * R / d] : [x, y]; };
+    for (let k = 1; k < this.trail.length; k++) {
+      const [a, b] = [this.trail[k - 1], this.trail[k]], age = (this.t - b[2]) / 2;
+      const A = clampR(px(a[0]), px(a[1])), B = clampR(px(b[0]), px(b[1]));
+      c.strokeStyle = col; c.globalAlpha = (1 - age) * .8; c.lineWidth = 5 * (1 - age) + 1;
+      c.beginPath(); c.moveTo(cx + A[0], cy + A[1]); c.lineTo(cx + B[0], cy + B[1]); c.stroke();
+    }
+    c.globalAlpha = 1;
+    const [dx, dy] = clampR(px(i.lat), px(i.lon));
+    c.shadowColor = col; c.shadowBlur = 24; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(cx + dx, cy + dy, 13, 0, Math.PI * 2); c.fill();
+    c.shadowBlur = 0; c.fillStyle = col; c.beginPath(); c.arc(cx + dx, cy + dy, 7, 0, Math.PI * 2); c.fill();
+    // Right column: g now, speed, peaks.
+    const gNow = Math.hypot(i.lat, i.lon);
+    c.textAlign = 'left'; c.fillStyle = '#ffffff70'; c.font = '600 16px Outfit, Arial'; c.fillText('G-FORCE', 360, 58);
+    c.fillStyle = '#f2f5f2'; c.font = '700 66px Outfit, Arial'; c.fillText(gNow.toFixed(2), 356, 120);
+    const gw = c.measureText(gNow.toFixed(2)).width; c.fillStyle = col; c.font = '600 26px Outfit, Arial'; c.fillText('g', 362 + gw, 120);
+    c.fillStyle = '#ffffff70'; c.font = '600 16px Outfit, Arial'; c.fillText(i.units === 'mph' ? 'MPH' : 'KM/H', 360, 168);
+    c.fillStyle = col; c.font = '700 54px Outfit, Arial'; c.fillText(String(Math.round(i.speed)), 356, 220);
+    // Speed bar.
+    c.fillStyle = '#ffffff14'; c.fillRect(360, 236, 240, 8); c.fillStyle = col; c.fillRect(360, 236, 240 * heat, 8);
+    c.font = '500 15px ui-monospace, Menlo, monospace'; c.fillStyle = '#ffffffaa';
+    const P = this.peak, rows = [['LAT L', P.l], ['LAT R', P.r], ['BRAKE', P.brake], ['ACCEL', P.acc]];
+    rows.forEach(([k, v], n) => { const x = 360 + (n % 2) * 128, y = 282 + Math.floor(n / 2) * 30; c.fillStyle = '#ffffff60'; c.fillText(k, x, y); c.fillStyle = '#f2f5f2'; c.fillText(v.toFixed(2), x + 66, y); });
+    c.fillStyle = '#ffffff40'; c.font = '600 12px Outfit, Arial'; c.fillText('PEAKS THIS DRIVE', 360, 346);
+  }
+}
+function mixHex(a, b, t) {
+  const A = new T.Color(a), B = new T.Color(b);
+  return '#' + A.lerp(B, Math.max(0, Math.min(1, t))).getHexString();
+}

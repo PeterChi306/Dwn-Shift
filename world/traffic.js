@@ -28,6 +28,12 @@ const NEAR = 70;                       // full-detail bodies within this of the 
 const RANGE = 420, SPAWN_MIN = 90, SPAWN_MAX = 360;
 const DRIVE = new Set(['freeway', 'ramp', 'boulevard', 'avenue', 'street', 'residential', 'underpass', 'tunnel', 'scenic']);
 const RANK = {freeway: 9, ramp: 8, boulevard: 7, avenue: 6, tunnel: 6, underpass: 5, street: 4, scenic: 3, residential: 2};
+// How busy each class of road is (2026-10-02): cars per km at full density.
+// The count around the player is capped by the road there (a canyon road
+// above the city carries a car or two, a freeway a stream), and spawns pick
+// roads in proportion, so the freeway is busy and Mulholland is quiet.
+const PER_KM = {freeway: 34, boulevard: 22, avenue: 15, tunnel: 10, underpass: 8, street: 7, ramp: 6, residential: 2.2, scenic: 1.1};
+const SPAWN_W = Object.fromEntries(Object.entries(PER_KM).map(([k, v]) => [k, v / PER_KM.freeway]));
 const LIMIT = {freeway: 28, ramp: 17, boulevard: 17, avenue: 15.5, street: 13, residential: 10.5, underpass: 14, tunnel: 15, scenic: 12};
 
 /* Paint: what LA drives (lots of white, black, silver and grey). */
@@ -59,6 +65,12 @@ export class Traffic {
       this.ends.get(node).push({seg, atStart});
     }
     this.drivable = model.segments.filter(s => DRIVE.has(s.kind) && s.L > 12);
+    // Road capacity per 64 m cell (cars at full density), summed round the player.
+    this.capGrid = new Map();
+    for (const seg of this.drivable) for (let i = 0; i < seg.pts.length - 1; i++) {
+      const a = seg.pts[i], b = seg.pts[i + 1], key = Math.floor((a.x + b.x) / 128) * 65536 + Math.floor((a.z + b.z) / 128);
+      this.capGrid.set(key, (this.capGrid.get(key) || 0) + Math.hypot(b.x - a.x, b.z - a.z) / 1000 * PER_KM[seg.kind]);
+    }
     this.types = Object.entries(TYPES).map(([name, t]) => ({name, t}));
     this.totalWeight = this.types.reduce((a, x) => a + x.t.weight, 0);
     this.buildMeshes();
@@ -69,6 +81,15 @@ export class Traffic {
   rand() { this.seed = (1664525 * this.seed + 1013904223) >>> 0; return this.seed / 4294967296; }
   get count() { return this.cars.length; }
   setDensity(d) { this.density = clamp(d, 0, 1); }
+  /** Cars the roads within RANGE of (x, z) carry at full density (cached until you move 40 m). */
+  capacity(x, z) {
+    const c = this._cap;
+    if (c && Math.hypot(x - c.x, z - c.z) < 40) return c.v;
+    let v = 0; const r = Math.ceil(RANGE / 64), cx = Math.floor(x / 64), cz = Math.floor(z / 64);
+    for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) if (i * i + j * j <= r * r) v += this.capGrid.get((cx + i) * 65536 + cz + j) || 0;
+    this._cap = {x, z, v};
+    return v;
+  }
 
   /* ------------------------------------------------------------- meshes */
   buildMeshes() {
@@ -238,11 +259,12 @@ export class Traffic {
 
   /* ------------------------------------------------------------ spawning */
   spawn(px, pz, cam) {
-    for (let tries = 0; tries < 12; tries++) {
+    for (let tries = 0; tries < 24; tries++) {
       const ang = this.rand() * Math.PI * 2, dist = SPAWN_MIN + this.rand() * (SPAWN_MAX - SPAWN_MIN);
       const x = px + Math.cos(ang) * dist, z = pz + Math.sin(ang) * dist;
       const r = this.model.nearest(x, z);
       if (!r || r.d > r.h + 2 || !DRIVE.has(r.seg.kind) || r.seg.L < 20) continue;
+      if (this.rand() > SPAWN_W[r.seg.kind]) continue;               // busy roads get the cars
       const seg = r.seg, s = clamp(r.s, seg.cut[0] + 3, seg.L - seg.cut[1] - 3);
       if (seg.L - seg.cut[1] - seg.cut[0] < 10) continue;
       const sec = this.model.sectionAt(seg, s);
@@ -344,10 +366,17 @@ export class Traffic {
     if (!dt) return;
     this.cam = cam;
     this.clock = (this.clock || 0) + dt;
-    const want = Math.round(MAX * this.density * this.density * .8 + MAX * this.density * .2);
-    // Recycle far cars; top up a few per frame.
+    const want = Math.min(Math.round(MAX * this.density * this.density * .8 + MAX * this.density * .2),
+      Math.max(this.density > 0 ? 2 : 0, Math.round(this.capacity(player.x, player.z) * this.density)));
+    this.want = want;
+    // Recycle far cars; top up a few per frame. Over the area's share (you
+    // drove up into the hills) the extras go once they are out of sight.
     const keep = [];
-    for (const c of this.cars) { if (Math.hypot(c.x - player.x, c.z - player.z) < RANGE && keep.length < want) keep.push(c); else this.release(c); }
+    for (const c of this.cars) {
+      const dx = c.x - player.x, dz = c.z - player.z, d = Math.hypot(dx, dz);
+      const seen = cam && d < 260 && ((c.x - cam.x) * cam.fx + (c.z - cam.z) * cam.fz) / Math.max(1, Math.hypot(c.x - cam.x, c.z - cam.z)) > .3;
+      if (d < RANGE && (keep.length < want || seen || c.loose)) keep.push(c); else this.release(c);
+    }
     this.cars = keep;
     this.spawnTimer -= dt;
     this.filling = this.cars.length < want * .6;
