@@ -13,7 +13,9 @@
  */
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {positionLocal, abs, float, smoothstep, step, materialColor, uv, fract, vec3, mix, floor, mod, normalLocal, normalView, positionViewDirection, fwidth} from 'three/tsl';
+import {positionLocal, abs, float, smoothstep, step, materialColor, uv, fract, vec3, mix, floor, mod, normalLocal, normalView, positionViewDirection, fwidth, uniform} from 'three/tsl';
+/** 0 by day .. 1 at night (world.js sets it): lets paint keep its colour after dark. */
+export const paintNight = uniform(0);
 
 /** Monotone cubic through [[z, v], ...] (no overshoot between keys). */
 export function curve(keys) {
@@ -134,6 +136,12 @@ export function carMaterials({paint = '#0c0d10', accent = '#1e4cff', flake = .6,
   // Paint: metallic base with a fine flake under a clear coat; shut lines are drawn by the model.
   m.paint = new T.MeshPhysicalNodeMaterial({color: paint, metalness: flake, roughness: paintRough, clearcoat: 1, clearcoatRoughness: .04, envMapIntensity: 1.25});
   m.paint.name = 'paint';
+  // At night the clear coat reflects a nearly black world and every colour
+  // read as black. A night term: the paint's own colour, stronger at grazing
+  // angles (the sheen a street light leaves), and a faint cool rim so even
+  // black paint shows its shape.
+  { const fres = float(1).sub(abs(normalView.dot(positionViewDirection))).pow(2);
+    m.paint.emissiveNode = materialColor.mul(float(.09).add(fres.mul(.32))).add(vec3(.03, .04, .065).mul(fres)).mul(paintNight); }
   // Glass: see-through face on, a mirror at grazing angles (Fresnel), as real glazing reads.
   m.glass = new T.MeshPhysicalNodeMaterial({color: glassTint, metalness: .1, roughness: .03, clearcoat: 1, clearcoatRoughness: .02, envMapIntensity: 1.8, transparent: true, depthWrite: false});
   m.glass.opacityNode = mix(float(glassOpacity), float(.97), float(1).sub(abs(normalView.dot(positionViewDirection))).pow(2.5));

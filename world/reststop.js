@@ -40,13 +40,13 @@ function buildRestStop(kit, places) {
   const faceSouth = Math.atan2(-NX, -NZ), faceWest = Math.atan2(-TX, -TZ);   // plane normals toward the freeway / toward the west
   const ASPH = '#3d3d3f', LINE = '#f2f2ee', KERB = '#b9b3a7';
   /* ---- the car park */
-  box('flood', (u0 + u1) / 2, y + .055, (v0 + v1) / 2, u1 - u0, .06, v1 - v0, ASPH);
+  box('line', (u0 + u1) / 2, y + .055, (v0 + v1) / 2, u1 - u0, .06, v1 - v0, ASPH);
   const aisle = 84;
-  for (let u = u0 + 6; u < u1 - 6; u += 9) box('flood', u, y + .075, aisle, 4.5, .02, .15, LINE);               // aisle centre dashes
-  for (let u = -122; u <= 12; u += 2.8) { box('flood', u, y + .075, 76.5, .12, .02, 5.5, LINE); box('flood', u, y + .075, 91.5, .12, .02, 5.5, LINE); }
+  for (let u = u0 + 6; u < u1 - 6; u += 9) box('line', u, y + .075, aisle, 4.5, .02, .15, LINE);               // aisle centre dashes
+  for (let u = -122; u <= 12; u += 2.8) { box('line', u, y + .075, 76.5, .12, .02, 5.5, LINE); box('line', u, y + .075, 91.5, .12, .02, 5.5, LINE); }
   for (let u = -120.6; u <= 12; u += 2.8) { box('stone', u, y + .13, 73.2, 1.6, .12, .2, KERB); box('stone', u, y + .13, 94.8, 1.6, .12, .2, KERB); }
   // Truck bays: long stalls at the back, west end.
-  for (let u = -134; u <= -40; u += 5.2) box('flood', u, y + .075, 108, .15, .02, 22, '#f2c21a');
+  for (let u = -134; u <= -40; u += 5.2) box('line', u, y + .075, 108, .15, .02, 22, '#f2c21a');
   board(scene, 3.2, 1, -90, y + 2.4, 97.6, faceSouth, (c, Wd, H) => { c.fillStyle = '#1d4d8f'; c.fillRect(0, 0, Wd, H); c.fillStyle = '#fff'; c.font = `800 ${H * .5}px Outfit, Arial`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('TRUCKS · RV', Wd / 2, H * .52); });
   box('metal', -90, y + 1.2, 97.6, .1, 2.4, .1, '#6d7177');
   // Kerbed islands with palms between the rows, light poles along them.
@@ -58,7 +58,7 @@ function buildRestStop(kit, places) {
   }
   /* ---- gas station: canopy over four islands, an EV charger, the store */
   const gu0 = 30, gu1 = 92, gv0 = 98, gv1 = 118;
-  box('flood', (gu0 + gu1) / 2, y + .062, (gv0 + gv1) / 2, gu1 - gu0 + 10, .06, gv1 - gv0 + 6, '#4a4a4c');
+  box('line', (gu0 + gu1) / 2, y + .062, (gv0 + gv1) / 2, gu1 - gu0 + 10, .06, gv1 - gv0 + 6, '#4a4a4c');
   for (const su of [-1, 1]) for (const sv of [-1, 1]) cyl('metal', (gu0 + gu1) / 2 + su * 24, y, (gv0 + gv1) / 2 + sv * 7, .3, 5.6, '#e8e6e0', true);
   box('paint', (gu0 + gu1) / 2, y + 5.9, (gv0 + gv1) / 2, gu1 - gu0, .7, gv1 - gv0, '#f2f2ee');
   box('paint', (gu0 + gu1) / 2, y + 6.1, gv0 - .02, gu1 - gu0, .5, .1, '#c8141c');                              // fascia stripe

@@ -18800,6 +18800,18 @@ window.DwnDrive = {
   /** Hybrid: off -> boot in silent EV; EV -> fire the engine; engine -> back to EV. */
   toggleEdrive() { initAudio(); if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume(); toggleEdrive(); },
   raceSwitch(which) { raceSwitch(which); },
+  /** Remote start (2026-10-02, the key fob): runs whatever this engine needs —
+   *  the race panel's switches in order, the starter cover, the electronics
+   *  stage — then cranks it; on a running car it switches it off. */
+  remoteStart() {
+    initAudio(); if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume();
+    if (S.engineOn || S.powered || S.cranking) { if (!S.cranking) ignitionPress(); return "off"; }
+    if (CC.race) for (const k of RACE_SWITCHES) if (!S.race[k]) raceSwitch(k);
+    if (CC.startCap && !S.capOpen) { S.capOpen = true; $("ignition")?.classList.add("cap-open"); }
+    if (CC.twoStage && !S.acc && !CC.race) { ignitionPress(); setTimeout(() => { if (!S.engineOn && !S.cranking) ignitionPress(); }, 1100); }
+    else ignitionPress();
+    return "on";
+  },
   horn(on) { horn(!!on); },
   /** On foot: the microphone leaves the car; `r` metres away, `pan` -1..1 to the right. */
   setWalk(w) {

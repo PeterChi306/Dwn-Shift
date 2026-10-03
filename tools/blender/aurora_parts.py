@@ -617,7 +617,7 @@ def tail(parts, ends, surf, out):
         for i in range(13):
             t = i / 12; z = zf_ + (zr_ - zf_) * t; y = ramp(t)
             top.append((z, y + (.02 if wall else .0)))
-            bot.append((z, min(y - .004, .152 - (.004 if wall else hk * .06 * t))))   # down to the floor's plane, no lower
+            bot.append((z, max(.152, y - (.03 if wall else .045 + .02 * t))))   # short fins under the ramp: deeper ones read as spikes from behind
         prof = round_poly(top + bot[::-1], [0] * 12 + [.004, .004] + [0] * 10 + [.01, 0], 2)
         Vv, F = prism([(y, z) for z, y in prof], .012 if wall else .008)
         M = Matrix.Translation((x, 0, (zf_ + zr_) / 2)) @ Rot('Y', yaw) @ Matrix.Translation((0, 0, -(zf_ + zr_) / 2)) @ Matrix(((0, 0, 1, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0, 1)))

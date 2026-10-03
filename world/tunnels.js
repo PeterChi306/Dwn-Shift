@@ -306,3 +306,73 @@ function mergeSimple(list) {
   out.setAttribute('uv', new T.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2));
   return out;
 }
+
+/* Covered freeway (2026-10-02): a cut-and-cover box over the 10 east of the
+ * Pacific rest area. Not a bore — a concrete structure on the flat: side
+ * walls, a roof slab, pillars down the median, portal faces with a name
+ * panel, light strips and jet fans under the roof. `model.galleries` lets
+ * world.js give it the tunnel light and acoustics and keep the camera under
+ * its roof. */
+const GALLERIES = [{name: 'SANTA MONICA COVERED SECTION', from: [-6440, 2318.6], to: [-6100, 2303.2]}];
+export function buildGalleries({model, scene, physics}) {
+  model.galleries = [];
+  const group = new T.Group(), wallC = {v: [], i: []};
+  const concrete = new T.MeshStandardMaterial({color: '#b9b4aa', roughness: .85, side: T.DoubleSide});
+  const dark = new T.MeshStandardMaterial({color: '#5d5a55', roughness: .9, side: T.DoubleSide});
+  const lamp = new T.MeshBasicMaterial({color: '#fff1d6', toneMapped: false, side: T.DoubleSide});
+  for (const G of GALLERIES) {
+    const a = model.nearest(G.from[0], G.from[1]), b = model.nearest(G.to[0], G.to[1]);
+    if (!a || !b || a.seg !== b.seg) continue;
+    const seg = a.seg, s0 = Math.min(a.s, b.s), s1 = Math.max(a.s, b.s);
+    model.galleries.push({seg, s0, s1});
+    const H = 7.2, pos = [], idx = [], dpos = [], didx = [], lpos = [], lidx = [];
+    const quad = (P, I, A, B, C, D) => { const n = P.length / 3; P.push(...A, ...B, ...C, ...D); I.push(n, n + 1, n + 2, n, n + 2, n + 3); };
+    const n = Math.ceil((s1 - s0) / 4), rows = [];
+    for (let k = 0; k <= n; k++) {
+      const s = s0 + (s1 - s0) * k / n, q = model.sectionAt(seg, s), W = q.h + 1.8;
+      const at = (u, v) => [q.x + q.nx * u, q.y + v, q.z + q.nz * u];
+      rows.push({q, W, at, s});
+    }
+    for (let k = 0; k < n; k++) {
+      const A = rows[k], B = rows[k + 1];
+      for (const sd of [-1, 1]) {
+        quad(pos, idx, A.at(sd * A.W, -.3), B.at(sd * B.W, -.3), B.at(sd * B.W, H), A.at(sd * A.W, H));             // inner wall face
+        quad(dpos, didx, A.at(sd * (A.W + .8), -.3), B.at(sd * (B.W + .8), -.3), B.at(sd * (B.W + .8), H + .8), A.at(sd * (A.W + .8), H + .8));   // outer face
+        const vb = wallC.v.length / 3; wallC.v.push(...A.at(sd * A.W, -.5), ...B.at(sd * B.W, -.5), ...B.at(sd * B.W, H), ...A.at(sd * A.W, H)); wallC.i.push(vb, vb + 1, vb + 2, vb, vb + 2, vb + 3);
+        // Light strips: two rows over each carriageway, 3 m on, 1 m off.
+        if (k % 1 === 0) for (const u of [.35, .75]) { const uu = sd * A.q.h * u; quad(lpos, lidx, A.at(uu - .15, H - .06), A.at(uu + .15, H - .06), B.at(uu + .15, H - .06), B.at(uu - .15, H - .06)); }
+      }
+      quad(pos, idx, A.at(-A.W, H), B.at(-B.W, H), B.at(B.W, H), A.at(A.W, H));                                    // roof underside
+      quad(dpos, didx, A.at(-A.W - .8, H + .8), A.at(A.W + .8, H + .8), B.at(B.W + .8, H + .8), B.at(-B.W - .8, H + .8));   // roof top
+    }
+    // Median pillars every 12 m; jet fans every 90 m over each carriageway.
+    const pil = new T.BoxGeometry(.9, H, .9);
+    for (let s = s0 + 6; s < s1; s += 12) { const q = model.sectionAt(seg, s), m = new T.Mesh(pil, concrete); m.position.set(q.x, q.y + H / 2, q.z); m.rotation.y = Math.atan2(q.tx, q.tz); m.castShadow = true; group.add(m); }
+    const fan = new T.CylinderGeometry(.55, .55, 3, 14); fan.rotateX(Math.PI / 2);
+    const fanM = new T.MeshStandardMaterial({color: '#8d9296', metalness: .6, roughness: .45});
+    for (let s = s0 + 45; s < s1 - 30; s += 90) for (const sd of [-1, 1]) { const q = model.sectionAt(seg, s), m = new T.Mesh(fan, fanM); m.position.set(q.x + q.nx * sd * q.h * .55, q.y + H - .8, q.z + q.nz * sd * q.h * .55); m.rotation.y = Math.atan2(q.tx, q.tz); group.add(m); }
+    // Portal faces: a deep header over the opening, the section's name on it.
+    for (const [r, out] of [[rows[0], -1], [rows[rows.length - 1], 1]]) {
+      const {q, W, at} = r, tx = q.tx * out, tz = q.tz * out;
+      const off = p => [p[0] + tx * .4, p[1], p[2] + tz * .4];
+      quad(dpos, didx, off(at(-W - .8, H - .4)), off(at(W + .8, H - .4)), off(at(W + .8, H + 2.2)), off(at(-W - .8, H + 2.2)));
+      quad(dpos, didx, at(-W - .8, H + .8), at(W + .8, H + .8), off(at(W + .8, H + 2.2)), off(at(-W - .8, H + 2.2)));
+      const cv = document.createElement('canvas'); cv.width = 2048; cv.height = 128; const c = cv.getContext('2d');
+      c.fillStyle = '#23272c'; c.fillRect(0, 0, 2048, 128); c.fillStyle = '#e8e4da'; c.font = '700 70px Outfit, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(G.name, 1024, 68);
+      const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace;
+      const sign = new T.Mesh(new T.PlaneGeometry(24, 1.5), new T.MeshStandardMaterial({map: tex, emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: .5}));
+      const p = off(at(0, H + .9)); sign.position.set(p[0] + tx * .03, p[1], p[2] + tz * .03); sign.rotation.y = Math.atan2(tx, tz); group.add(sign);
+    }
+    const mk = (P, I, mat, shadow) => { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals(); const m = new T.Mesh(g, mat); m.castShadow = shadow; m.receiveShadow = true; group.add(m); };
+    mk(pos, idx, concrete, false); mk(dpos, didx, dark, true); mk(lpos, lidx, lamp, false);
+  }
+  scene.add(group);
+  if (physics && wallC.i.length) physics.setMesh('galleries', new Float32Array(wallC.v), new Uint32Array(wallC.i));
+  return group;
+}
+/** Is (x, y, z) under a covered freeway? (model.galleries from buildGalleries) */
+export function inGallery(model, x, y, z) {
+  if (!model.galleries?.length) return false;
+  const r = model.nearest(x, z, y);
+  return !!r && model.galleries.some(g => g.seg === r.seg && r.s >= g.s0 && r.s <= g.s1 && r.d < r.h + 2 && Math.abs(y - r.y) < 6);
+}

@@ -335,12 +335,21 @@ function addLaser(P, add, group) {
  *  the body so it reads from the chase cam. A real light under the car
  *  (owned by the world, see updateGlow) lights the road, tyres and rockers. */
 function addGlow(group, color, mode) {
+  // The pool's falloff, computed per pixel (ctx.filter blur is not available
+  // everywhere: where it was missing the pool came out as a hard rectangle).
+  // Distance to the car's footprint (a rounded rectangle), then a smooth
+  // Gaussian-ish fade that reaches zero well inside the texture's edge.
   const c = document.createElement('canvas'); c.width = 128; c.height = 256;
-  const x = c.getContext('2d');
-  // A rounded rectangle blurred out: brightest under the sills, soft to the rim.
-  x.filter = 'blur(18px)'; x.fillStyle = '#fff';
-  x.beginPath(); x.roundRect(28, 34, 72, 188, 30); x.fill();
-  x.filter = 'blur(6px)'; x.globalAlpha = .55; x.beginPath(); x.roundRect(36, 46, 56, 164, 22); x.fill();
+  const x = c.getContext('2d'), img = x.createImageData(128, 256), D = img.data;
+  const hx = 30, hz = 92, rr = 26;                                   // footprint half-size and corner radius, in pixels
+  for (let j = 0; j < 256; j++) for (let i = 0; i < 128; i++) {
+    const qx = Math.max(Math.abs(i + .5 - 64) - (hx - rr), 0), qz = Math.max(Math.abs(j + .5 - 128) - (hz - rr), 0);
+    const d = Math.max(0, Math.hypot(qx, qz) - rr);                  // 0 inside the footprint
+    let a = Math.exp(-((d / 16) ** 2) * 1.5);
+    a *= Math.min(1, Math.min(i, 127 - i, j, 255 - j) / 10);          // never touch the texture's edge
+    const k = (j * 128 + i) * 4; D[k] = D[k + 1] = D[k + 2] = 255; D[k + 3] = Math.round(a * 255);
+  }
+  x.putImageData(img, 0, 0);
   const tex = new T.CanvasTexture(c);
   const poolMat = new T.MeshBasicMaterial({color, map: tex, transparent: true, opacity: 1, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false,
     polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4});

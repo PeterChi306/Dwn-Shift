@@ -221,3 +221,15 @@ body.racing .world-toast{top:178px}
 .ws-ev b{background:#0b1a2e!important;border-color:#4aa8ff55!important}
 .ws-cap b{display:block;padding:2px 3px;border-radius:2px;background:#0b0c0d;border:1px solid #ffffff1f;font:700 6.5px/1 Outfit,Arial;letter-spacing:.8px;color:#e9ecee;white-space:nowrap}
 .ws-cap kbd{font:600 8px ui-monospace,Menlo,monospace;padding:1px 4px;border-radius:3px;background:#000a;color:#cfd8cf}
+
+/* 2026-10-02 key fob, bottom right while on foot. */
+.world-fob{position:fixed;z-index:53;right:28px;bottom:96px;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:14px 12px 10px;width:150px;border-radius:26px 26px 30px 30px;background:linear-gradient(160deg,#25282d,#0d0f12 70%);border:1px solid #ffffff1c;box-shadow:0 16px 40px #000a,inset 0 1px 0 #ffffff14}
+.world-fob[hidden]{display:none}
+.fob-title{font:700 8px Outfit,Arial;letter-spacing:2.5px;color:#9fb0c8;text-align:center}
+.world-fob button{display:flex;align-items:center;gap:8px;padding:9px 10px!important;border-radius:14px!important;background:linear-gradient(#2c3036,#1a1d21)!important;border:1px solid #ffffff1a!important;box-shadow:inset 0 1px 0 #ffffff12,0 2px 4px #0008}
+.world-fob button:active{transform:translateY(1px)}
+.world-fob button i{font-style:normal;font-size:15px;color:#cfd8e6;width:18px;text-align:center}
+.world-fob button b{flex:1;font-size:8.5px;letter-spacing:1.6px;text-align:left}
+.world-fob kbd{font:600 8px ui-monospace,Menlo,monospace;padding:1px 4px;border-radius:3px;background:#000a;color:#cfd8cf}
+.world-fob.running #fobStart i{color:#5dff8a;text-shadow:0 0 8px #5dff8a}.world-fob.open #fobDoors i{color:#4aa8ff;text-shadow:0 0 8px #4aa8ff}
+.world-fob small{font-size:9px;letter-spacing:1px;color:#ffffff70;text-align:center}
