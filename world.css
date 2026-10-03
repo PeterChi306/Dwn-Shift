@@ -212,3 +212,12 @@ body.racing .world-toast{top:178px}
 .world-start.cap-open .ws-cover{transform:perspective(200px) rotateX(-112deg);filter:brightness(.8)}
 .ws-hint{margin:0 0 4px;max-width:150px;font-size:10px;line-height:1.4;color:#eef2ec;text-shadow:0 1px 3px #000,0 0 8px #000}
 @media(max-width:650px){.world-start{right:12px;bottom:260px}.ws-hint{display:none}}
+
+/* 2026-10-02 hybrid switch: blue guard-less toggle, EV lit blue, engine lit amber. */
+.ws-hybrid{display:none}.world-start.hybrid .ws-hybrid{display:flex}
+.ws-ev .ws-led{background:#102038}.ws-ev.ev .ws-led{background:#4aa8ff;box-shadow:0 0 6px #4aa8ff,0 0 2px #fff}.ws-ev.on .ws-led{background:#ffb23a;box-shadow:0 0 6px #ffb23a}
+.ws-ev.ev .ws-bat,.ws-ev.on .ws-bat{transform:rotate(0deg) rotateX(28deg) translateY(-13px)}
+.ws-ev.ev .ws-bat{transform:rotate(-30deg) rotateX(28deg) translateY(-13px)}.ws-ev.on .ws-bat{transform:rotate(30deg) rotateX(28deg) translateY(-13px)}
+.ws-ev b{background:#0b1a2e!important;border-color:#4aa8ff55!important}
+.ws-cap b{display:block;padding:2px 3px;border-radius:2px;background:#0b0c0d;border:1px solid #ffffff1f;font:700 6.5px/1 Outfit,Arial;letter-spacing:.8px;color:#e9ecee;white-space:nowrap}
+.ws-cap kbd{font:600 8px ui-monospace,Menlo,monospace;padding:1px 4px;border-radius:3px;background:#000a;color:#cfd8cf}

@@ -3,7 +3,7 @@
  *   - the Hollywood sign, on the south face of Mount Lee above Mulholland,
  *     nine sheet-metal letters on their scaffolds, each seated on the slope
  *     at its own height like the real one, floodlit after dark;
- *   - the Mount Lee overlook at the top of Mount Lee Summit Road (rebuilt
+ *   - the Los Santerra Overlook (renamed 2026-10-02) at the top of Mount Lee, at the top of Mount Lee Summit Road (rebuilt
  *     2026-10-02): a graded, kerbed and lit access drive, a striped parking
  *     lot under light poles, a picnic lawn with tables, grills, shade trees
  *     and string lights, and the view terrace with its stone parapet, coin
@@ -26,6 +26,17 @@ export const reserved = (x, z, pad = 0) => RESERVED.some(c => (x - c.x) ** 2 + (
 const SIGN = {x: -1258, z: -3187, dir: [.934, -.358], H: 21, pitch: 14.6};
 const OVERLOOK = {x: -1075, z: -3262, y: 539.5, hl: 32, hw: 34, road: [-1070, -3392]};
 const MAST = {x: -1228, z: -3418};
+/** A lit name board (canvas texture) facing along yaw. */
+function nameBoard(scene, x, y, z, yaw, title, sub) {
+  const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const c = cv.getContext('2d');
+  c.fillStyle = '#24342c'; c.fillRect(0, 0, 1024, 256); c.strokeStyle = '#e8e2cf'; c.lineWidth = 8; c.strokeRect(14, 14, 996, 228);
+  c.fillStyle = '#f2ecd8'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '700 92px Georgia, serif'; c.fillText(title, 512, 108);
+  c.font = '600 44px Outfit, Arial'; c.fillStyle = '#c9d6c8'; c.fillText(sub, 512, 192);
+  const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace;
+  const m = new T.Mesh(new T.PlaneGeometry(4.2, 1.05), new T.MeshStandardMaterial({map: tex, emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: .45, roughness: .7}));
+  m.position.set(x, y, z); m.rotation.y = yaw; scene.add(m);
+}
+
 export class Places {
   constructor({model, ground}) {
     this.model = model; this.ground = ground;
@@ -34,7 +45,11 @@ export class Places {
     this.extras = [];        // other modules' build hooks
     RESERVED.push({x: SIGN.x, z: SIGN.z, r: 95}, {x: OVERLOOK.x, z: OVERLOOK.z, r: 70}, {x: OVERLOOK.x, z: OVERLOOK.z - 80, r: 30});
     ground.addPad({cx: OVERLOOK.x, cz: OVERLOOK.z, fx: 0, fz: 1, hl: OVERLOOK.hl, hw: OVERLOOK.hw, y: OVERLOOK.y, margin: 22});
-    this.pois.push({name: 'Santerra Beach', kind: 'beach', x: -1400, z: 3890}, {name: 'Hollywood Sign', kind: 'view', x: SIGN.x, z: SIGN.z + 60}, {name: 'Mount Lee Overlook', kind: 'view', x: OVERLOOK.x, z: OVERLOOK.z - 60});
+    // …and held there after the roads have shaped the hill (the cutting below
+    // the view end dragged the terrace's ground down: you walked off the
+    // drawn floor and dropped). Floors are also solid boxes (overlook()).
+    ground.addPad({cx: OVERLOOK.x, cz: OVERLOOK.z, fx: 0, fz: 1, hl: OVERLOOK.hl - .5, hw: OVERLOOK.hw - .5, y: OVERLOOK.y, hard: true, margin: 2});
+    this.pois.push({name: 'Santerra Beach', kind: 'beach', x: -1400, z: 3890}, {name: 'Hollywood Sign', kind: 'view', x: SIGN.x, z: SIGN.z + 60}, {name: 'Los Santerra Overlook', kind: 'view', x: OVERLOOK.x, z: OVERLOOK.z - 60});
   }
 
   build({scene, physics, night}) {
@@ -97,11 +112,13 @@ export class Places {
     }
   }
 
-  /* ------------------------------------------------------ Mount Lee overlook */
+  /* ------------------------------------------------------ Los Santerra Overlook (Mount Lee) */
   overlook(kit) {
     const {x: cx, z: cz, y: Y, hl, hw} = OVERLOOK, g = this.ground;
     const y = Y + .02, s0 = cz - hl, s1 = cz + hl - 2;                 // north (drive) to south (view) edge
     const ASPH = '#34363a', LINE = '#efefe9', KERB = '#b9b3a7', PAVER = '#b6a98f', WARM = '#ffe2b0';
+    // Walkable floors: an invisible solid slab under each drawn surface, top flush with it.
+    const floor = (x, z, sx, sz) => kit.colliders.push({x, y: y - .23, z, hx: sx / 2, hy: .25, hz: sz / 2, yaw: 0, tag: 'stone'});
     const pool = (x, z, r, I = .5) => kit.add('wash', washDisc(r, I), x, g.height(x, z) + .08, z, 0, '#ffffff', {keep: true});
     /** A lamp post: pole, arm(s) and lit head(s), with the pool it throws. */
     const lamp = (x, z, yaw, {arms = 1, h = 6, r = 10} = {}) => {
@@ -138,6 +155,7 @@ export class Places {
         const q = sec(30), [x, z] = off(q, -(q.h + 4.5)), gy = g.height(x, z), yaw = Math.atan2(q.tx, q.tz) + Math.PI / 2;
         kit.box('paint', x, gy + 1.3, z, 4.6, 2.2, .3, yaw, '#24342c', true);
         kit.box('lit', x, gy + 1.7, z, 4.0, .55, .34, yaw, '#e8e2cf');
+        nameBoard(this.scene, x + q.nx * .2, gy + 1.62, z + q.nz * .2, Math.atan2(q.nx, q.nz), 'LOS SANTERRA OVERLOOK', 'PARKING · PICNIC · VIEW');
         kit.box('lit', x, gy + 1.05, z, 1.1, .55, .34, yaw, '#2e6fd6');
         for (const o2 of [-2.1, 2.1]) kit.post('paint', x + Math.cos(yaw) * o2, gy - .5, gy + .2, z - Math.sin(yaw) * o2, .3, .3, yaw, '#8e8272');
       }
@@ -145,7 +163,7 @@ export class Places {
 
     /* ---- the parking lot (west and middle, by the drive) */
     const lx0 = cx - 32, lx1 = cx + 6, lz0 = s0 + 1, lz1 = s0 + 21;
-    kit.box('line', (lx0 + lx1) / 2, y, (lz0 + lz1) / 2, lx1 - lx0, .04, lz1 - lz0, 0, ASPH);
+    kit.box('line', (lx0 + lx1) / 2, y, (lz0 + lz1) / 2, lx1 - lx0, .04, lz1 - lz0, 0, ASPH); floor((lx0 + lx1) / 2, (lz0 + lz1) / 2, lx1 - lx0, lz1 - lz0);
     kit.box('line', cx, y, s0 + .5, 9.6, .04, 2, 0, ASPH);                                   // mouth where the road meets the lot
     const bay = (x, za, zb, color = LINE) => kit.box('line', x, y + .01, (za + zb) / 2, .12, .03, Math.abs(zb - za), 0, color);
     for (let x = lx0 + 1; x <= cx - 5.4; x += 2.7) bay(x, lz0, lz0 + 5.4);                    // north row, noses to the hill
@@ -171,7 +189,8 @@ export class Places {
 
     /* ---- picnic lawn (east of the lot, down to the terrace) */
     const px0 = cx + 9, px1 = cx + hw - 1, pz0 = s0 + 1, pz1 = s1 - 17;
-    kit.box('grass', (px0 + px1) / 2, y, (pz0 + pz1) / 2, px1 - px0, .04, pz1 - pz0, 0, '#5f7d45');
+    kit.box('grass', (px0 + px1) / 2, y, (pz0 + pz1) / 2, px1 - px0, .04, pz1 - pz0, 0, '#5f7d45'); floor((px0 + px1) / 2, (pz0 + pz1) / 2, px1 - px0, pz1 - pz0);
+    floor(cx + 7.5, (s0 + s1) / 2, 3, s1 - s0);
     kit.box('line', cx + 7.5, y + .005, (s0 + s1) / 2, 3, .04, s1 - s0, 0, PAVER);              // path from the lot to the terrace
     for (let z = s0 + 1.5; z < s1; z += 1.2) kit.box('line', cx + 7.5, y + .01, z, 3, .03, .05, 0, '#9c8f77');
     const table = (x, z, yaw) => {
@@ -212,9 +231,10 @@ export class Places {
 
     /* ---- the view terrace */
     const pz = s1, tx0 = cx - hw + 5, tx1 = cx + hw - 5, tz0 = s1 - 16;
-    kit.box('line', cx, y, (tz0 + s1) / 2, hw * 2 - 4, .04, s1 - tz0, 0, PAVER);
+    kit.box('line', cx, y, (tz0 + s1) / 2, hw * 2 - 4, .04, s1 - tz0, 0, PAVER); floor(cx, (tz0 + s1) / 2, hw * 2 - 4, s1 - tz0 + .4);
     for (let k = -6; k <= 6; k++) kit.box('line', cx + k * 4.8, y + .006, (tz0 + s1) / 2, .1, .03, s1 - tz0, 0, '#9c8f77');
     kit.box('line', (lx0 + cx + 6) / 2, y, (lz1 + tz0) / 2, cx + 6 - lx0, .04, tz0 - lz1, 0, '#6d8a52');   // lawn between the lot and the terrace
+    floor((lx0 + cx + 6) / 2, (lz1 + tz0) / 2, cx + 6 - lx0, tz0 - lz1);
     // Stone parapet with a steel railing round the view end.
     kit.box('paint', cx, y + .5, pz, tx1 - tx0, 1, .8, 0, '#b8ab94', true);
     kit.box('metal', cx, y + 1.15, pz, tx1 - tx0, .06, .06, 0, '#474a4d');

@@ -77,7 +77,7 @@ function tessellate(g, near, maxEdge) {
 /* ------------------------------------------------------------------ materials */
 /** Ambient light shared by a car: colour and level uniforms. */
 export function makeAmbient(color = '#2f5bff') {
-  return {color: uniform(new T.Color(color)), level: uniform(.35)};
+  return {color: uniform(new T.Color(color)), level: uniform(.35), power: uniform(1)};   // power: the screens are dark until the car is on
 }
 /** A trim material lit by the ambient wash (its `glow` attribute); nodes from carKit. */
 function lit(amb, params, nodes = null, reflect = .7, physical = false) {
@@ -99,7 +99,7 @@ function screenMaterial(amb, tint = [.25, .5, 1]) {
   const route = smoothstep(.02, 0, abs(U.y.sub(.35).sub(sin(U.x.mul(7)).mul(.12)))).mul(step(U.x, .62));
   const tiles = step(.66, U.x).mul(step(.08, fract(U.y.mul(3)))).mul(step(.7, U.x).mul(.5).add(.35));
   const c = vec3(...tint).mul(grid.add(.06)).add(vec3(.3, .7, 1).mul(route)).add(vec3(...tint).mul(tiles.mul(.4)));
-  m.emissiveNode = c.mul(amb.level.mul(.6).add(.55));
+  m.emissiveNode = c.mul(amb.level.mul(.6).add(.55)).mul(amb.power ?? float(1));
   return m;
 }
 /** The fibre-optic starlight headliner. `uv` is metres across (u) and along (v) the roof. */

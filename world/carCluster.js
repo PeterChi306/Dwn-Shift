@@ -28,6 +28,8 @@ export class Cluster {
 
   /** i: {kmh, units, maxSpeed, rpm, red, top, gear, left, right, beam, brake, engine, tc, clock, dt} */
   update(dt, i) {
+    // Dark until the car has power; a short boot splash when it comes on.
+    if (screenPower(this, dt, i.power !== false, 'AURORA')) return;
     // Needles are damped like real ones so they sweep instead of jumping.
     const k = 1 - Math.exp(-dt * 12);
     this.needle.v += ((i.speed || 0) - this.needle.v) * k; this.needle.r += ((i.rpm || 0) - this.needle.r) * k;
@@ -169,6 +171,7 @@ export class GScreen {
   }
   /** i: {lat, lon (felt g: + pushed right, + pressed back), speed (km/h or mph), units, gear} */
   update(dt, i) {
+    if (screenPower(this, dt, i.power !== false, 'G-METER')) return;
     this.t += dt; this.acc += dt;
     const p = this.peak;
     p.r = Math.max(p.r, i.lat); p.l = Math.max(p.l, -i.lat); p.acc = Math.max(p.acc, i.lon); p.brake = Math.max(p.brake, -i.lon);
@@ -223,4 +226,27 @@ export class GScreen {
 function mixHex(a, b, t) {
   const A = new T.Color(a), B = new T.Color(b);
   return '#' + A.lerp(B, Math.max(0, Math.min(1, t))).getHexString();
+}
+
+/* Screen power (2026-10-02): a screen is black glass while the car is off,
+ * shows a boot splash for ~1.2 s when the electronics come on, then runs.
+ * Returns true while it owns the frame (off or booting). */
+function screenPower(scr, dt, on, title) {
+  const c = scr.ctx, W = scr.canvas.width, H = scr.canvas.height;
+  if (!on) {
+    if (scr.powered !== false) { c.fillStyle = '#020203'; c.fillRect(0, 0, W, H); scr.tex.needsUpdate = true; }
+    scr.powered = false; scr.boot = 0; return true;
+  }
+  if (scr.powered === false) { scr.powered = true; scr.boot = 1.25; }
+  if (scr.boot > 0) {
+    scr.boot -= dt;
+    const t = 1 - Math.max(0, scr.boot) / 1.25, a = Math.min(1, t * 3) * Math.min(1, scr.boot * 4 + .2);
+    c.fillStyle = '#020203'; c.fillRect(0, 0, W, H);
+    c.globalAlpha = a; c.fillStyle = '#e8eef8'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `300 ${H * .2}px Outfit, Arial`; c.fillText(title, W / 2, H * .46);
+    c.fillStyle = '#2f63ff'; c.fillRect(W * .3, H * .62, W * .4 * Math.min(1, t * 1.3), H * .012);
+    c.globalAlpha = 1; scr.tex.needsUpdate = true;
+    return scr.boot > 0;
+  }
+  scr.powered = true; return false;
 }

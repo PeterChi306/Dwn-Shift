@@ -250,17 +250,19 @@ export class CarFx {
     if (this.clock && hour !== null) { this.clock.h.rotation.z = (hour % 12) / 12 * Math.PI * 2; this.clock.m.rotation.z = (hour % 1) * Math.PI * 2; }
     if (this.ambient) this.ambient.level.value = .3 + (1 - Math.min(1, Math.max(0, day))) * .7;
     // The cluster: only redrawn while someone could read it (from the seat, or the car is near and visible).
+    const st = state || {}, power = !!(st.acc || st.engineOn || st.powered || st.cranking);
+    if (this.ambient?.power) this.ambient.power.value += ((power ? 1 : 0) - this.ambient.power.value) * Math.min(1, dt * 4);
     if (this.gauges && (cockpit || this.vehicle.object.visible)) {
       const s = state || {}, mph = s.units === 'mph', v = Math.abs(s.v || 0) * (mph ? 2.23694 : 3.6);
       const gear = s.mode === 'auto' ? (s.autoSel === 'D' ? String(s.autoGear || 1) : s.autoSel || 'P') : String(s.gear || 'N');
       const L = this.signalOn && (this.signal === 'left' || this.signal === 'hazard'), Rt = this.signalOn && (this.signal === 'right' || this.signal === 'hazard');
       const h = hour ?? 12, clock = `${String(Math.floor(h) % 24).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
       this.gauges.update(dt, {speed: v, units: mph ? 'mph' : 'kmh', maxSpeed: mph ? info?.mphMax : info?.kmhMax, rpm: s.rpm || 0, red: info?.max, gear,
-        left: L, right: Rt, beam, brake: !!car.handbrake || s.autoSel === 'P', engine: !s.engineOn || !!s.celOn, tc: Math.abs(car.rearSlip || 0) > .09 && (s.in?.gas || 0) > .3, clock});
+        left: L, right: Rt, beam, brake: !!car.handbrake || s.autoSel === 'P', engine: !s.engineOn || !!s.celOn, tc: Math.abs(car.rearSlip || 0) > .09 && (s.in?.gas || 0) > .3, clock, power});
     }
     if (this.gscreen && (cockpit || this.vehicle.object.visible)) {
       const s = state || {}, mph = s.units === 'mph';
-      this.gscreen.update(dt, {lat: g?.lat || 0, lon: g?.lon || 0, speed: Math.abs(s.v || 0) * (mph ? 2.23694 : 3.6), units: mph ? 'mph' : 'kmh'});
+      this.gscreen.update(dt, {lat: g?.lat || 0, lon: g?.lon || 0, speed: Math.abs(s.v || 0) * (mph ? 2.23694 : 3.6), units: mph ? 'mph' : 'kmh', power});
     }
   }
 }

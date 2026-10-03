@@ -18794,8 +18794,11 @@ window.DwnDrive = {
    *  switch panel (master, ignition, pump: in order), the red flip cover, or a key. */
   get startInfo() {
     return {race: !!CC.race, cap: !!CC.startCap, capOpen: !!S.capOpen, key: !!CC.ignKey, twoStage: !!CC.twoStage,
-      acc: !!S.acc, engineOn: !!S.engineOn, cranking: !!S.cranking, powered: !!S.powered, sw: {...(S.race || {})}, ready: !!CC.race && raceReady()};
+      acc: !!S.acc, engineOn: !!S.engineOn, cranking: !!S.cranking, powered: !!S.powered, sw: {...(S.race || {})}, ready: !!CC.race && raceReady(),
+      edrive: !!CC.edrive, ev: !!(CC.edrive && S.powered && S.eDrive === "ev"), fireLbl: CC.fireLbl || "FIRE ENGINE"};
   },
+  /** Hybrid: off -> boot in silent EV; EV -> fire the engine; engine -> back to EV. */
+  toggleEdrive() { initAudio(); if (AU.ctx && AU.ctx.state === "suspended") AU.ctx.resume(); toggleEdrive(); },
   raceSwitch(which) { raceSwitch(which); },
   horn(on) { horn(!!on); },
   /** On foot: the microphone leaves the car; `r` metres away, `pan` -1..1 to the right. */

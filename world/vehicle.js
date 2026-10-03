@@ -142,8 +142,13 @@ export class Car {
     c.indexUpAxis = 1;
     c.setIndexForwardAxis = 2;             // the binding's setter really is named this
     this.rest = .32;
+    // The suspension settles ~5 cm under the car's weight. Mounted at w.y + rest,
+    // every wheel sat 5 cm up in its arch at rest (and the body 5 cm low). Mount
+    // it that much lower, so at rest the wheel centre is where the body was
+    // modelled round it and the car rides at its design height.
+    this.sag = .051; this.mount = this.rest - this.sag;
     wheels.forEach((w, i) => {
-      c.addWheel({x: w.x, y: w.y + this.rest, z: w.z}, {x: 0, y: -1, z: 0}, {x: -1, y: 0, z: 0}, this.rest, radius);
+      c.addWheel({x: w.x, y: w.y + this.mount, z: w.z}, {x: 0, y: -1, z: 0}, {x: -1, y: 0, z: 0}, this.rest, radius);
       c.setWheelSuspensionStiffness(i, 46);
       c.setWheelSuspensionCompression(i, 4);
       c.setWheelSuspensionRelaxation(i, 5);
