@@ -26,13 +26,6 @@ export const reserved = (x, z, pad = 0) => RESERVED.some(c => (x - c.x) ** 2 + (
 const SIGN = {x: -1258, z: -3187, dir: [.934, -.358], H: 21, pitch: 14.6};
 const OVERLOOK = {x: -1075, z: -3262, y: 539.5, hl: 32, hw: 34, road: [-1070, -3392]};
 const MAST = {x: -1228, z: -3418};
-/** The overlook drive at t (0 road end .. 1 lot edge): [x, y, z, dirx, dirz]. */
-function drivePoint(t) {
-  const [rx, rz] = OVERLOOK.road, ex = OVERLOOK.x, ez = OVERLOOK.z - OVERLOOK.hl + 1, L = Math.hypot(ex - rx, ez - rz);
-  const u = Math.min(1, t / .45), y = 535.9 + (OVERLOOK.y - 535.9) * u * u * (3 - 2 * u);
-  return [rx + (ex - rx) * t, y, rz + (ez - rz) * t, (ex - rx) / L, (ez - rz) / L];
-}
-
 export class Places {
   constructor({model, ground}) {
     this.model = model; this.ground = ground;
@@ -41,10 +34,6 @@ export class Places {
     this.extras = [];        // other modules' build hooks
     RESERVED.push({x: SIGN.x, z: SIGN.z, r: 95}, {x: OVERLOOK.x, z: OVERLOOK.z, r: 70}, {x: OVERLOOK.x, z: OVERLOOK.z - 80, r: 30});
     ground.addPad({cx: OVERLOOK.x, cz: OVERLOOK.z, fx: 0, fz: 1, hl: OVERLOOK.hl, hw: OVERLOOK.hw, y: OVERLOOK.y, margin: 22});
-    // The access drive: graded in short level steps that climb smoothly from
-    // the road's turning circle to the lot (the hill had ±1 m bumps on it).
-    for (const t of [.05, .2]) { const p = drivePoint(t); RESERVED.push({x: p[0], z: p[2], r: 16}); }
-    for (let k = 0; k < 12; k++) { const t = (k + .5) / 12, p = drivePoint(t); ground.addPad({cx: p[0], cz: p[2], fx: p[3], fz: p[4], hl: 5.2, hw: 7, y: p[1], margin: 7}); }
     this.pois.push({name: 'Santerra Beach', kind: 'beach', x: -1400, z: 3890}, {name: 'Hollywood Sign', kind: 'view', x: SIGN.x, z: SIGN.z + 60}, {name: 'Mount Lee Overlook', kind: 'view', x: OVERLOOK.x, z: OVERLOOK.z - 60});
   }
 
@@ -127,36 +116,37 @@ export class Places {
       }
     };
 
-    /* ---- the drive: asphalt, kerbs, lines, reflectors, lamps */
-    const N = 40, D = [];
-    for (let k = 0; k <= N; k++) D.push(drivePoint(k / N));
-    const side = (p, o, lift = 0) => [p[0] - p[4] * o, p[1] + lift, p[2] + p[3] * o];
-    kit.ribbon('line', D.map(p => [p[0], g.height(p[0], p[2]), p[2]]), 9.4, ASPH, .05);
-    for (const o of [-4.25, 4.25]) kit.ribbon('line', D.map(p => { const q = side(p, o); return [q[0], g.height(q[0], q[2]), q[2]]; }), .16, LINE, .07);
-    for (let k = 0; k < N; k += 2) { const a = D[k], b = D[k + 1]; kit.ribbon('line', [[a[0], g.height(a[0], a[2]), a[2]], [b[0], g.height(b[0], b[2]), b[2]]], .14, '#e7b93a', .075); }
-    for (const o of [-4.95, 4.95]) for (let k = 0; k < N; k++) {
-      const a = side(D[k], o), b = side(D[k + 1], o), ya = g.height(a[0], a[2]), yb = g.height(b[0], b[2]);
-      kit.beam('stone', a[0], a[2], b[0], b[2], (ya + yb) / 2 + .07, .22, .3, KERB);
-    }
-    for (let k = 1; k < N; k += 3) for (const o of [-5.4, 5.4]) {           // reflector posts, cat's eyes on top
-      const q = side(D[k], o), gy = g.height(q[0], q[2]);
-      kit.box('paint', q[0], gy + .45, q[2], .12, .9, .12, 0, '#f2f2ee');
-      kit.box('glow', q[0], gy + .82, q[2], .13, .1, .13, 0, o > 0 ? '#ff5a3c' : '#fff1d0');
-    }
-    for (let k = 3, i = 0; k < N; k += 7, i++) { const o = i % 2 ? 6.2 : -6.2, q = side(D[k], o), p = D[k]; lamp(q[0], q[2], Math.atan2(p[0] - q[0], p[2] - q[2]), {r: 8.5}); }
-    { // entrance sign: OVERLOOK · PARKING · PICNIC, lit at night
-      const q = side(D[6], -8.5), gy = g.height(q[0], q[2]), yaw = Math.atan2(D[6][3], D[6][4]) + Math.PI / 2;
-      kit.box('paint', q[0], gy + 1.3, q[2], 4.6, 2.2, .3, yaw, '#24342c', true);
-      kit.box('lit', q[0] - Math.cos(yaw) * .17 * 0, gy + 1.7, q[2], 4.0, .55, .34, yaw, '#e8e2cf');
-      kit.box('lit', q[0], gy + 1.05, q[2], 1.1, .55, .34, yaw, '#2e6fd6');
-      for (const o of [-2.1, 2.1]) kit.post('paint', q[0] + Math.cos(yaw) * o, gy - .5, gy + .2, q[2] - Math.sin(yaw) * o, .3, .3, yaw, '#8e8272');
-      kit.add('wash', washFan(5, 2.6, .7), q[0] - Math.sin(yaw) * .9, gy, q[2] - Math.cos(yaw) * .9, yaw, '#ffffff', {keep: true});
+    /* ---- the drive: Mount Lee Summit Road itself now curves up into the lot
+     * (tools/add_overlook_drive.mjs). Along its last ~100 m: reflector posts,
+     * lamps throwing pools on it, and the entrance sign. */
+    const m = this.model, mouth = [cx, s0 - 2];
+    const seg = m.segments.find(q => q.name === 'Mount Lee Summit Road' && [0, q.L].some(t => { const e = m.sectionAt(q, t); return Math.hypot(e.x - mouth[0], e.z - mouth[1]) < 4; }));
+    if (seg) {
+      const atEnd = (() => { const e = m.sectionAt(seg, seg.L); return Math.hypot(e.x - mouth[0], e.z - mouth[1]) < 4; })();
+      const sec = d => m.sectionAt(seg, atEnd ? seg.L - d : d);           // d metres back from the lot
+      const off = (q, o) => [q.x + q.nx * o, q.z + q.nz * o];
+      for (let d = 8; d < 110; d += 9) for (const o of [-1, 1]) {
+        const q = sec(d), [x, z] = off(q, o * (q.h + 1.3)), gy = g.height(x, z);
+        kit.box('paint', x, gy + .45, z, .12, .9, .12, 0, '#f2f2ee');
+        kit.box('glow', x, gy + .82, z, .13, .1, .13, 0, o > 0 ? '#ff5a3c' : '#fff1d0');
+      }
+      for (let d = 14, i = 0; d < 110; d += 22, i++) {
+        const q = sec(d), o = (i % 2 ? 1 : -1) * (q.h + 2.4), [x, z] = off(q, o);
+        lamp(x, z, Math.atan2(q.x - x, q.z - z), {r: 8.5});
+      }
+      { // entrance sign: OVERLOOK · PARKING · PICNIC, lit at night
+        const q = sec(30), [x, z] = off(q, -(q.h + 4.5)), gy = g.height(x, z), yaw = Math.atan2(q.tx, q.tz) + Math.PI / 2;
+        kit.box('paint', x, gy + 1.3, z, 4.6, 2.2, .3, yaw, '#24342c', true);
+        kit.box('lit', x, gy + 1.7, z, 4.0, .55, .34, yaw, '#e8e2cf');
+        kit.box('lit', x, gy + 1.05, z, 1.1, .55, .34, yaw, '#2e6fd6');
+        for (const o2 of [-2.1, 2.1]) kit.post('paint', x + Math.cos(yaw) * o2, gy - .5, gy + .2, z - Math.sin(yaw) * o2, .3, .3, yaw, '#8e8272');
+      }
     }
 
     /* ---- the parking lot (west and middle, by the drive) */
     const lx0 = cx - 32, lx1 = cx + 6, lz0 = s0 + 1, lz1 = s0 + 21;
     kit.box('line', (lx0 + lx1) / 2, y, (lz0 + lz1) / 2, lx1 - lx0, .04, lz1 - lz0, 0, ASPH);
-    kit.box('line', cx, y, s0 - .2, 9.4, .04, 3, 0, ASPH);                                  // mouth onto the drive
+    kit.box('line', cx, y, s0 + .5, 9.6, .04, 2, 0, ASPH);                                   // mouth where the road meets the lot
     const bay = (x, za, zb, color = LINE) => kit.box('line', x, y + .01, (za + zb) / 2, .12, .03, Math.abs(zb - za), 0, color);
     for (let x = lx0 + 1; x <= cx - 5.4; x += 2.7) bay(x, lz0, lz0 + 5.4);                    // north row, noses to the hill
     for (let x = lx0 + 1; x <= lx1 - .8; x += 2.7) bay(x, lz1 - 5.6, lz1);                    // south row, noses to the view

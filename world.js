@@ -44,7 +44,7 @@ ui.innerHTML=`<canvas id="worldCanvas" aria-label="Los Santerra driving world"><
 <section class="world-location"><div class="world-eyebrow">LOS SANTERRA <span>CALIFORNIA</span></div><h1 id="worldDistrict">West Hollywood</h1><p><span id="worldStreet">Sunset Boulevard</span><time id="worldClock">18:42</time></p></section>
 <div class="world-race" id="worldRace" hidden><b id="worldRaceTitle"></b><span class="world-tree" id="worldTree" hidden><i data-l="pre"></i><i data-l="stage"></i><i data-l="a1"></i><i data-l="a2"></i><i data-l="a3"></i><i data-l="go"></i><i data-l="red"></i></span><strong id="worldRaceMain"></strong><small id="worldRaceSub"></small></div><div class="world-prompt" id="worldPrompt" hidden></div><div class="world-toast" id="worldToast" role="status">Building Los Santerra…</div>
 <aside class="world-nav glass"><div class="world-nav-head"><span id="worldNavTitle">EXPLORE LOS SANTERRA</span><span id="worldDistance">N ↑</span></div><canvas id="worldMap" width="552" height="320" aria-label="Local road network"></canvas><div class="world-nav-foot"><b id="worldNavGlyph"></b><span id="worldNext">Choose your own road</span><button id="worldExpandMap">↗ MAP</button></div></aside>
-<div class="world-start" id="worldStart" hidden><div class="ws-switches" id="wsSwitches">${[['master','MASTER','U'],['ign','IGNITION','O'],['pump','FUEL PUMP','P']].map(([k,n,key])=>`<button class="ws-sw" data-sw="${k}"><span class="ws-slot"><i class="ws-lever"></i></span><b>${n}</b><kbd>${key}</kbd></button>`).join('')}</div><div class="ws-key" id="wsKey"><span data-k="off">OFF</span><span data-k="on">ON</span><span data-k="start">START</span></div><button class="ws-start" id="wsStart"><span class="ws-cover"></span><b>ENGINE<br>START</b><small>HOLD I</small></button><p class="ws-hint" id="wsHint"></p></div><section class="world-dash forza"><div class="world-car"><span id="worldCar">PERFORMANCE COUPE</span><small id="worldEngine">HOLD I TO START</small></div><div class="world-signals"><i id="worldSigL">◀</i><i id="worldSigR">▶</i></div><canvas id="worldSpeedometer" width="780" height="372" aria-label="Speed, gear and revs"></canvas><div class="world-dial-digital" hidden><strong id="worldSpeed">0</strong><small id="worldUnit">KM/H</small></div><div class="world-dial-gear" hidden><b id="worldGear">P</b></div><div class="world-bottom-rpm" hidden><span><b id="worldRpm">0.0</b></span><span id="worldTraction">FREE DRIVE</span></div><div class="world-revtrack" hidden><i id="worldRev"></i></div></section>
+<div class="world-start" id="worldStart" hidden><div class="ws-switches" id="wsSwitches">${[['master','MASTER','U'],['ign','IGNITION','O'],['pump','FUEL PUMP','P']].map(([k,n,key])=>`<button class="ws-sw" data-sw="${k}"><span class="ws-slot"><i class="ws-lever"></i></span><b>${n}</b><kbd>${key}</kbd></button>`).join('')}</div><div class="ws-key" id="wsKey"><span data-k="off">OFF</span><span data-k="on">ON</span><span data-k="start">START</span></div><div class="ws-cap"><span class="ws-capbase"><i class="ws-cover"></i></span><b>STARTER COVER</b><kbd>I</kbd></div><p class="ws-hint" id="wsHint"></p></div><section class="world-dash forza"><div class="world-car"><span id="worldCar">PERFORMANCE COUPE</span><small id="worldEngine">HOLD I TO START</small></div><div class="world-signals"><i id="worldSigL">◀</i><i id="worldSigR">▶</i></div><canvas id="worldSpeedometer" width="560" height="560" aria-label="Tachometer and speed"></canvas><div class="world-dial-digital" hidden><strong id="worldSpeed">0</strong><small id="worldUnit">KM/H</small></div><div class="world-dial-gear" hidden><b id="worldGear">P</b></div><div class="world-bottom-rpm" hidden><span><b id="worldRpm">0.0</b></span><span id="worldTraction">FREE DRIVE</span></div><div class="world-revtrack" hidden><i id="worldRev"></i></div></section>
 <footer class="world-controls"><span><kbd>W</kbd><kbd>S</kbd> PEDALS</span><span><kbd>A</kbd><kbd>D</kbd> STEER</span><span><kbd>Q</kbd><kbd>E</kbd> SHIFT</span><span><kbd>SPACE</kbd> HANDBRAKE</span><span><kbd>,</kbd><kbd>.</kbd> SIGNALS</span><span><kbd>V</kbd> COCKPIT</span><span>DRAG TO LOOK</span><div class="world-prnd" id="worldQuickGear"><button data-selector="P">P</button><button data-selector="R">R</button><button data-selector="N">N</button><button data-selector="D">D</button></div><button id="worldCamera">CAMERA · CHASE</button><button id="worldNight">TIME · GOLDEN HOUR</button></footer>
 <dialog id="worldDialog"><div class="world-dialog-top"><div><div class="world-eyebrow">DWNSHIFT / DRIVE OS</div><h2 id="worldDialogTitle">The city is yours.</h2></div><button id="worldClose" aria-label="Close menu">✕</button></div><nav class="world-tabs"><button data-tab="drive" class="selected">Drive</button><button data-tab="map">Map</button><button data-tab="garage">Garage</button><button data-tab="online">Online</button><button data-tab="sound">Car sound</button><button data-tab="settings">Settings</button></nav><div id="worldPanel"></div></dialog><button id="worldReturn" hidden>↗ ENTER 3D WORLD</button><div id="worldFade" aria-hidden="true"></div>`;
 document.body.append(ui);
@@ -233,7 +233,7 @@ async function setModel(id){
  notify(modelById(id).name+' · '+modelById(id).tag);}
 function lighting(on){if(on!==isDark(clockSeconds/3600))setTimeOfDay(on?'night':'golden');else syncNight();}
 const audioView={ck:null,r:-1},gMeter={lat:0,lon:0};
-document.addEventListener('pointerdown',e=>{const sw=e.target.closest?.('#worldStart [data-sw]');if(sw){drive.raceSwitch(sw.dataset.sw);return;}if(e.target.closest?.('#wsStart')){drive.ignitionDown();const up=()=>{drive.ignitionUp();removeEventListener('pointerup',up);};addEventListener('pointerup',up);}});let raceVenue=null,glowLight=null;
+document.addEventListener('pointerdown',e=>{const sw=e.target.closest?.('#worldStart [data-sw]');if(sw){drive.raceSwitch(sw.dataset.sw);return;}});let raceVenue=null,glowLight=null;
 let works=null,inWorks=false,online=null,life=null,fireLights=[],soundscape=new Soundscape(),stepIdx=0,wasSwim=false,airT=0,carWet=false,carWetT=0,indoor=0,indoorT=0,stillT=0,walkYaw=0,fpPitch=0,walker=null,onFoot=false,timing=null,lastExterior=0,carFx=null,places=null,wadeT=0,lastX=0,lastZ=0,flipped=0,tunnelMix=0,displayCars=null,npcs=null,fwySigns=null,parked=null;
 const trafficLabel=d=>d<.02?'Off':d<.3?'Light':d<.6?'Normal':d<.85?'Busy':'Rush hour';
 /** Traffic density 0..1, kept per browser. */
@@ -415,7 +415,7 @@ function render(now){requestAnimationFrame(render);if(!active)return;const dt=Ma
  * to ON (pumps prime), then hold it over to START. */
 function startPanel(){
  const el=$('worldStart'),st=drive.startInfo;if(!st)return;
- const show=!onFoot&&!inWorks&&!paused&&(!(st.engineOn||st.powered)||st.cranking||performance.now()-(startPanel.ran||0)<1800);
+ const show=(st.race||st.cap)&&!onFoot&&!inWorks&&!paused&&(!(st.engineOn||st.powered)||st.cranking||performance.now()-(startPanel.ran||0)<1800);
  if(st.engineOn||st.powered){if(!startPanel.wasOn)startPanel.ran=performance.now();startPanel.wasOn=true;}else startPanel.wasOn=false;
  el.hidden=!show;if(!show)return;
  el.classList.toggle('race',st.race);el.classList.toggle('armed',st.ready);el.classList.toggle('has-cap',st.cap);el.classList.toggle('cap-open',st.capOpen);el.classList.toggle('keyed',st.key||st.twoStage);
@@ -427,53 +427,43 @@ function startPanel(){
   :st.cap&&!st.capOpen?'Press I to flip the red cover up':st.twoStage&&!st.acc?(st.key?'Press I: key to ON, let the pumps prime':'Press I once: electronics on'):'Hold I to start';
 }
 function drawDial(){
- // The driver display (2026-10-02), after the 2D game's glass panel: a status
- // chip and the car, the speed huge in light numerals, P R N D with the gear,
- // a segmented rev bar with its redline and shift lights, and a row of live
- // readouts (rpm, throttle, g, trip). 2x canvas, drawn at ~30 Hz.
- const cv=$('worldSpeedometer'),ctx=cv.getContext('2d'),s=drive.state,c=drive.car,W=cv.width,H=cv.height,now=performance.now();
- const mph=s.units==='mph',speed=Math.round(Math.abs(s.v)*(mph?2.23694:3.6)),red=c.max||7000,top=Math.ceil((red+400)/1000)*1000,rpm=clamp(s.rpm||0,0,top);
- const TEAL='#8be8c9',AMBER='#f0b257',RED='#ff4a3c',INK='#eef2ec',DIM='rgba(226,234,226,.46)',FAINT='rgba(226,234,226,.14)';
- const limiter=s.engineOn&&rpm>red*.97,flash=Math.floor(now/90)%2;
- ctx.clearRect(0,0,W,H);
- const rr=(x0,y0,w,h,r)=>{ctx.beginPath();ctx.roundRect(x0,y0,w,h,r);};
- // Glass.
- const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(14,19,22,.88)');g.addColorStop(1,'rgba(7,10,12,.92)');
- rr(2,2,W-4,H-4,30);ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='rgba(255,255,255,.09)';ctx.lineWidth=2;ctx.stroke();
- const sheen=ctx.createLinearGradient(0,0,W,H*.6);sheen.addColorStop(0,'rgba(140,232,201,.07)');sheen.addColorStop(.5,'rgba(140,232,201,0)');rr(2,2,W-4,H-4,30);ctx.fillStyle=sheen;ctx.fill();
- ctx.textBaseline='alphabetic';
- // Header: status chip, the car, the clock; indicator arrows either side of the clock.
- const status=limiter?['LIMITER',RED]:s.cranking?['STARTING',AMBER]:s.engineOn?[s.tunnel?'TUNNEL':'READY',TEAL]:s.powered?['READY · EV',TEAL]:['ENGINE OFF',DIM];
- ctx.font='600 19px Outfit, Arial';const cw=ctx.measureText(status[0]).width+30;
- rr(34,26,cw,34,7);ctx.strokeStyle=status[1];ctx.lineWidth=2;if(!(limiter&&flash))ctx.stroke();ctx.fillStyle=status[1];ctx.letterSpacing='3px';ctx.fillText(status[0],49,50);
- ctx.fillStyle=INK;ctx.font='600 19px Outfit, Arial';ctx.fillText((c.name||'').toUpperCase(),34+cw+18,50);ctx.letterSpacing='0px';
- ctx.font='500 19px ui-monospace, Menlo, monospace';ctx.fillStyle=DIM;ctx.textAlign='right';ctx.fillText(clock(),W-74,50);ctx.textAlign='left';
- const L=$('worldSigL')?.classList.contains('on'),Rt=$('worldSigR')?.classList.contains('on');
- const arrow=(x0,dir,on)=>{ctx.fillStyle=on?AMBER:FAINT;if(on){ctx.shadowColor=AMBER;ctx.shadowBlur=14;}ctx.beginPath();ctx.moveTo(x0,42);ctx.lineTo(x0+dir*14,32);ctx.lineTo(x0+dir*14,52);ctx.closePath();ctx.fill();ctx.shadowBlur=0;};
- arrow(W-196,1,L);arrow(W-40,-1,Rt);
- // Speed.
- ctx.fillStyle=INK;ctx.font='700 148px Outfit, Arial';ctx.shadowColor='rgba(139,232,201,.25)';ctx.shadowBlur=18;
- const st=String(speed);ctx.fillText(st,28,206);ctx.shadowBlur=0;const sw=ctx.measureText(st).width;
- ctx.fillStyle=DIM;ctx.font='500 24px Outfit, Arial';ctx.letterSpacing='2px';ctx.fillText(mph?'mph':'km/h',38+sw,204);ctx.letterSpacing='0px';
- // P R N D (or the manual gear), the live gear in a box.
- const auto=s.mode==='auto',sel=s.autoSel||'P',gear=auto?(sel==='D'?String(s.autoGear||1):sel):String(s.gear||'N');
- ctx.font='700 30px Outfit, Arial';ctx.letterSpacing='10px';ctx.textAlign='right';
- if(auto){let x0=W-34;for(const k of ['D','N','R','P']){const on=k===sel;ctx.fillStyle=on?TEAL:FAINT;if(on){ctx.shadowColor=TEAL;ctx.shadowBlur=12;}ctx.fillText(k,x0,206);ctx.shadowBlur=0;x0-=40;}}
- else{ctx.fillStyle=DIM;ctx.fillText(s.mode==='clutch'?'H-GATE':'MANUAL',W-34,206);}
- ctx.letterSpacing='0px';
- rr(W-138,84,104,76,12);ctx.fillStyle='rgba(255,255,255,.04)';ctx.fill();ctx.strokeStyle=limiter?RED:'rgba(255,255,255,.12)';ctx.lineWidth=2;ctx.stroke();
- ctx.fillStyle=limiter?RED:INK;ctx.font='700 60px Outfit, Arial';ctx.textAlign='center';ctx.fillText(gear,W-86,145);ctx.textAlign='left';
- // Rev bar: segments, amber band, redline; shift lights above its right end.
- const bx=34,by=236,bw=W-68,bh=18,segs=56,lit=rpm/top*segs;
- for(let k=0;k<segs;k++){const v=k/segs*top,x0=bx+k*bw/segs;ctx.fillStyle=k<lit?(v>=red?RED:v>=red*.84?AMBER:TEAL):v>=red?'rgba(255,74,60,.22)':FAINT;if(k<lit&&v>=red*.84){ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=10;}ctx.fillRect(x0+1,by,bw/segs-3,bh);ctx.shadowBlur=0;}
- ctx.font='500 15px ui-monospace, Menlo, monospace';ctx.fillStyle=DIM;ctx.textAlign='center';
- for(let v=0;v<=top;v+=1000)ctx.fillText(String(v/1000),bx+v/top*bw,by+bh+20);
- ctx.textAlign='left';
- for(let k=0;k<5;k++){const on=s.engineOn&&rpm>red*(.8+k*.04),col=k<2?TEAL:k<4?AMBER:RED;ctx.fillStyle=on&&!(limiter&&!flash)?col:FAINT;if(on){ctx.shadowColor=col;ctx.shadowBlur=12;}ctx.beginPath();ctx.arc(W-138+k*26,74,6,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
- // Readouts.
- const gTot=Math.hypot(gMeter.lat,gMeter.lon),cols=[['RPM',Math.round(rpm).toLocaleString()],['THR',Math.round((s.in?.gas||0)*100)+'%'],['G',gTot.toFixed(2)],[mph?'TRIP MI':'TRIP KM',(travelled/(mph?1609.34:1000)).toFixed(1)]];
- ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(34,286);ctx.lineTo(W-34,286);ctx.stroke();
- cols.forEach(([k,v],i)=>{const x0=34+i*(W-68)/4;ctx.fillStyle=DIM;ctx.font='600 14px Outfit, Arial';ctx.letterSpacing='3px';ctx.fillText(k,x0,314);ctx.letterSpacing='0px';ctx.fillStyle=INK;ctx.font='500 26px ui-monospace, Menlo, monospace';ctx.fillText(v,x0,344);});
+ const cv=$('worldSpeedometer'),ctx=cv.getContext('2d'),s=drive.state,c=drive.car,W=cv.width,cx=W/2,cy=W/2,R=W*.43;
+ const mph=s.units==='mph',speed=Math.round(Math.abs(s.v)*(mph?2.23694:3.6)),red=c.max||7000,top=Math.ceil((red+400)/1000)*1000;
+ const rpm=clamp(s.rpm||0,0,top),a0=Math.PI*.75,a1=Math.PI*2.25,ang=v=>a0+(a1-a0)*v/top,now=performance.now();
+ ctx.clearRect(0,0,W,W);
+ // Backdrop: a dark disc with a soft edge, so it reads over sky or road.
+ const bg=ctx.createRadialGradient(cx,cy,R*.2,cx,cy,R*1.18);bg.addColorStop(0,'rgba(8,12,16,.72)');bg.addColorStop(.82,'rgba(8,12,16,.55)');bg.addColorStop(1,'rgba(8,12,16,0)');
+ ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,R*1.18,0,Math.PI*2);ctx.fill();
+ // Track and redline band.
+ ctx.lineCap='butt';ctx.lineWidth=R*.075;ctx.strokeStyle='rgba(255,255,255,.08)';ctx.beginPath();ctx.arc(cx,cy,R*.9,a0,a1);ctx.stroke();
+ ctx.strokeStyle='rgba(235,52,40,.85)';ctx.beginPath();ctx.arc(cx,cy,R*.9,ang(red),a1);ctx.stroke();
+ // Rev arc, in segments like an LED bar.
+ const segs=48,lit=rpm/top*segs;
+ for(let k=0;k<segs;k++){if(k>=lit)break;const u=k/segs,v=u*top,b0=a0+(a1-a0)*u+.006,b1=a0+(a1-a0)*(k+1)/segs-.006;
+  ctx.strokeStyle=v>=red?'#ff3b2f':v>=red*.82?'#ffb23a':'#f4f6f2';ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=v>=red*.82?14:6;
+  ctx.beginPath();ctx.arc(cx,cy,R*.9,b0,b1);ctx.stroke();}
+ ctx.shadowBlur=0;
+ // Ticks and numerals (x1000).
+ for(let v=0;v<=top;v+=250){const a=ang(v),major=v%1000===0,r0=R*(major?.76:.8),r1=R*.84;
+  ctx.strokeStyle=v>=red?'#ff5a4a':major?'rgba(255,255,255,.95)':'rgba(255,255,255,.45)';ctx.lineWidth=major?R*.022:R*.01;
+  ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);ctx.stroke();
+  if(major){ctx.fillStyle=v>=red?'#ff6b5a':'rgba(240,244,238,.9)';ctx.font=`600 ${R*.12}px Outfit, Arial`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(v/1000),cx+Math.cos(a)*R*.64,cy+Math.sin(a)*R*.64);}}
+ // Needle.
+ const na=ang(rpm);ctx.save();ctx.translate(cx,cy);ctx.rotate(na);ctx.shadowColor='#ff6a2a';ctx.shadowBlur=18;
+ const ng=ctx.createLinearGradient(0,0,R*.93,0);ng.addColorStop(0,'rgba(255,90,40,0)');ng.addColorStop(.35,'#ff6a2a');ng.addColorStop(1,'#ffd0a0');
+ ctx.fillStyle=ng;ctx.beginPath();ctx.moveTo(R*.22,-R*.016);ctx.lineTo(R*.95,-R*.005);ctx.lineTo(R*.95,R*.005);ctx.lineTo(R*.22,R*.016);ctx.closePath();ctx.fill();ctx.restore();ctx.shadowBlur=0;
+ // Shift flash: the whole outer ring pulses near the limiter.
+ if(rpm>red*.95&&Math.floor(now/70)%2){ctx.strokeStyle='rgba(255,70,50,.9)';ctx.lineWidth=R*.03;ctx.shadowColor='#ff3b2f';ctx.shadowBlur=24;ctx.beginPath();ctx.arc(cx,cy,R*1.0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;}
+ // Gear, in a ring.
+ const gear=s.mode==='auto'?(s.autoSel==='D'?String(s.autoGear||1):s.autoSel):String(s.gear||'N');
+ ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=R*.012;ctx.beginPath();ctx.arc(cx,cy,R*.3,0,Math.PI*2);ctx.stroke();
+ ctx.fillStyle=rpm>red*.95?'#ff5a4a':'#ffffff';ctx.font=`700 ${R*.36}px Outfit, Arial`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(gear,cx,cy+R*.02);
+ // Speed and units, below.
+ ctx.fillStyle='#ffffff';ctx.font=`600 ${R*.3}px Outfit, Arial`;ctx.fillText(String(speed),cx,cy+R*.58);
+ ctx.fillStyle='rgba(235,240,232,.6)';ctx.font=`600 ${R*.075}px Outfit, Arial`;ctx.fillText(mph?'MPH':'KM/H',cx,cy+R*.8);
+ ctx.fillStyle='rgba(235,240,232,.45)';ctx.font=`600 ${R*.06}px Outfit, Arial`;ctx.fillText('RPM ×1000',cx,cy-R*.46);
+ // Tunnel / assist state, a small tag at the bottom.
+ if(s.tunnel){ctx.fillStyle='rgba(255,200,120,.8)';ctx.font=`600 ${R*.06}px Outfit, Arial`;ctx.fillText('TUNNEL',cx,cy+R*.96);}
 }
 /* The map: world/atlas.js draws it from the road network (the minimap
  * heading-up round the car, the atlas north-up with pan and zoom). */
