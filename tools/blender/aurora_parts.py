@@ -287,7 +287,30 @@ def nose(parts, ends, surf, out):
     out.append(bevel(me.obj('Splitter'), .004, 2))
     Vv, F = sweep([Vector((x, yb - .012, z + .004)) for x, z in front], superellipse(.0055, .0055, 2, 10))
     out.append(Mesh().add(Vv, F, 'accent').obj('SplitterEdge'))
+    # (2026-10-02, finer) A valance closing the bumper's bottom edge onto the
+    # blade, so the splitter reads as part of the nose, not a plate under it.
+    Vv, F = sweep([Vector((x * .995, yb - .006, z - .006)) for x, y, z in bottom], superellipse(.012, .014, 3, 10))
+    out.append(Mesh().add(Vv, F, 'gloss').obj('SplitterValance'))
     if LOD: return
+    # A kicked-up lip along the blade's leading edge, end plates at its tips,
+    # titanium struts from the bumper to the blade.
+    lip = [Vector((x, yb + .006 + .006 * (1 - (x / xe) ** 2), z - .014)) for x, z in front]
+    Vv, F = sweep(resample(lip, 48), superellipse(.004, .011, 3, 10))
+    out.append(Mesh().add(Vv, F, 'carbon').obj('SplitterLip'))
+    me = Mesh()
+    for sgn in (1, -1):
+        zf = front[0][1] if sgn > 0 else front[-1][1]
+        prof = round_poly([(zf + .01, yb - .03), (zf - .3, yb - .03), (zf - .3, yb + .09), (zf - .1, yb + .1), (zf + .005, yb + .03)], [0, .006, .02, .03, .006], 3)
+        Vv, F = prism([(y, z) for z, y in prof], .007)
+        me.add(Vv, F, 'carbon', Matrix(((0, 0, 1, sgn * (xe + .03)), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0, 1))))
+    out.append(bevel(me.obj('SplitterEndplates'), .0015, 1))
+    me = Mesh()
+    for x in (-.46, .46):
+        fz = max(z for (xx, z) in front if abs(xx - x) < .2) - .12
+        a, b = Vector((x, yb + .005, fz)), Vector((x * .92, yb + .12, fz - .08))
+        Vv, F = sweep([a, a.lerp(b, .5), b], [(math.cos(TAU * i / 10) * .006, math.sin(TAU * i / 10) * .006) for i in range(10)])
+        me.add(Vv, F, 'ti')
+    out.append(me.obj('SplitterStruts'))
     # Splitter fences and the turning vanes under the nose.
     me = Mesh()
     for x in (-.62, -.32, .32, .62):
@@ -378,16 +401,36 @@ def sides(parts, surf, out, panels):
             Vv, F = rbox(reg.box[1] - reg.box[0] - .014, reg.box[3] - reg.box[2] - .008, .006, .0025, 2)
             M = basis(reg.u, reg.v, reg.n, reg.at((reg.box[0] + reg.box[1]) / 2, (reg.box[2] + reg.box[3]) / 2, .009))
             out.append(Mesh().add(Vv, F, 'satin', M).obj(f'Door_{sl}_handle'))
-        # Side skirts: a carbon blade off the rocker with a kicked-up winglet at the rear.
-        sk = round_poly([(s * .8, .13), (s * .955, .128), (s * .975, .14), (s * .96, .152), (s * .86, .21), (s * .8, .21)], .006, 2)
-        Vv, F = prism([(x, y) for x, y in sk], ZF - R - .03 - (ZR + R + .03), ZR + R + .03)
-        o = Mesh().add(Vv, F, 'carbon').obj(f'Skirt{s}'); bevel(o, .003, 2); out.append(o)
+        # Side skirts (2026-10-02, finer): a carbon blade lofted along the rocker
+        # that narrows into each arch instead of stopping as a slab, an aero vane
+        # riding above it through the middle, a blue edge line, winglets at the rear.
+        za, zb = ZR + R + .02, ZF - R - .02
+        base_prof = [(.8, .13), (.955, .128), (.985, .136), (.975, .152), (.86, .205), (.8, .21)]
+        rings = []
+        for i in range(25):
+            t = i / 24; z = za + (zb - za) * t
+            e = min(1, t / .14, (1 - t) / .14); e = e * e * (3 - 2 * e)          # tuck into the arches
+            pr = round_poly([(.8 + (x - .8) * (.25 + .75 * e), y + (1 - e) * .02) for x, y in base_prof], .006, 2)
+            rings.append([Vector((s * x, y, z)) for x, y in pr])
+        Vv, F = loft(rings, True, True, True)
+        out.append(Mesh().add(Vv, F, 'carbon').obj(f'Skirt{s}'))
         if not LOD:
+            vane = []
+            for i in range(17):
+                t = i / 16; z = za + .25 + (zb - za - .55) * t
+                e = math.sin(math.pi * t) ** .5
+                pr = [(.9, .232), (.9 + .085 * e, .206), (.903 + .085 * e, .212), (.905, .238)]
+                vane.append([Vector((s * x, y, z)) for x, y in pr])
+            Vv, F = loft(vane, True, True, True)
+            out.append(Mesh().add(Vv, F, 'carbon').obj(f'Skirt{s}vane'))
+            edge = [Vector((s * (.8 + (.985 - .8) * (.25 + .75 * min(1, t / .14, (1 - t) / .14))), .134, za + (zb - za) * t)) for t in (i / 30 for i in range(31))]
+            Vv, F = sweep(edge, superellipse(.0035, .0035, 2, 8))
+            out.append(Mesh().add(Vv, F, 'accent').obj(f'Skirt{s}edge'))
             me = Mesh()
-            for zz, hh in ((ZR + R + .1, .07), (ZR + R + .2, .05)):
+            for zz, hh in ((ZR + R + .12, .075), (ZR + R + .22, .055)):
                 prof = round_poly([(zz, .14), (zz + .1, .14), (zz + .01, .14 + hh)], .006, 2)
                 Vv, F = prism([(z, y) for z, y in prof], .008)
-                me.add(Vv, F, 'carbon', Matrix(((0, 0, 1, s * .965), (0, 1, 0, 0), (1, 0, 0, 0), (0, 0, 0, 1))))
+                me.add(Vv, F, 'carbon', Matrix(((0, 0, 1, s * .95), (0, 1, 0, 0), (1, 0, 0, 0), (0, 0, 0, 1))))
             out.append(bevel(me.obj(f'Skirt{s}fins'), .0015, 1))
         # Mirrors (on the doors): a sculpted pod on a carbon aero stalk, a repeater along its leading edge.
         mz = .56; h = half_section(mz); bx, by = h[J_CREST][0] * s, h[J_CREST][1]
@@ -554,18 +597,41 @@ def tail(parts, ends, surf, out):
             out.append(Mesh().add(Vv, F, 'honey', M).obj(f'ExhaustBaffle{s}'))
             Vv, F = lathe([(.051, .4), (.051, .1)], 24)
             out.append(Mesh().add(Vv, F, 'heat', M).obj(f'ExhaustPipe{s}'))
-    # Diffuser: a carbon ramp from the floor to the tail, seven fences, a tow-hook cover.
-    V4 = [Vector((.84, .155, tzc + .78)), Vector((-.84, .155, tzc + .78)), Vector((-.84, ty + .01, tzc + .02)), Vector((.84, ty + .01, tzc + .02))]
-    o = Mesh().add(V4, [[0, 1, 2, 3]], 'carbon').obj('Diffuser', smooth=False)
+    # Diffuser (2026-10-02, finer): a concave carbon ramp that kicks up hard at
+    # the back, side walls, seven fences deepening and flaring outward toward
+    # the tail, a lip along the trailing edge.
+    zf_, zr_ = tzc + .8, tzc + .02
+    ramp = lambda t: .155 + (ty + .01 - .155) * t ** 1.9
+    rows = []
+    for i in range(13):
+        t = i / 12; z = zf_ + (zr_ - zf_) * t
+        rows.append([Vector((x, ramp(t), z)) for x in (.86, .43, 0, -.43, -.86)])
+    Vv, F = [], []
+    for r in rows: Vv += r
+    for i in range(12):
+        for j in range(4): F.append([i * 5 + j, i * 5 + j + 1, (i + 1) * 5 + j + 1, (i + 1) * 5 + j])
+    o = Mesh().add(Vv, F, 'carbon').obj('Diffuser', smooth=True)
     sol = o.modifiers.new('t', 'SOLIDIFY'); sol.thickness = .008; out.append(o)
+    def fence(x, hk, yaw=0.0, wall=False):
+        top, bot = [], []
+        for i in range(13):
+            t = i / 12; z = zf_ + (zr_ - zf_) * t; y = ramp(t)
+            top.append((z, y + (.02 if wall else .0)))
+            bot.append((z, min(y - .004, .152 - (.004 if wall else hk * .06 * t))))   # down to the floor's plane, no lower
+        prof = round_poly(top + bot[::-1], [0] * 12 + [.004, .004] + [0] * 10 + [.01, 0], 2)
+        Vv, F = prism([(y, z) for z, y in prof], .012 if wall else .008)
+        M = Matrix.Translation((x, 0, (zf_ + zr_) / 2)) @ Rot('Y', yaw) @ Matrix.Translation((0, 0, -(zf_ + zr_) / 2)) @ Matrix(((0, 0, 1, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
+        return Vv, F, M
     me = Mesh()
     for k in range(-3, 4):
-        hk = .23 - abs(k) * .03
-        prof = round_poly([(tzc + .7, .15), (tzc + .02, .15 + (ty - .15) * .0), (tzc + .02, ty + hk * .0 + .02), (tzc + .3, .15 + hk * .5)], [0, .004, .01, .03], 3)
-        prof = round_poly([(tzc + .7, .152), (tzc + .03, ty + .005), (tzc + .03, ty + .005 + .02 + hk * .25), (tzc + .5, .2)], [0, .004, .01, .04], 3)
-        Vv, F = prism([(y, z) for z, y in prof], .01)
-        me.add(Vv, F, 'carbon', Matrix(((0, 0, 1, k * .22), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0, 1))))
+        Vv, F, M = fence(k * .22, .2 - abs(k) * .025, -k * .025)
+        me.add(Vv, F, 'carbon', M)
+    for sgn in (1, -1):
+        Vv, F, M = fence(sgn * .865, .16, 0, True)
+        me.add(Vv, F, 'carbon', M)
     out.append(bevel(me.obj('DiffuserStrakes'), .002, 1))
+    Vv, F = sweep([Vector((x, ty + .012, zr_ - .004)) for x in (.86, .43, 0, -.43, -.86)], superellipse(.006, .012, 3, 10))
+    out.append(Mesh().add(Vv, F, 'carbon').obj('DiffuserLip'))
 
 # ------------------------------------------------------------------ underneath
 def under(out):

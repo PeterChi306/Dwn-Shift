@@ -219,7 +219,7 @@ export function auroraCabin(K, amb, trim = {}) {
   const C = new Cabin(amb, {leather, leather2: trim.leather ? shade(leather, new T.Color(leather).getHSL({}).l > .5 ? .86 : 1.25) : '#222226',
     alcantara: trim.insert || '#19191c', stitch, thread: trim.stitch ? shade(stitch, 1.15) : '#3a64ff', floor: '#0e0f11', headliner: '#141416',
     finish: trim.finish || 'carbon', paint: trim.paint || '#2a2c30'});
-  const W = .7, eye = [.36, .92, -.64];
+  const W = .7, eye = [.36, .935, -.66];
   const xs = range(-W + .012, W - .012, 36);
 
   /* ---- tub: floor, mats, sills with scuff plates, footwell and rear bulkheads */
@@ -261,7 +261,7 @@ export function auroraCabin(K, amb, trim = {}) {
   C.add(place(lathe([[.012, 0], [.012, .06]], 16), 0, .72, .16, 0, 0, Math.PI / 2), 'aluR');
   C.soft('piano', 0, roof(.2) - .07, .2, .2, .045, .015, .01, {rx: .15});
   C.add(place(lathe([[.007, 0], [.006, .04]], 12), 0, roof(.2) - .048, .205, 0, 0, Math.PI / 2), 'carbon');
-  C.add(place(new T.PlaneGeometry(.185, .034), 0, roof(.2) - .07, .192, .15, Math.PI, 0), 'screen');
+  C.add(place(new T.PlaneGeometry(.185, .034), 0, roof(.2) - .07, .192, .15, Math.PI, 0), 'glassDark');      // the mirror's face: dark glass, not a map
   // Jet vents at each end and a pair either side of the screen.
   for (const s of SIDES) { C.jetVent(s * .6, .7, .145, .036); C.jetVent(s * .17, .69, .155, .026); }
 
@@ -325,9 +325,10 @@ export function auroraCabin(K, amb, trim = {}) {
 
   /* ---- headliner, overhead switch panel, A-pillars */
   C.add(headlinerGeometry(roof, GZ0 + .3, .26, z => K.rw(z) + .01, .035, .07), 'headliner');
-  C.soft('carbon', 0, roof(-.1) - .052, -.1, .2, .03, .15, .012, {deform: (x, y, z) => [x * (y > 0 ? 1.15 : 1), y, z]});
-  for (let i = -1; i <= 1; i++) C.add(place(lathe([[.0025, 0], [.0025, .018], [.004, .02]], 8), i * .045, roof(-.1) - .068, -.13, 0, 0, -Math.PI / 2), 'chrome');
-  C.soft('#b1121c', .07, roof(-.1) - .07, -.07, .03, .006, .02, .002);
+  // Overhead switch panel: over the gap between the seats, out of the driver's forward view.
+  C.soft('carbon', 0, roof(-.62) - .05, -.62, .2, .028, .15, .012, {deform: (x, y, z) => [x * (y > 0 ? 1.15 : 1), y, z]});
+  for (let i = -1; i <= 1; i++) C.add(place(lathe([[.0025, 0], [.0025, .018], [.004, .02]], 8), i * .045, roof(-.62) - .066, -.65, 0, 0, -Math.PI / 2), 'chrome');
+  C.soft('#b1121c', .07, roof(-.62) - .068, -.59, .03, .006, .02, .002);
   // (No A-pillar trims: the canopy is glass all round the windshield.)
 
   /* ---- the light: across the dash lip into both doors, down the bridge, under it, footwells, overhead */
@@ -339,8 +340,8 @@ export function auroraCabin(K, amb, trim = {}) {
     C.strip([[s * .15, .43, .44], [s * .6, .43, .44]], .003);
   }
   C.strip([[-.1, .255, .1], [.1, .255, .1]], .0025);
-  C.strip([[-.08, roof(-.1) - .068, -.18], [.08, roof(-.1) - .068, -.18]], .0025);
-  const wheel = steeringWheel(C, 'aero', {x: .36, y: .66, z: -.2, tilt: -.28});
+  C.strip([[-.08, roof(-.62) - .066, -.7], [.08, roof(-.62) - .066, -.7]], .0025);
+  const wheel = steeringWheel(C, 'aero', {x: .36, y: .64, z: -.21, tilt: -.3});   // a touch lower: the rim clears the cluster
   return {group: C.finish(), wheel, cluster, clusterStyle: 'race', eye, screen, doors: {L: Dc[1].finish(), R: Dc[-1].finish()}};
 }
 

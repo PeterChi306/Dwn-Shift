@@ -11,6 +11,8 @@
  *            for an intake, a red laser out of the hole (the 2,000 hp street-build look)
  *   wheels   aero · forged · mesh · dish · lux, with rim and caliper colours
  *   stance   stock · lowered · slammed with camber
+ *   roof     clean · roof scoop · shark fin · LED light bar;  hood  stock · fender louvres · hood scoop
+ *   number   a race roundel on both doors and the hood (2026-10-02)
  *   glow     underglow colour or off, glowMode steady · breathing · colour cycle · chase;  livery: clean · twin stripes · side stripe · black roof
  *
  * applyBuild(vehicle, build) hides the stock pieces the build replaces (the
@@ -20,7 +22,7 @@
  */
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {uniform, mix, positionLocal, abs, smoothstep, float, vec3, step, materialColor} from 'three/tsl';
+import {uniform, mix, positionLocal, abs, smoothstep, float, vec3, vec2, step, materialColor, texture} from 'three/tsl';
 import {buildWheels} from './carWheels.js';
 import {rebuildCabin} from './carModels.js';
 
@@ -32,7 +34,10 @@ export const OPTIONS = {
   kit: [['stock', 'Stock body', ''], ['wide', 'GT widebody', 'Flared arches over a wider track'], ['fenders', 'Riveted overfenders', 'Bolt-on, boxy, every rivet showing']],
   exhaust: [['stock', 'Twin centre', ''], ['quad', 'Quad tips', ''], ['center', 'Single centre', 'One big pipe through the diffuser'], ['side', 'Side exit', 'Pipes out ahead of the rear wheels'], ['straight', 'Straight pipes', 'Burnt titanium, big flames']],
   lights: [['stock', 'LED white', ''], ['yellow', 'Selective yellow', ''], ['ice', 'Ice blue', ''], ['oneeye', 'One-eye laser', 'One lamp out for an intake, a red laser in its place']],
-  wheels: [['aero', 'Aero centre-lock', ''], ['forged', 'Forged five-spoke', ''], ['mesh', 'Cross mesh', ''], ['dish', 'Deep dish', ''], ['lux', 'Multi-spoke', '']],
+  wheels: [['aero', 'Aero centre-lock', ''], ['forged', 'Forged five-spoke', ''], ['mesh', 'Cross mesh', ''], ['dish', 'Deep dish', ''], ['lux', 'Multi-spoke', ''], ['turbofan', 'Turbofan covers', 'Aero discs with fan blades, the 935 look']],
+  roof: [['stock', 'Clean roof', ''], ['scoop', 'Roof scoop', 'Carbon air intake feeding the engine'], ['fin', 'Shark fin', 'Le Mans stability fin to the tail'], ['lightbar', 'LED light bar', 'Rally pods across the roof, lit at night']],
+  hood: [['stock', 'Stock hood', ''], ['louvres', 'Fender louvres', 'Two banks of carbon louvres over the front wheels'], ['scoop', 'Hood scoop', 'A raised intake in the middle of the hood']],
+  number: [['none', 'No number', ''], ['07', '07', ''], ['27', '27', ''], ['88', '88', ''], ['99', '99', '']],
   stance: [['stock', 'Stock', ''], ['low', 'Lowered', '-25 mm'], ['slammed', 'Slammed + camber', '-45 mm, wheels tucked, negative camber']],
   seats: [['bucket', 'Carbon buckets', 'Bolstered shells, 4-point harness'], ['comfort', 'Comfort seats', 'Quilted leather armchairs, piped edges']],
   finish: [['carbon', 'Carbon fibre', 'Gloss weave on the dash and tub'], ['alu', 'Brushed aluminium', 'Machined metal'], ['piano', 'Piano black', 'Deep gloss black'], ['paint', 'Body colour', 'Painted to match the car']],
@@ -52,7 +57,8 @@ export const CAGES = [['Black', '#1c1d20'], ['Silver', '#b9bec4'], ['Red', '#c81
 export const STRIPES = [['White', '#f2f2ee'], ['Black', '#0b0c0e'], ['Red', '#c8141c'], ['Blue', '#1f47ff'], ['Gold', '#c9a24a']];
 
 export const DEFAULT_BUILD = {wing: 'stock', front: 'stock', kit: 'stock', exhaust: 'stock', lights: 'stock', wheels: 'aero', rim: null, caliper: null, stance: 'stock', glow: null, glowMode: 'steady', livery: 'none', stripe: '#f2f2ee',
-  seats: 'bucket', finish: 'carbon', cage: 'none', screen: 'gmeter', leather: null, insert: null, stitch: null, cageColor: null};
+  seats: 'bucket', finish: 'carbon', cage: 'none', screen: 'gmeter', leather: null, insert: null, stitch: null, cageColor: null,
+  roof: 'stock', hood: 'stock', number: 'none'};
 export const PRESETS = [
   {id: 'stock', name: 'Factory', blurb: 'The Aurora as it left the line', build: {...DEFAULT_BUILD}},
   {id: 'gt3', name: 'GT3 R', blurb: 'Race car: widebody, big wing, splitter, forged wheels, stripes', paint: '#eeeeea',
@@ -162,7 +168,11 @@ function addWing(P, add, build, deckY) {
       // Boomerang tips: the plane sweeps up and back at each end.
       for (const s of [1, -1]) { const g = airfoil(.34, .3, .024, .14, 0, 0, 0); g.rotateZ(s * -.5); g.translate(s * .79, y + .08, z - .02); add(g, P.carbon); }
       for (const s of [1, -1]) add(plate([[z + .2, y + .02], [z - .2, y + .02], [z - .24, y + .26], [z + .1, y + .22]], .012, s * .95), P.carbon);
-    } else for (const s of [1, -1]) add(plate([[z + .22, y - .12], [z - .24, y - .12], [z - .26, y + .14], [z + .18, y + .1]], .012, s * .965), P.carbon);
+    } else for (const s of [1, -1]) {
+      add(plate([[z + .22, y - .12], [z - .24, y - .12], [z - .26, y + .14], [z + .18, y + .1]], .012, s * .965), P.carbon);
+      for (let k = 0; k < 3; k++) add(box(.004, .012, .2, s * .972, y - .06 + k * .045, z - .02, -.25), P.black);   // endplate louvres
+    }
+    add(box(span * .55, .008, .008, 0, y + .085, z - .19), P.glowMat('#ff2a2a'));         // LED strip along the gurney
     // Swan necks: hung from the top of the wing down to the deck.
     for (const s of [1, -1]) { const d = deckY(-1.92); add(plate([[-1.86, d - .03], [-2.0, d + .1], [-2.12, y + .02], [-2.2, y + .06], [-2.3, y + .06], [-2.2, y - .02], [-2.08, d + .06], [-1.96, d - .03]], .016, s * .3), P.carbon); }
   } else if (w === 'drift') {
@@ -186,8 +196,14 @@ function addFront(P, add, build, noseZ) {
       for (const [y, l] of [[.34, .2], [.44, .16]]) { const g = box(.14, .012, l, 0, 0, 0, 0, 0, s * .28); g.translate(s * .92, y, noseZ(s * .86) - .12); add(g, P.carbon); }   // canards
     }
   } else if (build.front === 'lip') {
-    add(box(1.2, .014, .08, 0, .155, 2.56), P.black);
-    add(box(.045, .012, .12, .32, .2, 2.56, -.6), P.red);                                                 // tow strap
+    // A thin lip that follows the nose's outline and turns up at its ends.
+    const outline = [];
+    for (let i = 0; i <= 16; i++) { const x = -.86 + 1.72 * i / 16; outline.push([x, Math.max(1.95, noseZ(x)) + .035]); }
+    const sh = new T.Shape(); sh.moveTo(-.86, 2.0); for (const [x, z] of outline) sh.lineTo(x, z); sh.lineTo(.86, 2.0); sh.closePath();
+    const blade = new T.ExtrudeGeometry(sh, {depth: .012, bevelEnabled: true, bevelThickness: .002, bevelSize: .003, bevelSegments: 1});
+    blade.rotateX(Math.PI / 2); blade.translate(0, .16, 0); add(blade, P.black);
+    for (const s of [1, -1]) add(plate([[noseZ(s * .84) - .12, .16], [noseZ(s * .84) + .03, .16], [noseZ(s * .84) + .03, .2], [noseZ(s * .84) - .08, .2]], .01, s * .86), P.black);
+    add(box(.045, .012, .12, .32, .2, Math.max(1.95, noseZ(.32)) + .02, -.6), P.red);                    // tow strap
   }
 }
 function addKit(P, add, build, wheels) {
@@ -202,8 +218,87 @@ function addKit(P, add, build, wheels) {
       const r = new T.CylinderGeometry(.011, .011, .012, 8); r.rotateZ(Math.PI / 2); r.translate(s * 1.075, w.y + rr * uy, w.z + rr * ux); add(r, P.rivet);
     }
   }
-  // Skirts out to the new arches.
-  for (const s of [1, -1]) add(box(.07, .1, 1.95, s * 1.04, .2, 0), fenders ? P.black : P.carbon);
+  // Skirts out to the new arches: a shaped blade that narrows into each arch.
+  for (const s of [1, -1]) add(skirtBlade(s, fenders ? 1.07 : 1.045), fenders ? P.black : P.carbon);
+}
+/** A side-skirt blade along z (between the arches), tapering at both ends into the arch. */
+function skirtBlade(s, xOut, z0 = -.98, z1 = .98) {
+  const sh = new T.Shape(), pts = [[.86, .12], [xOut - .02, .118], [xOut, .13], [xOut - .01, .15], [.92, .2], [.86, .205]];
+  sh.moveTo(...pts[0]); for (const p of pts.slice(1)) sh.lineTo(...p); sh.closePath();
+  const g = new T.ExtrudeGeometry(sh, {depth: z1 - z0, steps: 24, bevelEnabled: false}); g.translate(0, 0, z0);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const t = (pos.getZ(i) - z0) / (z1 - z0), e0 = Math.min(1, t / .12, (1 - t) / .12), e = e0 * e0 * (3 - 2 * e0);
+    pos.setX(i, s * (.86 + (pos.getX(i) - .86) * (.2 + .8 * e)));
+  }
+  if (s < 0) { const idx = g.index; if (idx) for (let k = 0; k < idx.count; k += 3) { const a = idx.getX(k + 1); idx.setX(k + 1, idx.getX(k + 2)); idx.setX(k + 2, a); } else for (let k = 0; k < pos.count; k += 3) for (const c of ['X', 'Y', 'Z']) { const a = pos['get' + c](k + 1); pos['set' + c](k + 1, pos['get' + c](k + 2)); pos['set' + c](k + 2, a); } }
+  g.computeVertexNormals();
+  return g;
+}
+
+/* Roof and hood parts (2026-10-02). Heights from the loft's roof profile and
+ * the hood's own surface (raycast), so they sit on the body. */
+function addRoof(P, add, build, K) {
+  const r = build.roof; if (!r || r === 'stock') return;
+  const roof = z => (K?.roof ? K.roof(z) : 1.16) + .004;
+  if (r === 'scoop') {
+    // A carbon snorkel: a half-dome section growing out of the roof, open at the front.
+    const rings = [], N = 18, zs = [-.12, -.2, -.32, -.46, -.6, -.74, -.86];
+    zs.forEach((z, k) => {
+      const t = k / (zs.length - 1), w = .17 * (1 - .55 * t * t), h = .12 * (1 - t) + .01;
+      const ring = []; for (let i = 0; i <= N; i++) { const a = Math.PI * i / N; ring.push([Math.cos(a) * w, roof(z) + Math.pow(Math.sin(a), .7) * h, z]); } rings.push(ring);
+    });
+    add(loftRings(rings), P.carbon);
+    const m = new T.Shape(); m.moveTo(-.15, 0); for (let i = 0; i <= 12; i++) { const a = Math.PI * i / 12; m.lineTo(Math.cos(a) * -.15, Math.pow(Math.sin(a), .7) * .105); }
+    const mouth = new T.ShapeGeometry(m); mouth.translate(0, roof(-.13) + .004, -.13); add(mouth, P.grille);
+    const lip = new T.TorusGeometry(.165, .006, 6, 24, Math.PI); lip.translate(0, roof(-.12) + .005, -.115); add(lip, P.carbon);
+  } else if (r === 'fin') {
+    const d = K?.deck ? K.deck : () => .95;
+    add(plate([[-.35, roof(-.35) - .01], [-.95, roof(-.95) + .1], [-1.6, Math.max(d(-1.6), .9) + .2], [-2.08, Math.max(d(-2.08), .9) + .16], [-2.12, Math.max(d(-2.12), .9) + .02], [-.35, roof(-.35) - .03]], .014, 0), P.carbon);
+  } else if (r === 'lightbar') {
+    const z = .32, y = roof(z) + .07;
+    add(box(1.0, .075, .07, 0, y, z), P.black);
+    for (const sd of [1, -1]) add(box(.03, .07, .1, sd * .42, y - .05, z - .02), P.black);           // feet
+    for (let i = 0; i < 6; i++) {
+      const x = -.4 + i * .16, lamp = new T.CylinderGeometry(.03, .03, .012, 16); lamp.rotateX(Math.PI / 2); lamp.translate(x, y, z + .036);
+      add(lamp, P.glowMat('#f2f6ff'));
+      const ring = new T.TorusGeometry(.033, .005, 6, 18); ring.translate(x, y, z + .038); add(ring, P.chrome);
+    }
+  }
+}
+function addHood(P, add, build, deckY) {
+  const h = build.hood; if (!h || h === 'stock') return;
+  if (h === 'louvres') {
+    for (const sd of [1, -1]) {
+      const xc = sd * .56;
+      add(box(.3, .004, .42, xc, deckY(1.5, xc) + .004, 1.5), P.grille);
+      for (let k = 0; k < 9; k++) {
+        const z = 1.32 + k * .045, y = deckY(z, xc) + .016;
+        add(box(.29, .005, .03, xc, y, z, -.55), P.carbon);
+      }
+    }
+  } else if (h === 'scoop') {
+    // A carbon intake standing up off the hood: open and tallest at the front, fairing into the hood behind.
+    const rings = [], N = 16, zs = [1.66, 1.6, 1.5, 1.38, 1.26, 1.14, 1.04];
+    zs.forEach((z, k) => {
+      const t = k / (zs.length - 1), w = .2 * (1 - .35 * t), hh = .1 * (1 - t) ** .8 + .004;
+      const ring = []; for (let i = 0; i <= N; i++) { const a = Math.PI * i / N; ring.push([Math.cos(a) * w, deckY(z, Math.cos(a) * w) + Math.pow(Math.sin(a), .8) * hh, z]); } rings.push(ring);
+    });
+    add(loftRings(rings), P.carbon);
+    const m = new T.Shape(); m.moveTo(.19, 0); for (let i = 0; i <= 14; i++) { const a = Math.PI * i / 14; m.lineTo(Math.cos(a) * .19, Math.pow(Math.sin(a), .8) * .092); }
+    const mouth = new T.ShapeGeometry(m); mouth.translate(0, deckY(1.64, 0) + .006, 1.645); add(mouth, P.grille);
+    const lip = new T.TorusGeometry(.2, .007, 6, 24, Math.PI); lip.scale(1, .5, 1); lip.translate(0, deckY(1.66, 0) + .004, 1.662); add(lip, P.carbon);
+  }
+}
+/** Rings of [x, y, z] points (same count) to a lofted strip surface, double-sided by the material. */
+function loftRings(rings) {
+  const pos = [], n = rings[0].length;
+  for (let k = 0; k < rings.length - 1; k++) for (let i = 0; i < n - 1; i++) {
+    const a = rings[k][i], b = rings[k][i + 1], c = rings[k + 1][i + 1], d = rings[k + 1][i];
+    pos.push(...a, ...b, ...c, ...a, ...c, ...d);
+  }
+  const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.computeVertexNormals();
+  return g;
 }
 function exhaustTips(build) {
   switch (build.exhaust) {
@@ -286,6 +381,31 @@ export function updateGlow(vehicle, {time = 0, night = 0, light = null} = {}) {
   }
 }
 
+/** Turbofan cover (2026-10-02): a flat disc over the rim's face with twelve
+ *  swept fan blades and a centre cap, on the spinning part of the wheel. */
+function turbofan(fresh, wheel, radius, rim, P) {
+  const spin = fresh.spin; if (!spin) return;
+  // Which way is out in the spin group's own frame (right wheels are turned, not mirrored):
+  // compare its +x with the car's own +x, times the side the wheel is on.
+  const car = wheel.pivot.parent; car?.updateMatrixWorld(true);
+  const sx = new T.Vector3(1, 0, 0).transformDirection(spin.matrixWorld), cx = new T.Vector3(1, 0, 0).transformDirection(car ? car.matrixWorld : new T.Matrix4());
+  const out = Math.sign(sx.dot(cx) * (Math.sign(wheel.x) || 1)) || 1;
+  const r = radius * .74, g = new T.Group();
+  const disc = new T.CylinderGeometry(r, r, .012, 40); disc.rotateZ(Math.PI / 2);
+  const dm = new T.MeshPhysicalMaterial({color: rim || '#d9dcdf', roughness: .25, metalness: .6, clearcoat: 1});
+  g.add(new T.Mesh(disc, dm));
+  for (let k = 0; k < 12; k++) {
+    const b = new T.BoxGeometry(.014, r * .62, .034);
+    b.rotateY(.4);                                  // pitched like a fan blade
+    b.translate(.014, r * .52, 0); b.rotateX(k / 12 * Math.PI * 2);
+    g.add(new T.Mesh(b, P.carbon));
+  }
+  const cap = new T.CylinderGeometry(r * .2, r * .24, .03, 24); cap.rotateZ(Math.PI / 2); cap.translate(.016, 0, 0); g.add(new T.Mesh(cap, P.black));
+  g.position.x = out * .118; if (out < 0) g.rotation.y = Math.PI;
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  spin.add(g);
+}
+
 /** Stripes / two-tone, painted in the shader on top of the body colour (positionLocal). */
 function setLivery(vehicle, build) {
   const paint = vehicle.body.paint;
@@ -297,12 +417,32 @@ function setLivery(vehicle, build) {
     const side = smoothstep(.01, 0, abs(P.y.sub(.5)).sub(.035)).mul(step(.85, ax));
     const k = u.kind;
     const mask = twin.mul(step(.5, k).mul(step(k, 1.5))).add(side.mul(step(1.5, k).mul(step(k, 2.5)))).add(roof.mul(step(2.5, k)));
-    paint.colorNode = mix(base, u.color, mask.min(1));
+    // Race roundels (2026-10-02): one texture projected on both doors (reading
+    // left to right from either side) and across the hood (from the front).
+    u.cv = document.createElement('canvas'); u.cv.width = u.cv.height = 256;
+    u.tex = new T.CanvasTexture(u.cv); u.tex.colorSpace = T.SRGBColorSpace; u.num = uniform(0);
+    const R = .2, sideC = [.3, .5], hoodZ = 1.42;
+    const inBox = (a, b) => step(0, a).mul(step(a, 1)).mul(step(0, b)).mul(step(b, 1));
+    const su = mix(P.z.sub(sideC[0]).div(2 * R).add(.5), float(.5).sub(P.z.sub(sideC[0]).div(2 * R)), step(0, P.x)), sv = P.y.sub(sideC[1]).div(2 * R).add(.5);
+    const hu = P.x.div(2 * R).add(.5), hv = float(.5).sub(P.z.sub(hoodZ).div(2 * R));
+    const onSide = step(.8, ax).mul(inBox(su, sv)), onHood = step(.72, P.y).mul(inBox(hu, hv)).mul(float(1).sub(step(.8, ax)));
+    const dSide = texture(u.tex, vec2(su, sv)), dHood = texture(u.tex, vec2(hu, hv));
+    const withLivery = mix(base, u.color, mask.min(1));
+    const a1 = dSide.a.mul(onSide).mul(u.num), a2 = dHood.a.mul(onHood).mul(u.num);
+    paint.colorNode = mix(mix(withLivery, dSide.rgb, a1), dHood.rgb, a2);
     paint.userData.livery = u; paint.needsUpdate = true;
   }
   const u = paint.userData.livery;
   u.kind.value = {none: 0, stripes: 1, side: 2, twotone: 3}[build.livery] || 0;
   u.color.value.set(build.livery === 'twotone' ? '#0b0c0e' : build.stripe || '#f2f2ee');
+  u.num.value = build.number && build.number !== 'none' ? 1 : 0;
+  if (u.num.value && u.drawn !== build.number) {
+    const c = u.cv.getContext('2d'); c.clearRect(0, 0, 256, 256);
+    c.fillStyle = '#f4f4f0'; c.beginPath(); c.arc(128, 128, 122, 0, Math.PI * 2); c.fill();
+    c.lineWidth = 10; c.strokeStyle = '#111214'; c.beginPath(); c.arc(128, 128, 112, 0, Math.PI * 2); c.stroke();
+    c.fillStyle = '#111214'; c.font = '900 138px Outfit, Arial Black, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(build.number, 128, 136);
+    u.tex.needsUpdate = true; u.drawn = build.number;
+  }
 }
 
 /** Apply a build to a player car made by makePlayerCar (the Aurora). */
@@ -329,6 +469,9 @@ export function applyBuild(vehicle, raw) {
   const noseZ = x => { ray.set(V3(x, .24, 4), V3(0, 0, -1)); const hit = ray.intersectObjects(paintMeshes, false)[0]; return hit ? 4 - hit.distance : 2.2; };
   addFront(P, add, build, noseZ);
   addKit(P, add, build, vehicle.wheels);
+  addRoof(P, add, build, body._K);
+  const hoodY = (z, x = 0) => { ray.set(V3(x, 3, z), V3(0, -1, 0)); const hit = ray.intersectObjects(paintMeshes, false)[0]; return hit ? 3 - hit.distance : .9; };
+  addHood(P, add, build, hoodY);
   const ex = exhaustTips(build);
   if (ex) {
     for (const [x, y, z, r, kind] of ex.tips) {
@@ -361,7 +504,8 @@ export function applyBuild(vehicle, raw) {
   // Wheels: rebuilt in the chosen style, pushed out under wide arches, tucked and cambered when low.
   const style = build.wheels, key = [style, build.rim, build.caliper].join('|');
   if (vehicle.wheelKey !== key && body.wheelsSpec) {
-    const fresh = buildWheels(body.wheelsSpec, body.radius, style, {rimColor: build.rim, caliper: build.caliper});
+    const fresh = buildWheels(body.wheelsSpec, body.radius, style === 'turbofan' ? 'forged' : style, {rimColor: build.rim, caliper: build.caliper});
+    if (style === 'turbofan') fresh.forEach((w, i) => turbofan(w, vehicle.wheels[i], body.radius, build.rim, P));
     vehicle.wheels.forEach((w, i) => {
       for (const c of [...w.pivot.children]) { w.pivot.remove(c); c.traverse(o => { if (o.isMesh) { o.geometry.dispose(); } }); }
       for (const c of [...fresh[i].pivot.children]) w.pivot.add(c);

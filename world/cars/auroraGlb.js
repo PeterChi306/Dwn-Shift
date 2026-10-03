@@ -105,7 +105,12 @@ export function auroraGlbBody(K, M, coarse = false) {
     for (const k of Object.keys(g.attributes)) if (!['position', 'normal'].includes(k)) g.deleteAttribute(k);
     const part = coarse ? null : partOf(lower);
     if (node && part?.startsWith('door')) {
-      const d = doors[part[4]] ||= {hinge: new T.Vector3(...node.userData.hinge), axis: new T.Vector3(...node.userData.axis).normalize()};
+      // Scissor doors (2026-10-02): the GLB's dihedral hinge sat high at the
+      // windshield base and flipped the door up at an odd lean. Now each door
+      // hangs on a hinge low at its front edge and rises about a sideways
+      // axis, with a little outward kick so its tail clears the sill.
+      const h = node.userData.hinge;
+      const d = doors[part[4]] ||= {hinge: new T.Vector3(h[0], .55, .9), axis: new T.Vector3(1, 0, 0), scissor: true};
       d.side = SIDE[part[4].toLowerCase()];
     }
     if (lower.includes('signal')) {
@@ -158,8 +163,15 @@ export function auroraGlbBody(K, M, coarse = false) {
 /** Swing the doors: open 0 (shut) .. 1 (fully up), per side key 'L' / 'R'. */
 export function setDoor(door, open) {
   door.open = open;
-  const e = open * open * (3 - 2 * open);
-  door.pivot.quaternion.setFromAxisAngle(door.axis, e * door.angle);
+  doorPose(door, open * open * (3 - 2 * open));
+}
+const _qa = new T.Quaternion(), _qb = new T.Quaternion(), _X = new T.Vector3(1, 0, 0), _Y = new T.Vector3(0, 1, 0);
+/** Pose a door at eased opening e (0..1): scissor = up about x, then out about y. */
+export function doorPose(door, e) {
+  if (!door.scissor) { door.pivot.quaternion.setFromAxisAngle(door.axis, e * door.angle); return; }
+  const out = Math.sin(Math.min(1, e * 1.4) * Math.PI / 2) * .14 * (door.hinge.x > 0 ? -1 : 1);
+  _qa.setFromAxisAngle(_Y, out); _qb.setFromAxisAngle(_X, e * 1.32);
+  door.pivot.quaternion.multiplyQuaternions(_qa, _qb);
 }
 
 /** The triangles of a non-indexed geometry whose centroid's x passes `keep`, or null. */

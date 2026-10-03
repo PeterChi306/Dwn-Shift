@@ -106,17 +106,28 @@ export const AMBIENTS = [
 
 /* ------------------------------------------------------------------ materials */
 
-/** Carbon-fibre twill in the shader: 2x2 woven tows that catch the light differently. */
-function carbonNode(scale = 90) {
+/** Carbon-fibre 2x2 twill in the shader (2026-10-02, finer): ~4 mm tows with a
+ *  rounded section, the diagonal twill steps, and the sheen that makes carbon
+ *  read as carbon: tows running across the view light up, tows running along
+ *  it go dark, so the checker flips as the camera moves. The weave fades to
+ *  its average colour where it would shimmer (fwidth), so it stays clean at
+ *  distance. Returns {color, rough}. */
+function carbonWeave(scale = 230) {
   const P = positionLocal, N = abs(normalLocal);
   // Project on the plane the surface mostly faces.
-  const a = mix(mix(P.x, P.z, step(N.z, N.x)), P.x, step(N.x.max(N.z), N.y.mul(.9))).mul(scale);
-  const b = mix(P.y, P.z, step(N.x.max(N.z), N.y.mul(.9))).mul(scale);
-  const cell = floor(a).add(floor(b)), tw = mod(floor(a.add(floor(b)).mul(.5)), 2);
-  const along = mix(fract(a), fract(b), tw), tow = along.sub(.5).abs().mul(2);
-  const shade = float(.55).add(tow.oneMinus().mul(.45)).mul(float(.8).add(mod(cell, 2).mul(.2)));
-  return vec3(.028, .03, .034).mul(shade);
+  const top = step(N.x.max(N.z), N.y.mul(.9)), side = step(N.z, N.x);
+  const a = mix(mix(P.x, P.z, side), P.x, top).mul(scale);
+  const b = mix(P.y, P.z, top).mul(scale);
+  const i = floor(a), j = floor(b), tw = mod(floor(i.add(j).mul(.5)), 2);        // which tow is on top: steps diagonally
+  const across = mix(fract(b), fract(a), tw), tow = float(1).sub(across.mul(2).sub(1).pow(2));   // rounded tow section
+  const V = positionViewDirection, ku = abs(V.x).mul(.8).add(.2), kv = abs(V.y).mul(.8).add(.2);
+  const sheen = mix(ku, kv, tw);                                                     // the tows facing the light glint
+  const lit = float(.38).add(tow.mul(.62).mul(sheen)).mul(float(.9).add(mod(i.add(j.mul(3)), 3).mul(.05)));
+  const fade = float(1).sub(smoothstep(.22, .75, fwidth(a).max(fwidth(b))));
+  const shade = mix(float(.62), lit, fade);
+  return {color: vec3(.024, .026, .03).mul(shade).mul(1.25), rough: mix(float(.34), float(.18).add(float(1).sub(tow).mul(.25)), fade)};
 }
+function carbonNode(scale) { return carbonWeave(scale).color; }
 
 export function carMaterials({paint = '#0c0d10', accent = '#1e4cff', flake = .6, paintRough = .28, glassTint = '#0b1216', glassOpacity = .42} = {}) {
   const m = {};
@@ -129,8 +140,8 @@ export function carMaterials({paint = '#0c0d10', accent = '#1e4cff', flake = .6,
   m.glass.name = 'glass';
   m.black = new T.MeshStandardMaterial({color: '#0a0b0c', roughness: .6, metalness: .2, side: T.DoubleSide});
   m.gloss = new T.MeshPhysicalMaterial({color: '#08090a', roughness: .12, metalness: .3, clearcoat: 1, clearcoatRoughness: .05});
-  m.carbon = new T.MeshPhysicalNodeMaterial({roughness: .3, metalness: .35, clearcoat: 1, clearcoatRoughness: .06});
-  m.carbon.colorNode = carbonNode();
+  m.carbon = new T.MeshPhysicalNodeMaterial({roughness: .3, metalness: .3, clearcoat: 1, clearcoatRoughness: .04});
+  { const w = carbonWeave(); m.carbon.colorNode = w.color; m.carbon.roughnessNode = w.rough; }
   m.chrome = new T.MeshStandardMaterial({color: '#d4d7db', roughness: .08, metalness: 1, side: T.DoubleSide});
   m.satin = new T.MeshStandardMaterial({color: '#8d9298', roughness: .32, metalness: .9, side: T.DoubleSide});
   m.rubber = new T.MeshStandardMaterial({color: '#141515', roughness: .85});

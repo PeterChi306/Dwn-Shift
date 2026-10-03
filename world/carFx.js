@@ -17,6 +17,7 @@
  */
 import * as T from 'three';
 import {Cluster, GScreen} from './carCluster.js';
+import {doorPose} from './cars/auroraGlb.js';
 import {instancedDynamicBufferAttribute, uv, vec3, vec4, float, smoothstep, mix, uniform, sin, time, attribute, step} from 'three/tsl';
 
 const SMOKE = 700, FIRE = 96;
@@ -176,7 +177,7 @@ export class CarFx {
       const t = this.doorTarget[k] ?? 0; if (d.open === t) continue;
       d.open = t > d.open ? Math.min(t, d.open + dt / 1.2) : Math.max(t, d.open - dt / 1.0);
       const e = d.open * d.open * (3 - 2 * d.open);
-      d.pivot.quaternion.setFromAxisAngle(d.axis, e * d.angle);
+      doorPose(d, e);
     }
   }
 

@@ -7094,6 +7094,37 @@ function sfxWiper(dir) {
   th.connect(tg); tg.connect(AU.sfx); th.start(t + dur); th.stop(t + dur + 0.12);
 }
 
+/* THE HORN (2026-10-02, H in the world). A pair of disc horns, the classic
+   high/low pair a fourth-ish apart: each a buzzing square wave through the
+   diaphragm's resonances (a narrow peak near 2.2-2.6 kHz, a body around 500),
+   a little grit from a soft clipper, and the fast swell and drop of a relay.
+   Through the sfx bus, so it follows the cabin and the camera like the rest. */
+const HORN = { nodes: null };
+function horn(on) {
+  initAudio();
+  if (!AU.ready) return;
+  if (AU.ctx.state === "suspended") AU.ctx.resume();
+  const ctx = AU.ctx, t = ctx.currentTime;
+  if (on && !HORN.nodes) {
+    const out = ctx.createGain(); out.gain.value = 0;
+    const shaper = ctx.createWaveShaper();
+    const curve = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; curve[i] = Math.tanh(x * 2.4) * .8; }
+    shaper.curve = curve;
+    const body = ctx.createBiquadFilter(); body.type = "peaking"; body.frequency.value = 520; body.Q.value = 1.2; body.gain.value = 6;
+    const disc = ctx.createBiquadFilter(); disc.type = "peaking"; disc.frequency.value = 2400; disc.Q.value = 3; disc.gain.value = 9;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 6500;
+    const oscs = [[415, -6], [521, 5]].map(([f, d]) => { const o = ctx.createOscillator(); o.type = "square"; o.frequency.value = f; o.detune.value = d; const g = ctx.createGain(); g.gain.value = .5; o.connect(g); g.connect(shaper); o.start(); return o; });
+    shaper.connect(body); body.connect(disc); disc.connect(lp); lp.connect(out); out.connect(AU.sfx);
+    const k = inCabin() ? .55 : 1;
+    out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(.16 * k, t + .025);
+    HORN.nodes = { out, oscs };
+  } else if (!on && HORN.nodes) {
+    const { out, oscs } = HORN.nodes; HORN.nodes = null;
+    out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value, t); out.gain.linearRampToValueAtTime(0, t + .06);
+    for (const o of oscs) o.stop(t + .08);
+  }
+}
+
 function sfxClunk(strength = 1, out) {
   if (!AU.ready) return;
   const ctx = AU.ctx, t = ctx.currentTime, dest = out || AU.sfx;
@@ -18766,6 +18797,7 @@ window.DwnDrive = {
       acc: !!S.acc, engineOn: !!S.engineOn, cranking: !!S.cranking, powered: !!S.powered, sw: {...(S.race || {})}, ready: !!CC.race && raceReady()};
   },
   raceSwitch(which) { raceSwitch(which); },
+  horn(on) { horn(!!on); },
   /** On foot: the microphone leaves the car; `r` metres away, `pan` -1..1 to the right. */
   setWalk(w) {
     if (w && !S.walk) { if (S.listen !== "street") S._listenBefore = S.listen; S.listen = "street"; if (AU.ready) applyListen(); }
