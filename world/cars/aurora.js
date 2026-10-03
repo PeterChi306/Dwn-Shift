@@ -213,13 +213,14 @@ export function auroraBody(K, M, amb, coarse) {
  *  carbon|alu|piano|paint, paint (body colour), seats bucket|comfort, cage
  *  none|half|full, cageColor, screen gmeter|nav}. Missing keys = factory. */
 export function auroraCabin(K, amb, trim = {}) {
+  if (trim.shell === 'race') return auroraRaceCabin(K, amb, trim);
   const {GZ0, GZ1, roof, gw} = K;
   const shade = (hex, k) => '#' + new T.Color(hex).multiplyScalar(k).getHexString();
   const leather = trim.leather || '#161618', stitch = trim.stitch || '#2448ff';
   const C = new Cabin(amb, {leather, leather2: trim.leather ? shade(leather, new T.Color(leather).getHSL({}).l > .5 ? .86 : 1.25) : '#222226',
     alcantara: trim.insert || '#19191c', stitch, thread: trim.stitch ? shade(stitch, 1.15) : '#3a64ff', floor: '#0e0f11', headliner: '#141416',
     finish: trim.finish || 'carbon', paint: trim.paint || '#2a2c30'});
-  const W = .7, eye = [.36, .935, -.66];
+  const W = .7, eye = [.36, .9, -.71];     // 2026-10-03: down and back a little, so the wheel sits at arm's length and the glass hides the body
   const xs = range(-W + .012, W - .012, 36);
 
   /* ---- tub: floor, mats, sills with scuff plates, footwell and rear bulkheads */
@@ -321,7 +322,7 @@ export function auroraCabin(K, amb, trim = {}) {
     C.add(place(lathe([[.006, 0], [.006, .16]], 10), px, .36, .76, 0, -Math.PI / 2 + .5, 0).rotateX(0), 'aluR');
   }
   C.soft('speaker', .56, .27, .66, .09, .16, .012, .01, {rx: -.7});
-  C.add(place(lathe([[.045, 0], [.04, .12], [.03, .26]], 24), .36, .64, -.07, 0, -Math.PI / 2 - .0, 0), 'carbon');
+  C.add(place(lathe([[.045, 0], [.04, .12], [.03, .26]], 24), .36, .615, .01, 0, -Math.PI / 2 - .0, 0), 'carbon');
 
   /* ---- headliner, overhead switch panel, A-pillars */
   C.add(headlinerGeometry(roof, GZ0 + .3, .26, z => K.rw(z) + .01, .035, .07), 'headliner');
@@ -341,8 +342,103 @@ export function auroraCabin(K, amb, trim = {}) {
   }
   C.strip([[-.1, .255, .1], [.1, .255, .1]], .0025);
   C.strip([[-.08, roof(-.62) - .066, -.7], [.08, roof(-.62) - .066, -.7]], .0025);
-  const wheel = steeringWheel(C, 'aero', {x: .36, y: .64, z: -.21, tilt: -.3});   // a touch lower: the rim clears the cluster
+  // Out toward the dash and a little smaller (2026-10-03): from the seat the rim's top passes under the cluster.
+  const wheel = steeringWheel(C, 'aero', {x: .36, y: .615, z: -.13, tilt: -.28, size: .9});
   return {group: C.finish(), wheel, cluster, clusterStyle: 'race', eye, screen, doors: {L: Dc[1].finish(), R: Dc[-1].finish()}};
+}
+
+/* =========================================================== race shell
+ * The stripped interior (2026-10-03, Peter: "strip the interior, leave only the
+ * carbon monocoque, the buttons, the ignition, no screens, an F1-style wheel,
+ * full roll cage"). Bare carbon tub, sills and bulkheads; a flat matte dash beam
+ * with no screens on it; a switch panel in the middle of the dash (guarded
+ * toggles with labels, the ignition rotary, a red start button, the kill
+ * switch and the extinguisher pull); carbon race shells with red six-point
+ * harnesses; plain carbon door skins with pull loops; an extinguisher bottle
+ * on the passenger floor; the full cage. The only display is on the wheel. */
+function auroraRaceCabin(K, amb, trim) {
+  const {GZ0, GZ1, roof} = K, belt = trim.stitch || '#d3191c';
+  const C = new Cabin(amb, {leather: '#121214', leather2: '#18181a', alcantara: '#151517', stitch: belt, thread: belt, floor: '#0c0c0e', headliner: '#0d0d0f', finish: 'carbon'});
+  const W = .7, eye = [.36, .9, -.71], xs = range(-W + .012, W - .012, 36);
+
+  /* ---- the tub: bare carbon everywhere, riveted alu heel plates */
+  C.soft('carbon', 0, .165, (GZ0 + .95) / 2, 1.38, .02, .95 - GZ0, .008);
+  for (const x of [.36, -.36]) {
+    C.soft('alu', x, .18, .52, .3, .005, .34, .002, {seg: 3});
+    for (const [rx, rz] of [[-.13, .37], [.13, .37], [-.13, .67], [.13, .67]]) C.add(place(lathe([[.001, 0], [.005, 0], [.004, .003], [.001, .004]], 10), x + rx, .183, rz), 'aluR');
+  }
+  for (const s of SIDES) C.soft('carbonMatte', s * .645, .27, -.35, .15, .2, 1.45, .035, {seg: 8});
+  C.soft('carbonMatte', 0, .32, .95, 1.36, .3, .05, .02);
+  C.soft('carbonMatte', 0, .58, GZ0 + .03, 1.36, .8, .05, .02);
+  C.add(sweep(superLoop(.27, .07, 6, 40).map(([a, b]) => [a, .8 + b, GZ0 + .058]), () => ring(.006, .006, 8), {closed: true, up: [0, 0, 1]}), 'aluR');
+  C.soft('glassDark', 0, .8, GZ0 + .058, .54, .14, .004, .002);
+  C.add(headlinerGeometry(roof, GZ0 + .3, .26, z => K.rw(z) + .01, .035, .07), 'carbonMatte');
+
+  /* ---- dash: one flat carbon beam, matte on top so it never mirrors in the glass */
+  const dz = GZ1 - .012, dy = K.gBase(GZ1) - .016;
+  C.add(loftSolid(xs, () => roundPoly([[dz, dy], [.42, .785], [.22, .775], [.16, .75], [.15, .66], [.22, .5], [.42, .42], [dz, .42]], [0, .05, .03, .02, .03, .05, .03, 0], 4), (x, a, b) => [x, b, a]), 'carbonMatte');
+  C.soft('carbon', 0, .755, .155, 1.3, .03, .02, .008);                     // the beam's gloss lip
+  // A small mirror on the header (a race car still looks back).
+  C.soft('carbonMatte', 0, roof(.2) - .065, .2, .17, .04, .012, .008, {rx: .15});
+  C.add(place(new T.PlaneGeometry(.155, .03, 1, 1), 0, roof(.2) - .065, .193, .15, Math.PI, 0), 'glassDark');
+
+  /* ---- the switch panel: in the middle of the dash, turned toward the driver */
+  const pm = new T.Matrix4().compose(new T.Vector3(.07, .655, .14), new T.Quaternion().setFromEuler(new T.Euler(-.42, -.3, 0, 'YXZ')), new T.Vector3(1, 1, 1));
+  const P = (g, key) => C.add(g.applyMatrix4(pm), key);
+  P(prism(roundPoly([[-.15, .07], [.15, .07], [.15, -.07], [-.15, -.07]], .012, 3), .012, 'z', .003), 'carbon');
+  P(place(prism(roundPoly([[-.142, .062], [.142, .062], [.142, -.062], [-.142, -.062]], .008, 3), .002, 'z'), 0, 0, -.0075), 'rubber');
+  // Six guarded toggles, each with a white label strip and a status light.
+  for (let i = 0; i < 6; i++) {
+    const x = -.115 + i * .046, y = .028;
+    P(place(lathe([[.001, 0], [.008, 0], [.007, .006], [.004, .008]], 16), x, y, -.009, -Math.PI / 2, 0, 0), 'aluR');
+    P(place(lathe([[.0024, 0], [.0024, .024], [.0036, .028], [.001, .031]], 10), x, y, -.012, -Math.PI / 2 - .45, 0, 0), 'chrome');
+    P(sweep(resample([[x + .013, y - .016, -.009], [x + .013, y, -.034], [x + .013, y + .016, -.009]], 12), () => ring(.0019, .0019, 5)), i === 0 ? '#c8141c' : 'aluR');
+    P(sweep(resample([[x - .013, y - .016, -.009], [x - .013, y, -.034], [x - .013, y + .016, -.009]], 12), () => ring(.0019, .0019, 5)), i === 0 ? '#c8141c' : 'aluR');
+    P(place(new T.PlaneGeometry(.03, .008), x, y + .028, -.0088, 0, Math.PI, 0), '#e8e8e2');
+    P(place(softBox(.005, .005, .003, .0018, 2), x, y - .024, -.009), i < 2 ? 'ledG' : i < 4 ? 'led' : 'ledB');
+  }
+  // Bottom row: the ignition rotary, the big red START, the kill switch on its blue triangle, the extinguisher pull.
+  const by = -.032;
+  P(place(lathe([[.001, 0], [.017, 0], [.017, .006], [.014, .008], [.001, .009]], 28), -.105, by, -.009, -Math.PI / 2, 0, 0), 'aluR');
+  P(place(softBox(.026, .008, .012, .003, 3), -.105, by, -.02, 0, 0, .7), '#1c1d20');
+  P(place(new T.TorusGeometry(.021, .0018, 6, 28), -.105, by, -.009), 'ledW');
+  P(place(lathe([[.001, 0], [.024, 0], [.026, .005], [.022, .01], [.001, .011]], 32), -.03, by, -.009, -Math.PI / 2, 0, 0), 'aluR');
+  P(place(lathe([[.001, .009], [.019, .009], [.02, .016], [.016, .022], [.001, .024]], 32), -.03, by, -.009, -Math.PI / 2, 0, 0), '#c8141c');
+  P(place(new T.TorusGeometry(.0215, .0018, 6, 32), -.03, by, -.0185), 'led');
+  P(prism([[.025, by - .026], [.085, by - .026], [.055, by + .028]], .002, 'z'), '#1f47ff');
+  P(place(lathe([[.001, 0], [.012, 0], [.012, .01], [.009, .014], [.001, .015]], 24), .055, by - .006, -.01, -Math.PI / 2, 0, 0), '#c8141c');
+  P(place(softBox(.036, .008, .008, .003, 3), .055, by - .006, -.028), '#c8141c');
+  P(place(softBox(.03, .006, .02, .003, 3), .118, by + .002, -.016), '#c8141c');
+  P(place(lathe([[.0025, 0], [.0025, .02]], 8), .118, by + .002, -.009, -Math.PI / 2, 0, 0), 'aluR');
+
+  /* ---- the extinguisher: a red bottle on the passenger floor, in alu straps */
+  C.add(place(lathe([[.001, 0], [.045, 0], [.05, .01], [.05, .27], [.04, .3], [.012, .31], [.012, .34], [.001, .34]], 28), -.2, .25, .42, 0, 0, Math.PI / 2), '#c8141c');
+  for (const x of [-.25, -.4]) C.add(place(new T.TorusGeometry(.052, .004, 6, 28), x, .25, .42, 0, Math.PI / 2, 0), 'aluR');
+  C.add(place(lathe([[.001, 0], [.02, 0], [.02, .03], [.001, .03]], 16), -.555, .25, .42, 0, 0, Math.PI / 2), 'black');
+
+  /* ---- doors: plain carbon skins, a red pull loop, the release */
+  const Dc = {};
+  for (const s of SIDES) {
+    const Cd = Dc[s] = new Cabin(amb, {...C.P, _mats: C.m}, C.strips);
+    const card = () => roundPoly([[0, .26], [.018, .26], [.022, .5], [.022, .74], [.03, .8], [0, .82]], [0, .008, .01, .01, .01, 0], 3);
+    Cd.add(loftSolid(range(.25, -1.05, 24), card, (z, a, b) => [s * (W + .045 - a), b, z]), 'carbonMatte');
+    Cd.add(sweep(resample([[s * (W + .02), .62, -.12], [s * (W - .03), .57, -.22], [s * (W + .02), .52, -.32]], 20), () => ring(.004, .014, 6), {up: [s, 0, 0]}), 'accent');
+    Cd.add(place(prism(roundPoly([[0, 0], [.07, .006], [.07, .016], [0, .014]], .004, 2), .012, 'x', .002), s * (W - .002), .72, .08), 'aluR');
+  }
+
+  /* ---- race shells, six-point harnesses, pedals, the column */
+  for (const x of [.36, -.36]) C.seat({x, y: .24, z: -.52, w: .5, style: 'bucket', recline: .28, backH: .72, key: 'alcantara', insert: 'alcantara', harness: 'accent'});
+  for (const x of [.36, -.36]) for (const s of SIDES) C.add(ribbon(resample([[x + s * .05, .3, -.27], [x + s * .03, .28, -.36], [x + s * .015, .26, -.46]], 12), .036, .003, [0, 1, 0]), 'accent');   // crotch straps
+  rollCage(C, K, true, trim.cageColor || '#1c1d20');
+  for (const [px, w, h] of [[.47, .055, .1], [.37, .085, .08], [.27, .065, .08]]) {
+    C.soft('alu', px, .3, .68, w, h, .01, .004, {rx: -.6});
+    C.add(place(lathe([[.006, 0], [.006, .16]], 10), px, .36, .76, 0, -Math.PI / 2 + .5, 0), 'aluR');
+  }
+  C.add(place(lathe([[.04, 0], [.035, .12], [.028, .3]], 24), .36, .64, .01, 0, -Math.PI / 2, 0), 'carbonMatte');
+  // Only a footwell light: a race car has no mood lighting.
+  C.strip([[.6, .42, .4], [-.6, .42, .4]], .0025);
+  const wheel = steeringWheel(C, 'f1', {x: .36, y: .64, z: -.16, tilt: -.14, size: 1.05});
+  return {group: C.finish(), wheel, cluster: wheel.userData.display, clusterStyle: 'f1', eye, screen: null, doors: {L: Dc[1].finish(), R: Dc[-1].finish()}};
 }
 
 /** A bolted-in roll cage: the main hoop behind the seats with its diagonal and

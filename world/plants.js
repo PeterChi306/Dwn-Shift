@@ -495,6 +495,10 @@ export class Plants {
     let meshes = 0, instances = 0;
     for (const [ckey, list] of chunks) {
       const [cx, cz] = ckey.split(',').map(Number), group = {x: (cx + .5) * CHUNK, z: (cz + .5) * CHUNK, meshes: [], shrubs: [], cards: [], items: list.filter(p => NEAR.includes(p.sp))};
+      // Performance (2026-10-03): each chunk's meshes live in three groups (trees, leaf cards, scrub) that are
+      // shown and hidden whole, so the renderer skips a hidden chunk in one test instead of visiting every mesh.
+      group.g = {meshes: new T.Group(), cards: new T.Group(), shrubs: new T.Group()};
+      for (const g of Object.values(group.g)) { g.matrixAutoUpdate = false; g.userData.frozen = true; scene.add(g); }
       this.chunks.push(group);
       const bySp = new Map();
       for (const p of list) { if (!bySp.has(p.sp)) bySp.set(p.sp, []); bySp.get(p.sp).push(p); }
@@ -526,9 +530,10 @@ export class Plants {
         });
         mesh.castShadow = sp !== 'shrub'; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false;
         mesh.computeBoundingSphere();
-        scene.add(mesh); meshes++; instances += items.length;
+        meshes++; instances += items.length;
         // Broadleaf canopies are a solid core under leaf cards; far off the core alone reads the same.
-        (sp === 'shrub' || sp === 'rock' ? group.shrubs : ['broadLeaf', 'jacaranda', 'oakLeaf', 'eucFar', 'pineFar'].includes(matName) ? group.cards : group.meshes).push(mesh);
+        const kind = sp === 'shrub' || sp === 'rock' ? 'shrubs' : ['broadLeaf', 'jacaranda', 'oakLeaf', 'eucFar', 'pineFar'].includes(matName) ? 'cards' : 'meshes';
+        group[kind].push(mesh); group.g[kind].add(mesh);
       }
     }
     // The near trees: VARIANTS grown templates per species, one wood and one
@@ -550,16 +555,16 @@ export class Plants {
       const list = [];
       for (let k = 0; k < VARIANTS; k++) {
         const t = growTree(sp, k + 1), pair = [];
+        // Wood and leaves share one wind-anchor buffer and one matrix buffer (perf 2026-10-03: half the uploads).
+        const wind = new T.InstancedBufferAttribute(new Float32Array(NEAR_CAP * 4), 4);
         for (const [geo, mat] of [[t.wood, wood], [t.leaves, leaf]]) {
-          const wind = new T.InstancedBufferAttribute(new Float32Array(NEAR_CAP * 4), 4);
-          wind.setUsage(T.DynamicDrawUsage);
           geo.setAttribute('wind', wind);
           const mesh = new T.InstancedMesh(geo, mat, NEAR_CAP);
           mesh.count = 0; mesh.frustumCulled = false; mesh.castShadow = sp !== 'shrub'; mesh.receiveShadow = true; mesh.matrixAutoUpdate = false;
-          mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
           mesh.setColorAt(0, color.setRGB(1, 1, 1));
           scene.add(mesh); pair.push(mesh);
         }
+        pair[1].instanceMatrix = pair[0].instanceMatrix;
         list.push(pair);
       }
       this.near[sp] = {list, fit: FIT[sp]};
@@ -576,9 +581,7 @@ export class Plants {
     if (this.near && (!this.nearAt || Math.hypot(x - this.nearAt[0], z - this.nearAt[1]) > 10)) this.refillNear(x, z);
     for (const c of this.chunks) {
       const d = Math.hypot(c.x - x, c.z - z) - CHUNK * .7;
-      for (const m of c.meshes) m.visible = d < 1300;
-      for (const m of c.cards) m.visible = d < 800;
-      for (const m of c.shrubs) m.visible = d < 520;
+      c.g.meshes.visible = d < 1300; c.g.cards.visible = d < 800; c.g.shrubs.visible = d < 520;
     }
   }
 
@@ -600,18 +603,22 @@ export class Plants {
       const {list, fit} = this.near[sp];
       list.forEach((pair, k) => {
         const items = (buckets.get(sp + k) || []).slice(0, NEAR_CAP);
-        for (const mesh of pair) {
-          const wind = mesh.geometry.attributes.wind;
-          items.forEach((p, i) => {
-            const f = fit(p);
-            q.setFromAxisAngle(up, p.yaw); v.set(p.x, p.y, p.z); sc.set(f, f, f);
-            m.compose(v, q, sc); mesh.setMatrixAt(i, m);
-            mesh.setColorAt(i, mesh !== pair[1] ? col.setRGB(1, 1, 1) : sp === 'shrub' ? col.copy(this.shrubTint[Math.floor(p.tint * this.shrubTint.length) % this.shrubTint.length]) : col.setRGB(p.tint, p.tint, p.tint));
-            wind.array.set([p.x, p.y, p.z, CROWN[sp](p)], i * 4);
-          });
-          mesh.count = items.length;
-          mesh.instanceMatrix.needsUpdate = true; mesh.instanceColor.needsUpdate = true; wind.needsUpdate = true;
-        }
+        // Unchanged set (the usual case for a 10 m move): nothing to upload.
+        let sig = items.length; for (const p of items) sig = (sig * 31 + p.x * 7.3 + p.z * 3.1) % 1e9;
+        if (pair.sig === sig) return;
+        pair.sig = sig;
+        const [wood, leaves] = pair, wind = wood.geometry.attributes.wind;
+        items.forEach((p, i) => {
+          const f = fit(p);
+          q.setFromAxisAngle(up, p.yaw); v.set(p.x, p.y, p.z); sc.set(f, f, f);
+          m.compose(v, q, sc); wood.setMatrixAt(i, m);
+          wood.setColorAt(i, col.setRGB(1, 1, 1));
+          leaves.setColorAt(i, sp === 'shrub' ? col.copy(this.shrubTint[Math.floor(p.tint * this.shrubTint.length) % this.shrubTint.length]) : col.setRGB(p.tint, p.tint, p.tint));
+          wind.array.set([p.x, p.y, p.z, CROWN[sp](p)], i * 4);
+        });
+        const n = Math.max(1, items.length);
+        wood.count = leaves.count = items.length;
+        for (const [a, size] of [[wood.instanceMatrix, 16], [wood.instanceColor, 3], [leaves.instanceColor, 3], [wind, 4]]) { a.clearUpdateRanges(); a.addUpdateRange(0, n * size); a.needsUpdate = true; }
       });
     }
     this.nearCam.value.set(x, 0, z);

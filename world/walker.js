@@ -42,7 +42,7 @@ export class Walker {
     this.collider.setEnabled(false);
     this.body.setTranslation({x: 0, y: -500, z: 0}, true);
   }
-  /** input: {fwd, right, run, jump} in -1..1; camYaw: the camera's heading. */
+  /** input: {fwd, right, run, crouch, jump} in -1..1; camYaw: the camera's heading. */
   update(dt, input, camYaw) {
     if (!this.active) return;
     this.t += dt;
@@ -56,7 +56,7 @@ export class Walker {
     // Wanted velocity, relative to where the camera looks.
     let fx = Math.sin(camYaw) * input.fwd - Math.cos(camYaw) * input.right, fz = Math.cos(camYaw) * input.fwd + Math.sin(camYaw) * input.right;
     const l = Math.hypot(fx, fz); if (l > 1) { fx /= l; fz /= l; }
-    const top = (input.run ? 6.2 : 2.8) * (1 - this.wading * .55), want = l > .05 ? top : 0;
+    const top = (input.crouch ? 1.2 : input.run ? 6.2 : 2.8) * (1 - this.wading * .55), want = l > .05 ? top : 0;
     this.speed += (want - this.speed) * (1 - Math.exp(-dt * (want > this.speed ? 7 : 10)));
     if (l > .05) {
       const target = Math.atan2(fx, fz); let d = target - this.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -84,6 +84,9 @@ export class Walker {
     P.armL.rotation.x = -swing * .8; P.armR.rotation.x = swing * .8;
     P.torso.rotation.x = input.run ? .12 * Math.min(1, this.speed / 4) : 0;
     if (!this.grounded) { P.legL.rotation.x = .5; P.legR.rotation.x = -.2; }
+    // Crouched: knees bent, the body down about 60 cm (others in a lobby see it too).
+    this.crouchK = (this.crouchK || 0) + ((input.crouch ? 1 : 0) - (this.crouchK || 0)) * (1 - Math.exp(-dt * 9));
+    if (this.crouchK > .01) { const k = this.crouchK; this.mesh.position.y -= k * .45; P.legL.rotation.x += -1.3 * k; P.legR.rotation.x += -1.1 * k; P.torso.rotation.x += .35 * k; }
   }
   /** Swimming: buoyancy holds the eyes ~25 cm over the surface with a gentle
    *  bob; breaststroke pace; Space kicks up. Push into the pool wall where the

@@ -84,6 +84,8 @@ export function buildTunnels({model, ground, scene, physics, textures}) {
     if (geo.index) for (const k of geo.index.array) colliders.i.push(base + k);
     else for (let k = 0; k < count; k++) colliders.i.push(base + k);         // ExtrudeGeometry is non-indexed
   }
+  { const f = o => { o.updateMatrix(); o.matrixAutoUpdate = false; o.children.forEach(f); }; f(group); }
+  group.userData.farCull = 2500;          // portals and linings: hidden when far (world.js)
   scene.add(group);
   if (physics && colliders.i.length) physics.setMesh('tunnels', new Float32Array(colliders.v), new Uint32Array(colliders.i));
   return {group, bores, length: Math.round(length), portals: portals.length, fans: fans.length * 2};
@@ -366,6 +368,8 @@ export function buildGalleries({model, scene, physics}) {
     const mk = (P, I, mat, shadow) => { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals(); const m = new T.Mesh(g, mat); m.castShadow = shadow; m.receiveShadow = true; group.add(m); };
     mk(pos, idx, concrete, false); mk(dpos, didx, dark, true); mk(lpos, lidx, lamp, false);
   }
+  { const f = o => { o.updateMatrix(); o.matrixAutoUpdate = false; o.children.forEach(f); }; f(group); }
+  group.userData.farCull = 2500;          // portals and linings: hidden when far (world.js)
   scene.add(group);
   if (physics && wallC.i.length) physics.setMesh('galleries', new Float32Array(wallC.v), new Uint32Array(wallC.i));
   return group;

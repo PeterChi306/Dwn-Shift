@@ -108,6 +108,8 @@ export class Kit {
       mesh.userData.kind = 'kit:' + key; mesh.matrixAutoUpdate = false;
       group.add(mesh);
     }
+    { const f = o => { o.updateMatrix(); o.matrixAutoUpdate = false; o.children.forEach(f); }; f(group); }
+    group.userData.farCull = 2200;          // props: hidden when far (world.js)
     scene.add(group);
     return group;
   }

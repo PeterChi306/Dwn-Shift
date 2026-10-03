@@ -59,9 +59,11 @@ export function buildDisplayCars(scene, lots) {
         g.add(mesh);
       }
     });
+    g.matrixAutoUpdate = false;                 // static: three no longer re-composes it (and dirties its children) every frame
     scene.add(g); groups.push({g, x: cx, z: cz});
   }
-  return {count: spots.length, update(x, z) { for (const c of groups) c.g.visible = Math.hypot(c.x - x, c.z - z) < SHOW; }};
+  // Shown within SHOW (a 4.5 m car is ~2 px beyond it at our resolution); shadows only from the near cells.
+  return {count: spots.length, update(x, z) { for (const c of groups) { const d = Math.hypot(c.x - x, c.z - z); c.g.visible = d < SHOW; const sh = d < SHADOW; if (c.sh !== sh) { c.sh = sh; for (const m of c.g.children) m.castShadow = sh && m.material.name !== 'glass'; } } }};
 }
-const CELL = 1024, SHOW = 1500;
+const CELL = 256, SHOW = 600, SHADOW = 260;   // 2026-10-03: was 1 km cells shown to 1.5 km (~200 draws on the Strip)
 function push(map, mat, g) { if (!map.has(mat)) map.set(mat, []); map.get(mat).push(g); }

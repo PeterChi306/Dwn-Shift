@@ -159,6 +159,7 @@ export class Cabin {
       quilt: () => lit(amb, {color: P.leather}, quiltNodes(P.leather, P.thread), .9),
       carbon: () => lit(amb, {roughness: .25, metalness: .35, clearcoat: 1, clearcoatRoughness: .05}, {colorNode: carbonNode()}, .5, true),
       trim: () => lit(amb, {color: P.trim, roughness: .45, metalness: .2}, null, .6),
+      carbonMatte: () => lit(amb, {roughness: .58, metalness: .25}, {colorNode: carbonNode(150)}, .35),
       floor: () => lit(amb, {color: P.floor}, carpetNodes(P.floor), .7),
       headliner: () => lit(amb, {color: P.headliner, side: D}, suedeNodes(P.headliner), .8),
       wood: () => lit(amb, {roughness: .12, metalness: 0, clearcoat: 1, clearcoatRoughness: .03}, woodNodes(P.woodDark, P.woodLight), .5, true),
@@ -357,7 +358,7 @@ export class Cabin {
 export function steeringWheel(cabin, style, {x, y, z, tilt = -.35, size = 1}) {
   const c = cabin.child(), pivot = new T.Group(); pivot.position.set(x, y, z); pivot.rotation.x = tilt;
   // Wheel turns per radian of road-wheel steer: a yoke is quick (about 3/4 turn each way), a limousine slow.
-  pivot.userData.ratio = {aero: 4.2, lux: 9, classic: 10, suv: 8}[style] || 8.5;
+  pivot.userData.ratio = {aero: 4.2, f1: 3.6, lux: 9, classic: 10, suv: 8}[style] || 8.5;
   const s = size;
   if (style === 'aero') {
     // Flat-topped, flat-bottomed rim: carbon top and bottom, fat alcantara grips
@@ -391,6 +392,46 @@ export function steeringWheel(cabin, style, {x, y, z, tilt = -.35, size = 1}) {
     for (let i = 0; i < 15; i++) c.add(place(softBox(.0065, .0045, .003, .0015, 2), (i - 7) * .0085 * s, .036 * s, -.009), i < 5 ? 'ledG' : i < 10 ? 'led' : 'ledB');
     c.add(place(prism(roundPoly([[-.012, -.06], [.012, -.06], [.02, -.12], [-.02, -.12]], .006, 3), .018, 'z', .003), 0, 0, .012), 'carbon');
     c.add(place(lathe([[.045, .0], [.04, .04], [.03, .07]], 24), 0, 0, .03, 0, -Math.PI / 2, 0), 'carbon');
+  } else if (style === 'f1') {
+    // An F1-style wheel (2026-10-03, the stripped race shell): a carbon body
+    // with two moulded rubber grips, a display in the middle (carFx draws the
+    // 'f1' cluster on it), a row of shift lights across the top, coloured
+    // buttons and knurled rotaries, two paddles a side and a quick-release hub.
+    const out = roundPoly([[-.098, .062], [.098, .062], [.118, .042], [.124, -.012], [.112, -.056], [.07, -.07], [.034, -.058], [-.034, -.058], [-.07, -.07], [-.112, -.056], [-.124, -.012], [-.118, .042]],
+      [.012, .012, .014, .02, .02, .016, .01, .01, .016, .02, .02, .014], 4).map(([a, b]) => [a * s, b * s]);
+    c.add(place(prism(out, .028, 'z', .004), 0, 0, .006), 'carbon');
+    // Face plate: matte black where the controls sit.
+    c.add(place(prism(roundPoly([[-.09, .052], [.09, .052], [.104, .03], [.106, -.02], [.094, -.05], [.06, -.06], [-.06, -.06], [-.094, -.05], [-.106, -.02], [-.104, .03]], .01, 3).map(([a, b]) => [a * s, b * s]), .004, 'z'), 0, 0, -.0095), 'rubber');
+    // Grips: fat moulded rubber over the outer edges, with finger ridges.
+    for (const sx of [-1, 1]) {
+      const g = []; for (let i = 0; i <= 18; i++) { const t = i / 18, y = (.058 - t * .13) * s; g.push([sx * (.122 + Math.sin(Math.PI * t) * .02) * s, y, .004]); }
+      c.add(sweep(g, t => ring(.017 * s * (1 + Math.sin(Math.PI * t) * .15), .021 * s, 14), {up: [0, 0, 1]}), 'rubber');
+      for (let k = 0; k < 4; k++) c.add(place(new T.TorusGeometry(.0175 * s, .0025, 5, 14, Math.PI), sx * (.118 + .018) * s, (.02 - k * .022) * s, .004, 0, sx > 0 ? -Math.PI / 2 : Math.PI / 2, 0), 'rubber');
+      // Paddles: upshift/downshift blades, and the clutch paddles under them.
+      c.add(place(prism(roundPoly([[0, .032], [.05, .03], [.06, .004], [.004, -.004]], .008, 3), .005, 'z', .0015), sx * .07 * s, .02 * s, .03, 0, sx > 0 ? 0 : Math.PI, 0), 'carbon');
+      c.add(place(prism(roundPoly([[0, .012], [.042, .01], [.05, -.012], [.004, -.016]], .006, 3), .005, 'z', .0015), sx * .07 * s, -.03 * s, .036, 0, sx > 0 ? 0 : Math.PI, 0), 'aluR');
+      // Buttons: three a side down the face, coloured caps in machined bezels.
+      const caps = sx > 0 ? ['#d3191c', '#f2c21a', '#ecebe6'] : ['#1f47ff', '#2bd65a', '#ff6a1a'];
+      caps.forEach((col, k) => {
+        const bx = sx * .078 * s, by = (.032 - k * .026) * s;
+        c.add(place(lathe([[.001, 0], [.0105, 0], [.0105, .003], [.008, .004]], 18), bx, by, -.011, -Math.PI / 2, 0, 0), 'aluR');
+        c.add(place(lathe([[.001, .003], [.0078, .003], [.0075, .0075], [.001, .0085]], 18), bx, by, -.011, -Math.PI / 2, 0, 0), col);
+      });
+      // Rotaries: two knurled dials low on each side of the display.
+      for (let k = 0; k < 2; k++) {
+        const rx = sx * (.022 + k * .03) * s, ry = -.04 * s;
+        c.add(place(lathe([[.001, 0], [.0115, 0], [.0115, .009], [.009, .011], [.001, .011]], 24), rx, ry, -.011, -Math.PI / 2, 0, 0), 'knurl');
+        c.add(place(new T.BoxGeometry(.0018, .008, .002), rx, ry + .004, -.0225), 'ledW');
+      }
+    }
+    // The display in a piano-black bezel, and the shift lights over it.
+    c.add(place(prism(roundPoly([[-.054, .028], [.054, .028], [.054, -.022], [-.054, -.022]], .005, 3), .004, 'z', .0015), 0, .012 * s, -.012), 'piano');
+    const display = clusterScreen(.1 * s, .043 * s); display.position.set(0, .012 * s, -.0172); c.mesh(display); pivot.userData.display = display;
+    for (let i = 0; i < 15; i++) c.add(place(softBox(.0055, .0042, .003, .0014, 2), (i - 7) * .0072 * s, .046 * s, -.012), i < 5 ? 'ledG' : i < 10 ? 'led' : 'ledB');
+    c.add(place(softBox(.006, .006, .003, .002, 2), -.06 * s, .046 * s, -.012), 'ledB'); c.add(place(softBox(.006, .006, .003, .002, 2), .06 * s, .046 * s, -.012), 'ledB');
+    // Quick-release hub and the boss behind.
+    c.add(place(lathe([[.026, 0], [.026, .014], [.02, .02], [.02, .05]], 28), 0, 0, .02, Math.PI / 2, 0, 0), 'aluR');
+    c.add(place(new T.TorusGeometry(.027, .003, 6, 28), 0, 0, .026), 'led');
   } else if (style === 'lux') {
     // A thin leather rim with a chrome inner ring, three slender chrome spokes,
     // a leather boss with a chrome bezel and a medallion that stays upright.

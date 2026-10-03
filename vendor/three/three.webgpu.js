@@ -18870,25 +18870,11 @@ function createInstanceMatrixNode( builder, instanceMatrix ) {
 
 		} else {
 
-			let interleaved = _matrixBuffers.get( instanceMatrix );
-
-			if ( ! interleaved ) {
-
-				interleaved = new InstancedInterleavedBuffer( instanceMatrix.array, 16, 1 );
-				_matrixBuffers.set( instanceMatrix, interleaved );
-
-			}
-
-			const bufferFn = instanceMatrix.usage === DynamicDrawUsage ? instancedDynamicBufferAttribute : instancedBufferAttribute;
-
-			const instanceBuffers = [
-				bufferFn( interleaved, 'vec4', 16, 0 ),
-				bufferFn( interleaved, 'vec4', 16, 4 ),
-				bufferFn( interleaved, 'vec4', 16, 8 ),
-				bufferFn( interleaved, 'vec4', 16, 12 )
-			];
-
-			instanceMatrixNode = mat4( ...instanceBuffers );
+			// Dwn SHIFT patch (2026-10-03): the instance matrix is read from NAMED attributes that every instanced
+			// mesh carries on its own geometry (_dwnInstanceAttributes, run before each draw). So one compiled shader
+			// serves every instanced mesh of a material, instead of a ~10 ms shader build per object as new chunks
+			// of trees, lamps and dealer cars come into view (the stutter when driving fast).
+			instanceMatrixNode = mat4( attribute( '_dwnIM0', 'vec4' ), attribute( '_dwnIM1', 'vec4' ), attribute( '_dwnIM2', 'vec4' ), attribute( '_dwnIM3', 'vec4' ) );
 
 		}
 
@@ -18960,7 +18946,7 @@ const instance = /*@__PURE__*/ Fn( ( [ matrices, colors = null ], builder ) => {
 
 		if ( uniformBufferSize > builder.getUniformBufferLimit() ) {
 
-			interleavedMatrix = _matrixBuffers.get( matrices );
+			interleavedMatrix = null;	// Dwn SHIFT patch: synced per object in _dwnInstanceAttributes
 
 		}
 
@@ -18977,20 +18963,7 @@ const instance = /*@__PURE__*/ Fn( ( [ matrices, colors = null ], builder ) => {
 
 		} else {
 
-			let bufferAttribute = _colorBuffers.get( colors );
-
-			if ( ! bufferAttribute ) {
-
-				bufferAttribute = new InstancedBufferAttribute( colors.array, 3 );
-				_colorBuffers.set( colors, bufferAttribute );
-
-			}
-
-			interleavedColor = bufferAttribute;
-
-			const bufferFn = colors.usage === DynamicDrawUsage ? instancedDynamicBufferAttribute : instancedBufferAttribute;
-
-			instanceColorNode = vec3( bufferFn( bufferAttribute, 'vec3', 3, 0 ) );
+			instanceColorNode = vec3( attribute( '_dwnIC', 'vec3' ) );	// Dwn SHIFT patch: per object, by name (see above)
 
 		}
 
@@ -19080,6 +19053,77 @@ const instance = /*@__PURE__*/ Fn( ( [ matrices, colors = null ], builder ) => {
  * @function
  * @param {InstancedMesh} instancedMesh - The instanced mesh.
  */
+// Dwn SHIFT patch: give an instanced mesh its own geometry (buffers shared) if another instanced mesh already
+// uses that geometry, then hang its instance matrix / colour on it as named attributes, kept in sync.
+const _dwnGeometryOwner = /*@__PURE__*/ new WeakMap();
+function _dwnInstanceAttributes( object ) {
+
+	const m = object.instanceMatrix;
+	if ( ! m || m.isInstancedBufferAttribute !== true || m.isStorageInstancedBufferAttribute === true ) return;
+	let geo = object.geometry;
+	const owner = _dwnGeometryOwner.get( geo );
+	if ( owner !== object ) {
+
+		if ( owner !== undefined ) {
+
+			const g = new BufferGeometry();
+			g.index = geo.index;
+			for ( const k in geo.attributes ) if ( k.startsWith( '_dwnI' ) === false ) g.setAttribute( k, geo.attributes[ k ] );
+			g.morphAttributes = geo.morphAttributes; g.morphTargetsRelative = geo.morphTargetsRelative;
+			g.groups = geo.groups.slice(); g.drawRange = { start: geo.drawRange.start, count: geo.drawRange.count };
+			g.boundingBox = geo.boundingBox; g.boundingSphere = geo.boundingSphere; g.name = geo.name;
+			object.geometry = geo = g;
+
+		}
+		_dwnGeometryOwner.set( geo, object );
+
+	}
+	let ib = _matrixBuffers.get( m );
+	if ( ib === undefined || ib.array !== m.array ) {
+
+		ib = new InstancedInterleavedBuffer( m.array, 16, 1 ); ib.version = m.version;
+		_matrixBuffers.set( m, ib );
+
+	}
+	const a0 = geo.attributes._dwnIM0;
+	if ( a0 === undefined || a0.data !== ib ) for ( let i = 0; i < 4; i ++ ) geo.setAttribute( '_dwnIM' + i, new InterleavedBufferAttribute( ib, 4, i * 4 ) );
+	if ( ib.version !== m.version ) {
+
+		ib.clearUpdateRanges(); ib.updateRanges.push( ...m.updateRanges ); m.clearUpdateRanges();
+		ib.version = m.version;
+
+	}
+	const c = object.instanceColor;
+	if ( c ) {
+
+		let cb = _colorBuffers.get( c );
+		if ( cb === undefined || cb.array !== c.array ) {
+
+			cb = new InstancedBufferAttribute( c.array, 3 ); cb.version = c.version;
+			_colorBuffers.set( c, cb );
+
+		}
+		if ( geo.attributes._dwnIC !== cb ) geo.setAttribute( '_dwnIC', cb );
+		if ( cb.version !== c.version ) {
+
+			cb.clearUpdateRanges(); cb.updateRanges.push( ...c.updateRanges ); c.clearUpdateRanges();
+			cb.version = c.version;
+
+		}
+
+	}
+
+}
+/** Dwn SHIFT patch: may this instanced mesh share its compiled shader with others of its material? */
+function _dwnSharedInstancing( object, renderer ) {
+
+	const m = object.instanceMatrix;
+	if ( object.isInstancedMesh !== true || ! m || m.isInstancedBufferAttribute !== true || m.isStorageInstancedBufferAttribute === true ) return false;
+	if ( object.instanceColor && object.instanceColor.isStorageInstancedBufferAttribute === true ) return false;
+	return Math.max( m.count, 1 ) * 16 * 4 > renderer.backend.capabilities.getUniformBufferLimit();
+
+}
+
 const instancedMesh = /*@__PURE__*/ Fn( ( [ instancedMesh ] ) => {
 
 	const { instanceMatrix, instanceColor } = instancedMesh;
@@ -31304,7 +31348,8 @@ class RenderObject {
 
 			// TODO: https://github.com/mrdoob/three.js/pull/29066#issuecomment-2269400850
 
-			cacheKey += object.uuid + ',';
+			// Dwn SHIFT patch: instanced meshes on the attribute path share a shader (see _dwnInstanceAttributes).
+			cacheKey += _dwnSharedInstancing( object, this.renderer ) ? ( 'dwnInst' + ( object.instanceColor ? 'C' : '' ) + ',' ) : ( object.uuid + ',' );
 
 		}
 
@@ -31450,6 +31495,15 @@ const _chainKeys$3 = [];
  *
  * @private
  */
+// Dwn SHIFT patch: the parts of a re-dressed shadow-pass material that its cache key depends on.
+const _nodeKey = ( n ) => ( n && n.isNode ) ? n.id : ( n ? 'x' : 'n' );
+function _shadowPassSignature( m ) {
+
+	return _nodeKey( m.positionNode ) + '|' + _nodeKey( m.colorNode ) + '|' + _nodeKey( m.depthNode ) + '|' + ( m.alphaTest > 0 ) + '|' + m.side + '|' + m.transparent +
+		'|' + ( m.alphaMap ? m.alphaMap.id : 0 ) + '|' + ( m.displacementMap ? m.displacementMap.id : 0 );
+
+}
+
 class RenderObjects {
 
 	/**
@@ -31577,7 +31631,17 @@ class RenderObjects {
 
 			if ( renderObject.version !== material.version || renderObject.needsUpdate ) {
 
-				if ( renderObject.initialCacheKey !== renderObject.getCacheKey() ) {
+				// Dwn SHIFT patch (2026-10-03): the shadow pass re-dresses ONE shared override material for every
+				// object (alphaTest, side, position/colour/depth nodes...), so its version moves constantly and the
+				// full material cache key (a big string hash) was rebuilt for nearly every shadow draw, every frame.
+				// What the shadow render object depends on is captured by a small signature; if it is unchanged, so is the key.
+				const shadowSig = material.isShadowPassMaterial === true ? _shadowPassSignature( material ) : null;
+
+				if ( shadowSig !== null && renderObject._shadowSig === shadowSig && renderObject.needsUpdate === false ) {
+
+					renderObject.version = material.version;
+
+				} else if ( renderObject.initialCacheKey !== renderObject.getCacheKey() ) {
 
 					renderObject.dispose();
 
@@ -31586,6 +31650,7 @@ class RenderObjects {
 				} else {
 
 					renderObject.version = material.version;
+					renderObject._shadowSig = shadowSig;
 
 				}
 
@@ -31875,11 +31940,16 @@ class Attributes extends DataMap {
 
 			const bufferAttribute = this._getBufferAttribute( attribute );
 
-			if ( data.version < bufferAttribute.version || bufferAttribute.usage === DynamicDrawUsage ) {
+			// Dwn SHIFT patch (2026-10-03): a DynamicDrawUsage attribute was re-uploaded on EVERY draw call that
+			// used it (48 near-tree meshes x 2 passes = ~4.5 MB/frame). Now at most once per frame unless its version changes.
+			const dynamicDue = bufferAttribute.usage === DynamicDrawUsage && data.frame !== this.info.frame;
+
+			if ( data.version < bufferAttribute.version || dynamicDue ) {
 
 				this.backend.updateAttribute( attribute );
 
 				data.version = bufferAttribute.version;
+				data.frame = this.info.frame;
 
 			}
 
@@ -65513,6 +65583,8 @@ class Renderer {
 	 */
 	_renderObjectDirect( object, material, scene, camera, lightsNode, group, clippingContext, passId ) {
 
+		if ( object.isInstancedMesh === true ) _dwnInstanceAttributes( object );	// Dwn SHIFT patch
+
 		const renderObject = this._objects.get( object, material, scene, camera, lightsNode, this._currentRenderContext, clippingContext, passId );
 		renderObject.drawRange = object.geometry.drawRange;
 		renderObject.group = group;
@@ -65578,6 +65650,8 @@ class Renderer {
 	 * @param {string} [passId] - An optional ID for identifying the pass.
 	 */
 	_createObjectPipeline( object, material, scene, camera, lightsNode, group, clippingContext, passId ) {
+
+		if ( object.isInstancedMesh === true ) _dwnInstanceAttributes( object );	// Dwn SHIFT patch
 
 		// If in async compilation mode, queue the work for sequential execution
 		if ( this._compilationPromises !== null ) {

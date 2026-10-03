@@ -199,7 +199,7 @@ function buildCircuit(kit, places) {
   }
   // Pit wall, then the pit lane: it leaves the track before the main straight
   // and rejoins it after the line, both ends blended into the track's edge.
-  const group = new T.Group(); places.scene.add(group);
+  const group = new T.Group(); places.scene.add(group); group.matrixAutoUpdate = false; group.userData.farCull = 3500;   // static; hidden when far (world.js)
   const px = C.pits.x, tz = C.sf.z, E = C.sf.x + W / 2;                 // track's east (pit-side) edge
   kit.box('paint', E + 4, y + .6, (C.pits.z0 + C.pits.z1) / 2, .6, 1.2, C.pits.z1 - C.pits.z0 + 150, 0, '#e8e6e0', true);
   for (let z = C.pits.z0 - 75; z < C.pits.z1 + 75; z += 4) kit.box('paint', E + 4, y + 1.22, z, .62, .04, 2, 0, Math.floor(z / 4) % 2 ? '#c8141c' : '#f2f2ee');
@@ -355,7 +355,7 @@ const textBoard = (bg, fg, text, sub = '') => (c, W, H) => {
 /* ------------------------------------------------------------ drag strip */
 function buildDrag(kit, places) {
   const D = DRAG, y = D.y, x0 = D.x0 - 60, x1 = D.end, L = x1 - x0, cx = (x0 + x1) / 2, zc = D.zc, g = places.ground;
-  const group = new T.Group(); places.scene.add(group);
+  const group = new T.Group(); places.scene.add(group); group.matrixAutoUpdate = false; group.userData.farCull = 3500;   // static; hidden when far (world.js)
   /* ---- the strip: concrete launch pad, then asphalt; rubber down each lane */
   kit.box('flood', cx, y + .06, zc, L, .06, 26, 0, '#3a3a3c');
   kit.box('flood', D.x0 + 50, y + .066, zc, 220, .06, 22.4, 0, '#8e8b85');                          // concrete pad, 60 m behind to 160 m out

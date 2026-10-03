@@ -23,6 +23,12 @@ import * as T from 'three';
 import {clamp, angleDelta} from './network.js';
 import {fleetGeometry} from './npcBody.js';
 
+/** Mark a car set's shared matrix and its colours for upload, only the first n instances. */
+export function upload(set, n) {
+  const k = Math.max(1, n), im = set.body.instanceMatrix;
+  im.clearUpdateRanges(); im.addUpdateRange(0, k * 16); im.needsUpdate = true;
+  for (const part in set) { const c = set[part].instanceColor; if (c) { c.clearUpdateRanges(); c.addUpdateRange(0, k * 3); c.needsUpdate = true; } }
+}
 const MAX = 140;                       // cars at full density
 const NEAR = 70;                       // full-detail bodies within this of the camera
 const RANGE = 420, SPAWN_MIN = 90, SPAWN_MAX = 360;
@@ -112,6 +118,9 @@ export class Traffic {
         if (k === 'body' || k === 'head' || k === 'tail') m.instanceColor = new T.InstancedBufferAttribute(new Float32Array(MAX * 3), 3);
         this.scene.add(m); set[k] = m;
       }
+      // One instance-matrix buffer per car type and LOD, shared by its body, glass, trim and lamps (perf
+      // 2026-10-03): set once, uploaded once per frame instead of once per part.
+      for (const k in set) if (k !== 'body') set[k].instanceMatrix = set.body.instanceMatrix;
       (coarse ? this.farMeshes : this.meshes)[name] = set;
     }
   }
@@ -537,18 +546,17 @@ export class Traffic {
       counts[key]++;
       e.set(-car.pitch, Math.atan2(car.hx, car.hz), 0, 'YXZ'); q.setFromEuler(e); p.set(car.x, car.y + .02, car.z);
       m4.compose(p, q, one);
-      for (const k in set) set[k].setMatrixAt(i, m4);
+      set.body.setMatrixAt(i, m4);
       set.body.setColorAt(i, car.color);
       set.head?.setColorAt(i, car.type === 'police' ? head : head);
       set.tail?.setColorAt(i, car.brake ? tailHot : tailDim);
     }
     for (const {name} of this.types) for (const far of [false, true]) {
       const set = (far ? this.farMeshes : this.meshes)[name], n = counts[(far ? 'f:' : 'n:') + name] || 0;
-      for (const k in set) {
-        set[k].count = n;
-        set[k].instanceMatrix.needsUpdate = true;
-        if (set[k].instanceColor) set[k].instanceColor.needsUpdate = true;
-      }
+      for (const k in set) set[k].count = n;
+      // Upload only the slots in use (the buffers are sized for full density), and nothing for an empty type.
+      if (n || set.body._n) upload(set, n);
+      set.body._n = n;
     }
   }
   clear() { this.cars = []; this.draw(); }

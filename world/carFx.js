@@ -182,7 +182,7 @@ export class CarFx {
   }
 
   /* ------------------------------------------------------------ per frame */
-  update(dt, {car, state, day, cockpit, steer, dialCanvas, hour = null, info = null, beam = false, g = null}) {
+  update(dt, {car, state, day, cockpit, steer, dialCanvas, hour = null, info = null, beam = false, g = null, wet = 0}) {
     this.day.value = day;
     this.updateDoors(dt);
     const o = this.vehicle.object, v = car.body.linvel(), speed = Math.hypot(v.x, v.z);
@@ -205,6 +205,20 @@ export class CarFx {
           this.emit(this.smoke, {x: this.tmp.x + (Math.random() - .5) * .3, y: this.tmp.y - .22, z: this.tmp.z + (Math.random() - .5) * .3,
             vx: v.x * .35 + (Math.random() - .5) * 1.4, vy: .4 + Math.random() * .6, vz: v.z * .35 + (Math.random() - .5) * 1.4,
             age: 0, life: 1.8 + Math.random() * 1.4, size: .8 + Math.random() * .6, alpha: .1 + k * .12, rot: Math.random() * 6, spin: (Math.random() - .5) * .6});
+        }
+      });
+    }
+    // Spray: in the wet the tyres throw a mist of road water behind the car.
+    if ((o.visible || cockpit) && wet > .15 && speed > 7) {
+      const k = wet * Math.min(1, (speed - 7) / 25), n = k * dt * 26;
+      this.vehicle.wheels.forEach((w, i) => {
+        if (!car.wheelState(i).contact) return;
+        for (let e = 0; e < n; e++) {
+          if (Math.random() > n - e) break;
+          w.pivot.getWorldPosition(this.tmp);
+          this.emit(this.smoke, {x: this.tmp.x + (Math.random() - .5) * .4, y: this.tmp.y - .15, z: this.tmp.z + (Math.random() - .5) * .4,
+            vx: v.x * .55 + (Math.random() - .5) * 2, vy: .6 + Math.random() * 1.1, vz: v.z * .55 + (Math.random() - .5) * 2,
+            age: 0, life: .55 + Math.random() * .5, size: .7 + Math.random() * .6 + speed * .012, alpha: .05 + k * .09, rot: Math.random() * 6, spin: (Math.random() - .5) * .8});
         }
       });
     }

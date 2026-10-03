@@ -287,7 +287,7 @@ export class Car {
       // Load sensitivity: a heavily loaded tyre grips less per newton, which
       // is what makes weight transfer cost the outside pair a little.
       const load = Math.min(1.08, Math.max(.82, 1 - .09 * (Fz / Fz0 - 1)));
-      let mu = (w.front ? M.muF : M.muR) * load * aeroK;
+      let mu = (w.front ? M.muF : M.muR) * load * aeroK * (this.wetGrip ?? 1);   // wetGrip: rain on the road (world.js)
       const hand = !w.front && this.handbrake;
       if (hand) mu *= M.hand;                              // locked rears: a slide, on purpose
       const peak = mu * Fz;

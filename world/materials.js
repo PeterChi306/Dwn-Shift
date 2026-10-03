@@ -10,9 +10,11 @@ import {Fn, attribute, uv, vec2, vec3, float, abs, fract, step, smoothstep, mix,
   positionWorld, uniform, If, Discard, vertexColor, normalMap, normalWorld} from 'three/tsl';
 import {asphalt, concrete, grass, groundDetail, wildland, lawn, noise} from './textures.js';
 import {exp} from 'three/tsl';
+import {weather} from './rain.js';
 export const LAMP = 36;             // metres between street lamps on one side
 
 export function makeMaterials() {
+  const wet = weather.wet;          // rain (2026-10-03): darker, glossier, puddled
   const A = asphalt(), C = concrete(), grassTex = grass(), G = groundDetail(), W = wildland(), L = lawn(), N = noise();
 
   /* ---- road surface + markings */
@@ -53,6 +55,8 @@ export function makeMaterials() {
   const rot = (s, a) => vec2(u.mul(Math.cos(a)).sub(v.mul(Math.sin(a))), u.mul(Math.sin(a)).add(v.mul(Math.cos(a)))).div(s);
   const snakes = texture(A.mask, rot(17, .61)).r, patches = texture(A.mask, rot(43, -.37).add(.29)).b;
   const patchIn = smoothstep(.32, .5, patches), patchEdge = smoothstep(.12, .3, patches).mul(float(1).sub(smoothstep(.34, .5, patches)));
+  // Where water stands after rain: low spots from a slow noise, mostly off the crown of the lane.
+  const puddle = smoothstep(.55, .68, texture(N, positionWorld.xz.div(17)).g).mul(smoothstep(.62, .48, texture(N, positionWorld.xz.div(5.3)).r).mul(.5).add(.5));
   road.colorNode = Fn(() => {
     // Two samples of the surface, one rotated, mixed by a slow noise: no grid.
     const mixer = smoothstep(.35, .65, texture(N, positionWorld.xz.div(140)).b);
@@ -71,9 +75,10 @@ export function makeMaterials() {
     const wear = texture(A.color, roadUV.mul(3.1)).r.mul(.9).add(.35).min(1);
     c = mix(c, vec3(.88, .87, .82), min(white, 1).mul(wear));
     c = mix(c, vec3(.86, .64, .2), min(yellow, 1).mul(wear));
-    return c;
+    // Wet: asphalt goes much darker (paint less so), darker still in the puddles.
+    return c.mul(float(1).sub(wet.mul(float(.46).sub(paint.mul(.24))))).mul(float(1).sub(puddle.mul(wet).mul(.28)));
   })();
-  road.roughnessNode = mix(texture(A.mask, roadUV).g.sub(snakes.mul(.4)).sub(patchIn.mul(.08)), float(.55), paint);
+  road.roughnessNode = mix(mix(texture(A.mask, roadUV).g.sub(snakes.mul(.4)).sub(patchIn.mul(.08)), float(.55), paint), mix(float(.2), float(.035), puddle), wet);
   // Street lighting after dark: pools under lamps every 36 m, staggered side
   // to side (lamps.js puts the posts in the same places, from the same arc
   // length). Junctions are lit all over. Night fades this in.
@@ -81,13 +86,16 @@ export function makeMaterials() {
   const lampAt = fract(v.div(LAMP * 2)).mul(LAMP * 2);          // 0 .. 72 m along the road
   const dA = lampAt.min(float(LAMP * 2).sub(lampAt)), dB = abs(lampAt.sub(LAMP));
   const side = h.add(.8);
-  const poolA = exp(dA.mul(dA).add(u.sub(side).mul(u.sub(side))).div(-2 * 6.5 * 6.5));
-  const poolB = exp(dB.mul(dB).add(u.add(side).mul(u.add(side))).div(-2 * 6.5 * 6.5));
+  // Wet, each pool stretches along the road: the lamp's reflection in the water.
+  const stretch = wet.mul(4).add(1);
+  const poolA = exp(dA.mul(dA).div(stretch).add(u.sub(side).mul(u.sub(side))).div(-2 * 6.5 * 6.5));
+  const poolB = exp(dB.mul(dB).div(stretch).add(u.add(side).mul(u.add(side))).div(-2 * 6.5 * 6.5));
   const lit = mix(poolA.add(poolB), float(.35), step(style, -.5)).mul(step(.5, abs(style).add(step(style, -.5))));
   // Light falling on the asphalt: scaled by its own colour, so pools read as
   // lit road, not glowing paint.
-  road.emissiveNode = road.colorNode.mul(vec3(1, .88, .72)).mul(lit).mul(night).mul(1.6);
-  road.normalNode = normalMap(texture(A.normal, roadUV), vec2(.55, .55));
+  road.emissiveNode = road.colorNode.mul(vec3(1, .88, .72)).mul(lit).mul(night).mul(wet.mul(2.2).add(1.6));
+  const rough = float(.55).sub(wet.mul(.4));
+  road.normalNode = normalMap(texture(A.normal, roadUV), vec2(rough, rough));
 
   /* ---- crosswalks: continental bars, their own quads over the junction */
   const crosswalk = new T.MeshStandardNodeMaterial({metalness: 0, roughness: .55, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2});
@@ -104,7 +112,8 @@ export function makeMaterials() {
     const base = texture(C.color, uv().div(3)).rgb.mul(new T.Color(tone));
     // Distance (in slab fractions) to the nearest score line.
     const d = float(.5).sub(abs(fract(v.div(1.5)).sub(float(.5))));
-    m.colorNode = scored ? base.mul(float(.65).add(smoothstep(float(0), float(.02), d).mul(float(.35)))) : base;
+    m.colorNode = (scored ? base.mul(float(.65).add(smoothstep(float(0), float(.02), d).mul(float(.35)))) : base).mul(float(1).sub(wet.mul(.32)));
+    m.roughnessNode = mix(float(.85), float(.38), wet);
     m.normalNode = normalMap(texture(C.normal, uv().div(3)), vec2(.4, .4));
     return m;
   };
@@ -178,7 +187,8 @@ export function makeMaterials() {
     return mix(base, strata, steep.mul(.9));
   });
   const ground = new T.MeshStandardNodeMaterial({roughness: 1, metalness: 0});
-  ground.colorNode = groundColor();
+  ground.colorNode = groundColor().mul(float(1).sub(wet.mul(.25)));
+  ground.roughnessNode = mix(float(1), float(.72), wet);
   ground.normalNode = Fn(() => {
     const p = positionWorld.xz, {brush, soil} = cover();
     const wildN = mix(mix(texture(W.grass.normal, p.div(4)).rgb, texture(W.soil.normal, p.div(3)).rgb, soil), texture(W.brush.normal, p.div(7)).rgb, brush);
@@ -193,7 +203,7 @@ export function makeMaterials() {
   far.colorNode = Fn(() => {
     const p = positionWorld.xz;
     If(p.x.greaterThan(detailRect.x).and(p.x.lessThan(detailRect.z)).and(p.y.greaterThan(detailRect.y)).and(p.y.lessThan(detailRect.w)), () => { Discard(); });
-    return groundColor();
+    return groundColor().mul(float(1).sub(wet.mul(.25)));
   })();
 
   const pier = std('#c4bfb4', C.color, 1 / 4, .9);

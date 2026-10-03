@@ -14,7 +14,7 @@
  */
 import * as T from 'three';
 import {fleetGeometry} from './npcBody.js';
-import {TYPES, PAINT} from './traffic.js';
+import {TYPES, PAINT, upload} from './traffic.js';
 
 const CELL = 128, RANGE = 280, NEAR = 70, SLOT = 6.8, CAP_NEAR = 400, CAP_FAR = 1600, BODIES = 14;
 const KERB = new Set(['street', 'residential', 'avenue', 'boulevard']);
@@ -73,6 +73,7 @@ export class Parked {
         if (k === 'body') mesh.instanceColor = new T.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
         this.scene.add(mesh); set[k] = mesh;
       }
+      for (const k in set) if (k !== 'body') set[k].instanceMatrix = set.body.instanceMatrix;   // one shared buffer per set (perf)
       this.sets[lod][name] = set;
     }
   }
@@ -101,14 +102,16 @@ export class Parked {
         counts[key] = k + 1;
         const set = this.sets[lod][type], t = TYPES[type];
         q.setFromAxisAngle(up, a[i + 3]); m4.compose(p.set(x, a[i + 1] + .02, z), q, one);
-        for (const part in set) set[part].setMatrixAt(k, m4);
+        set.body.setMatrixAt(k, m4);
         set.body.setColorAt(k, c.set(t.paint || PAINT[Math.floor(hash(id, 47) * PAINT.length)]));
         vis.push({x, y: a[i + 1], z, yaw: a[i + 3], type, id, d});
       }
     }
     for (const lod of ['near', 'far']) for (const [name] of MIX) {
       const set = this.sets[lod][name], n = counts[lod + name] || 0;
-      for (const part in set) { set[part].count = n; set[part].instanceMatrix.needsUpdate = true; if (set[part].instanceColor) set[part].instanceColor.needsUpdate = true; }
+      for (const part in set) set[part].count = n;
+      if (n || set.body._n) upload(set, n);
+      set.body._n = n;
     }
     vis.sort((a, b) => a.d - b.d);
     this.visible = vis;

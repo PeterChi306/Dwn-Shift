@@ -38,13 +38,31 @@ export function buildLamps({model, scene, area, night}) {
   const glow = new T.MeshStandardNodeMaterial({color: '#dcdcd4', roughness: .3});
   glow.emissiveNode = vec3(1, .9, .74).mul(night).mul(6);
   const q = new T.Quaternion(), m = new T.Matrix4(), up = new T.Vector3(0, 1, 0), one = new T.Vector3(1, 1, 1);
-  const make = (geo, mat) => {
-    const mesh = new T.InstancedMesh(geo, mat, spots.length);
-    spots.forEach((p, i) => { q.setFromAxisAngle(up, p.yaw); m.compose(new T.Vector3(p.x, p.y, p.z), q, one); mesh.setMatrixAt(i, m); });
-    mesh.castShadow = true; mesh.matrixAutoUpdate = false; mesh.computeBoundingSphere(); scene.add(mesh);
+  // Performance (2026-10-03): the ~20,000 lamps were ONE instanced mesh per material spanning the whole city, so
+  // nothing could cull them: ~2M triangles in the main pass and 2M more in the shadow pass, every frame. Now one
+  // set per 400 m cell, culled by the frustum and by distance (updateLamps), with shadows only from the near cells.
+  const cells = new Map();
+  for (const p of spots) { const k = Math.floor(p.x / CELL) * 65536 + Math.floor(p.z / CELL); (cells.get(k) || cells.set(k, []).get(k)).push(p); }
+  const poleGeo = mergeGeometries([pole, arm, base]);
+  const make = (geo, mat, list) => {
+    const mesh = new T.InstancedMesh(geo, mat, list.length);
+    list.forEach((p, i) => { q.setFromAxisAngle(up, p.yaw); m.compose(new T.Vector3(p.x, p.y, p.z), q, one); mesh.setMatrixAt(i, m); });
+    mesh.castShadow = false; mesh.matrixAutoUpdate = false; mesh.computeBoundingSphere(); scene.add(mesh);
     return mesh;
   };
-  make(mergeGeometries([pole, arm, base]), metal);
-  make(head, glow);
+  lampCells = [...cells.values()].map(list => {
+    let x = 0, z = 0; for (const p of list) { x += p.x / list.length; z += p.z / list.length; }
+    return {x, z, pole: make(poleGeo, metal, list), head: make(head, glow, list), sh: false};
+  });
   return spots.length;
+}
+const CELL = 400, POLES = 1000, HEADS = 3000, SHADOWS = 330;
+let lampCells = [];
+/** Each frame: poles near the camera, heads (the night glow) further, shadows only close by. */
+export function updateLamps(x, z) {
+  for (const c of lampCells) {
+    const d = Math.hypot(c.x - x, c.z - z) - CELL * .7;
+    c.pole.visible = d < POLES; c.head.visible = d < HEADS;
+    const sh = d < SHADOWS; if (sh !== c.sh) { c.sh = sh; c.pole.castShadow = c.head.castShadow = sh; }
+  }
 }

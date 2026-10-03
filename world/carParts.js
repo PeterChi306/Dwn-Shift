@@ -13,6 +13,7 @@
  *   stance   stock · lowered · slammed with camber
  *   roof     clean · roof scoop · shark fin · LED light bar;  hood  stock · fender louvres · hood scoop
  *   number   a race roundel on both doors and the hood (2026-10-02)
+ *   shell    road interior · stripped race shell (2026-10-03: bare carbon, switch panel, F1 wheel, full cage)
  *   glow     underglow colour or off, glowMode steady · breathing · colour cycle · chase;  livery: clean · twin stripes · side stripe · black roof
  *
  * applyBuild(vehicle, build) hides the stock pieces the build replaces (the
@@ -39,6 +40,7 @@ export const OPTIONS = {
   hood: [['stock', 'Stock hood', ''], ['louvres', 'Fender louvres', 'Two banks of carbon louvres over the front wheels'], ['scoop', 'Hood scoop', 'A raised intake in the middle of the hood']],
   number: [['none', 'No number', ''], ['07', '07', ''], ['27', '27', ''], ['88', '88', ''], ['99', '99', '']],
   stance: [['stock', 'Stock', ''], ['low', 'Lowered', '-25 mm'], ['slammed', 'Slammed + camber', '-45 mm, wheels tucked, negative camber']],
+  shell: [['road', 'Road interior', 'Leather, alcantara, two screens, the light sweep'], ['race', 'Stripped race shell', 'Bare carbon tub, switch panel, F1 wheel, full cage, no screens']],
   seats: [['bucket', 'Carbon buckets', 'Bolstered shells, 4-point harness'], ['comfort', 'Comfort seats', 'Quilted leather armchairs, piped edges']],
   finish: [['carbon', 'Carbon fibre', 'Gloss weave on the dash and tub'], ['alu', 'Brushed aluminium', 'Machined metal'], ['piano', 'Piano black', 'Deep gloss black'], ['paint', 'Body colour', 'Painted to match the car']],
   cage: [['none', 'No cage', ''], ['half', 'Half cage', 'Main hoop, diagonal, harness bar, door bars'], ['full', 'Full cage', 'Adds roof rails and A-pillar bars']],
@@ -57,12 +59,12 @@ export const CAGES = [['Black', '#1c1d20'], ['Silver', '#b9bec4'], ['Red', '#c81
 export const STRIPES = [['White', '#f2f2ee'], ['Black', '#0b0c0e'], ['Red', '#c8141c'], ['Blue', '#1f47ff'], ['Gold', '#c9a24a']];
 
 export const DEFAULT_BUILD = {wing: 'stock', front: 'stock', kit: 'stock', exhaust: 'stock', lights: 'stock', wheels: 'aero', rim: null, caliper: null, stance: 'stock', glow: null, glowMode: 'steady', livery: 'none', stripe: '#f2f2ee',
-  seats: 'bucket', finish: 'carbon', cage: 'none', screen: 'gmeter', leather: null, insert: null, stitch: null, cageColor: null,
+  shell: 'road', seats: 'bucket', finish: 'carbon', cage: 'none', screen: 'gmeter', leather: null, insert: null, stitch: null, cageColor: null,
   roof: 'stock', hood: 'stock', number: 'none'};
 export const PRESETS = [
   {id: 'stock', name: 'Factory', blurb: 'The Aurora as it left the line', build: {...DEFAULT_BUILD}},
   {id: 'gt3', name: 'GT3 R', blurb: 'Race car: widebody, big wing, splitter, forged wheels, stripes', paint: '#eeeeea',
-    build: {...DEFAULT_BUILD, wing: 'gt3', front: 'gt3', kit: 'wide', exhaust: 'side', wheels: 'forged', rim: '#1c1d20', caliper: '#d3191c', stance: 'low', livery: 'stripes', stripe: '#c8141c'}, handling: 'grip'},
+    build: {...DEFAULT_BUILD, wing: 'gt3', front: 'gt3', kit: 'wide', exhaust: 'side', wheels: 'forged', rim: '#1c1d20', caliper: '#d3191c', stance: 'low', livery: 'stripes', stripe: '#c8141c', shell: 'race'}, handling: 'grip'},
   {id: 'drift', name: 'Drift Missile', blurb: 'Slammed on dish wheels, overfenders, wing on stilts', paint: '#5b2bd6',
     build: {...DEFAULT_BUILD, wing: 'drift', front: 'lip', kit: 'fenders', exhaust: 'straight', wheels: 'dish', rim: '#16171a', caliper: '#f2c21a', stance: 'slammed', glow: '#9b3cff', livery: 'twotone'}, handling: 'drift'},
   {id: 'oneeye', name: '2,000 HP One-Eye', blurb: 'One lamp out for the intake, red laser, straight pipes', paint: '#121316',
@@ -504,9 +506,9 @@ export function applyBuild(vehicle, raw) {
   body.head.emissive.set(lamp); body.head.color.set(build.lights === 'yellow' ? '#ffe9a0' : '#dfe9f5');
   setLivery(vehicle, build);
   // Interior: the cabin is rebuilt when its trim changes (colours are baked into its materials).
-  const trim = {leather: build.leather, insert: build.insert, stitch: build.stitch, finish: build.finish, seats: build.seats, cage: build.cage, cageColor: build.cageColor, screen: build.screen,
+  const trim = {shell: build.shell, leather: build.leather, insert: build.insert, stitch: build.stitch, finish: build.finish, seats: build.seats, cage: build.cage, cageColor: build.cageColor, screen: build.screen,
     paint: build.finish === 'paint' ? '#' + body.paint.color.getHexString() : null};
-  const trimKey = JSON.stringify(trim), factory = JSON.stringify({...trim, ...Object.fromEntries(['leather', 'insert', 'stitch', 'cageColor', 'paint'].map(k => [k, null])), finish: 'carbon', seats: 'bucket', cage: 'none', screen: 'gmeter'});
+  const trimKey = JSON.stringify(trim), factory = JSON.stringify({...trim, ...Object.fromEntries(['leather', 'insert', 'stitch', 'cageColor', 'paint'].map(k => [k, null])), finish: 'carbon', seats: 'bucket', cage: 'none', screen: 'gmeter', shell: 'road'});
   let cabin = false;
   if (body.interior && vehicle.trimKey !== trimKey && (vehicle.trimKey !== undefined || trimKey !== factory)) { rebuildCabin(body, trim); cabin = true; }
   vehicle.trimKey = trimKey;

@@ -49,6 +49,7 @@ export class Cluster {
     } else {
       const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#07080b'); g.addColorStop(1, '#0d0f14'); c.fillStyle = g; c.fillRect(0, 0, W, H);
     }
+    if (style === 'f1') { this.f1(c, i, speed, rpm, red, units); c.restore(); return; }
     const R = 158, lx = 215, rx = W - 215, cy = 228;
     if (style === 'race') {
       this.raceDial(c, rx, cy, R + 12, rpm, red, top);
@@ -62,6 +63,36 @@ export class Cluster {
     }
     this.telltales(c, i, style);
     c.restore();
+  }
+
+  /** The race wheel's display (2026-10-03, the stripped shell): a black LCD
+   *  with the rev lights across the top, the gear huge in the middle, speed
+   *  and revs either side, and the settings a race engineer would ask about. */
+  f1(c, i, speed, rpm, red, units) {
+    c.fillStyle = '#010203'; c.fillRect(0, 0, W, H);
+    const n = 20, lit = Math.round(Math.min(1, rpm / red) * n), flash = rpm > red * .97 && Math.floor(performance.now() / 80) % 2;
+    for (let k = 0; k < n; k++) {
+      const x = 22 + k * (W - 44) / n, w = (W - 44) / n - 7, col = k < 8 ? '#2bd65a' : k < 15 ? '#ff2a2a' : '#3a6bff';
+      c.fillStyle = k < lit ? (flash ? '#ffffff' : col) : '#121418'; c.fillRect(x, 16, w, 30);
+    }
+    c.strokeStyle = '#262a32'; c.lineWidth = 3;
+    c.strokeRect(14, 62, 300, 270); c.strokeRect(W - 314, 62, 300, 270); c.strokeRect(340, 62, W - 680, 270);
+    c.textBaseline = 'middle'; c.textAlign = 'center';
+    c.fillStyle = '#ffffff'; c.font = '700 270px Outfit, Arial'; c.fillText(i.gear || 'N', W / 2, 205);
+    c.font = '700 116px Outfit, Arial'; c.fillText(String(Math.round(speed)), 164, 180);
+    c.fillStyle = '#8f98a8'; c.font = '600 30px Outfit, Arial'; c.fillText(units, 164, 272); c.fillText('RPM', W - 164, 272);
+    c.fillStyle = rpm > red * .96 ? '#ff3b2f' : '#ffd23a'; c.font = '700 96px Outfit, Arial'; c.fillText(String(Math.round(rpm / 10) * 10), W - 164, 180);
+    // The foot row: brake balance, traction control, engine map, the time; lights for the signals and the limiter.
+    const cells = [['BBAL', '56.5'], ['TC', i.tc ? 'ACT' : '3'], ['MAP', '2'], ['TIME', i.clock || '']];
+    cells.forEach(([k, v], j) => {
+      const x = 14 + j * (W - 28) / 4, w = (W - 28) / 4 - 10;
+      c.fillStyle = '#0b0d11'; c.fillRect(x, 348, w, 76);
+      c.fillStyle = '#6f7888'; c.font = '600 24px Outfit, Arial'; c.fillText(k, x + w / 2, 368);
+      c.fillStyle = k === 'TC' && i.tc ? '#ffd23a' : '#e8eef8'; c.font = '700 38px Outfit, Arial'; c.fillText(v, x + w / 2, 402);
+    });
+    if (i.left) { c.fillStyle = '#2bd65a'; c.font = '700 60px Outfit, Arial'; c.fillText('◀', 380, 96); }
+    if (i.right) { c.fillStyle = '#2bd65a'; c.font = '700 60px Outfit, Arial'; c.fillText('▶', W - 380, 96); }
+    if (i.brake) { c.fillStyle = '#ff3b2f'; c.font = '700 30px Outfit, Arial'; c.fillText('PARK', W / 2, 312); }
   }
 
   /** A round analogue dial from `max` over 260 degrees. */

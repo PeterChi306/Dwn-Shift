@@ -79,6 +79,7 @@
 .world-prompt[hidden]{display:none}
 .world-prompt kbd{font-family:inherit;padding:3px 7px;border:1px solid #fff5;border-radius:4px;margin-right:6px;font-size:10px}
 body.on-foot .world-dash,body.on-foot .world-signals{opacity:0;pointer-events:none;transition:opacity .4s}
+body.riding .world-fob,body.riding .world-controls>span,body.riding .world-prnd{display:none}
 .world-homes{margin:22px 0 4px}.world-homes>div{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 #world .world-homes button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px 14px}
 .world-homes b{font-size:12px;font-weight:500}.world-homes small{font-size:9px;opacity:.6;letter-spacing:.5px}

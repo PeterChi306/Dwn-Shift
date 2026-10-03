@@ -17,6 +17,7 @@
  */
 import * as T from 'three';
 import {hostLobby, joinLobby, newCode} from './lobbyP2P.js';
+import {Cluster} from './carCluster.js';
 
 const SEND_HZ = 15, DELAY = .12;
 const COLORS = ['#4f86ff', '#ff5a4a', '#ffc23a', '#3ee08a', '#c46bff', '#ff8a2a', '#2fd6e0', '#ff4fae', '#a8e04a', '#e8e8e8'];
@@ -166,6 +167,7 @@ export class Online {
     const p = this.peers.get(id); if (!p) return;
     if (p.vehicle) { this.h.scene.remove(p.vehicle.object); this.h.disposeCar(p.vehicle); }
     if (p.avatar) this.h.scene.remove(p.avatar);
+    this.seat(p, 'drv', null); this.seat(p, 'pass', null);
     if (p.body) this.h.physics.world.removeRigidBody(p.body);
     if (p.voice) { this.stopVoice(p); }
     p.tag.remove(); this.peers.delete(id);
@@ -185,7 +187,7 @@ export class Online {
     const A = a.s, B = b.s, lerp = i => A[i] + (B[i] - A[i]) * k;
     const qa = new T.Quaternion(A[3], A[4], A[5], A[6]), qb = new T.Quaternion(B[3], B[4], B[5], B[6]);
     return {x: lerp(0), y: lerp(1), z: lerp(2), q: qa.slerp(qb, Math.min(1, k)), v: lerp(7), steer: lerp(8), flags: B[9] | 0, rpm: (B[10] || 0) * 100, skid: B[11] || 0,
-      walk: B[9] & 8 ? {x: B[12], y: B[13], z: B[14], yaw: B[15]} : null, gas: B[16] ?? .3, age: now - S[S.length - 1].t};
+      walk: B[9] & 8 ? {x: B[12], y: B[13], z: B[14], yaw: B[15]} : null, gas: B[16] ?? .3, ride: B[9] & 128 && B[17] ? String(B[17]) : null, age: now - S[S.length - 1].t};
   }
 
   /* ------------------------------------------------------------- per frame */
@@ -206,7 +208,7 @@ export class Online {
     this.listen(dt, camera);
     for (const p of this.peers.values()) {
       const st = this.sample(p, now), veh = p.vehicle;
-      if (!st || !veh || st.age > 6) { if (veh) veh.object.visible = false; p.tag.style.display = 'none'; if (p.avatar) p.avatar.visible = false; continue; }
+      if (!st || !veh || st.age > 6) { if (veh) veh.object.visible = false; p.tag.style.display = 'none'; if (p.avatar) p.avatar.visible = false; this.seat(p, 'drv', null); this.seat(p, 'pass', null); continue; }
       const o = veh.object; o.visible = true; o.position.set(st.x, st.y, st.z); o.quaternion.copy(st.q); o.updateMatrixWorld();
       // Wheels: steer and roll.
       p.spin += st.v / (veh.body.radius || .36) * dt;
@@ -216,20 +218,39 @@ export class Online {
       if (b.head) b.head.emissiveIntensity = night ? 2.2 : .6;
       if (b.reverse) b.reverse.emissiveIntensity = st.flags & 4 ? 2.6 : 0;
       if (b.interior?.group) b.interior.group.visible = camera.position.distanceTo(o.position) < 40;
+      // Riding in this car: its cluster comes alive with the driver's speed and revs.
+      if (this.h.ridingId?.() === p.id && b.interior?.cluster) {
+        if (!p.gauges || p.gauges.mesh !== b.interior.cluster) p.gauges = new Cluster(b.interior.cluster, b.interior.clusterStyle || 'plain');
+        const kmh = Math.abs(st.v) * 3.6, h = new Date();
+        p.gauges.update(dt, {speed: kmh, units: 'kmh', rpm: st.rpm, red: 8000, gear: st.flags & 4 ? 'R' : kmh < 1 ? 'N' : String(Math.min(7, 1 + Math.floor(kmh / 45))), brake: false, engine: false, clock: `${h.getHours()}:${String(h.getMinutes()).padStart(2, '0')}`, power: true});
+      }
       // Something solid to bump into, unless the lobby is in ghost mode.
       this.collider(p, st, collisions && !st.walk, me);
       // On foot: a figure where they stand.
-      if (st.walk) {
+      // Seated figures (2026-10-03): the driver at their wheel, and whoever rides along in a passenger seat.
+      this.seat(p, 'drv', st.walk ? null : o, [.36, .25, -.52]);
+      const seatIn = st.ride ? (st.ride === this.id ? this.h.localCar?.() : this.peers.get(st.ride)?.vehicle?.object) : null;
+      this.seat(p, 'pass', seatIn || null, [-.36, .25, -.52]);
+      const withMe = st.ride === this.id;
+      if (withMe !== !!p.withMe) { p.withMe = withMe; this.say(null, withMe ? `${p.name} hopped in` : `${p.name} got out`); this.h.notify(withMe ? `${p.name} is riding with you` : `${p.name} got out`); }
+      if (st.walk && !st.ride) {
         if (!p.avatar) p.avatar = avatar(this.color(p.id)), this.h.scene.add(p.avatar);
-        p.avatar.visible = true; p.avatar.position.set(st.walk.x, st.walk.y, st.walk.z); p.avatar.rotation.y = st.walk.yaw;
+        p.avatar.visible = true; p.avatar.position.set(st.walk.x, st.walk.y, st.walk.z); p.avatar.rotation.y = st.walk.yaw; p.avatar.scale.y = st.flags & 64 ? .6 : 1;
       } else if (p.avatar) p.avatar.visible = false;
       // Name tag over whoever (car or figure) they are.
-      const at = st.walk ? v3.set(st.walk.x, st.walk.y + 2.2, st.walk.z) : v3.set(st.x, st.y + 1.9, st.z);
+      const at = st.ride && seatIn ? v3.set(seatIn.position.x, seatIn.position.y + 1.9, seatIn.position.z) : st.walk ? v3.set(st.walk.x, st.walk.y + 2.2, st.walk.z) : v3.set(st.x, st.y + 1.9, st.z);
       const d = camera.position.distanceTo(at); at.project(camera);
       if (at.z > 1 || d > 900) p.tag.style.display = 'none';
       else { p.tag.style.display = ''; p.tag.style.transform = `translate(${(at.x * .5 + .5) * W}px,${(-at.y * .5 + .5) * H}px) translate(-50%,-100%) scale(${Math.max(.62, Math.min(1, 40 / d))})`; p.tag.querySelector('small').textContent = d > 60 ? Math.round(d) + ' m' : ''; }
       this.voice(p, st, camera.position.distanceTo(o.position), o);
     }
+  }
+  /** Put peer p's seated figure `key` in `parent` (a car's object) at `at`, or take it out. */
+  seat(p, key, parent, at) {
+    let f = p[key];
+    if (!parent) { if (f?.parent) f.parent.remove(f); return; }
+    if (!f) f = p[key] = seated(this.color(p.id));
+    if (f.parent !== parent) { parent.add(f); f.position.set(...at); }
   }
   collider(p, st, on, me) {
     const P = this.h.physics, R = P.R;
@@ -312,7 +333,9 @@ export class Online {
     const f = rpm / 60 * E.cyl / 2 * dop;
     V.o1.frequency.setTargetAtTime(f, t, .04); V.o2.frequency.setTargetAtTime(f / 2, t, .04); V.o3.frequency.setTargetAtTime(f * 2.003, t, .04);
     V.rasp.frequency.setTargetAtTime(Math.min(9000, f * 3.2), t, .05); V.ng.gain.setTargetAtTime(.08 + gas * .35, t, .06);
-    V.air.frequency.setTargetAtTime(Math.max(700, Math.min(16000, (2500 + gas * 9000 + rpm * .6) / (1 + dist / 60))), t, .08);
+    // Riding in this car: you hear it through the bulkhead, not the open air.
+    const inside = this.h.ridingId?.() === p.id;
+    V.air.frequency.setTargetAtTime(inside ? 1500 + gas * 1800 : Math.max(700, Math.min(16000, (2500 + gas * 9000 + rpm * .6) / (1 + dist / 60))), t, .08);
     const lvl = (.2 + .75 * gas) * (.5 + .5 * Math.min(1, rpm / E.max));
     V.level.gain.setTargetAtTime(lvl, t, .08);
     // Tunnel: you, or they, inside a bore.
@@ -334,6 +357,24 @@ export class Online {
   }
 }
 
+/** A seated figure for a car seat (the cushion at the origin, facing +z):
+ *  thighs forward, hands up toward the wheel, a band in the player's colour. */
+function seated(color) {
+  const g = new T.Group(), m = new T.MeshStandardMaterial({color: '#2a2e35', roughness: .7}), skin = new T.MeshStandardMaterial({color: '#c8a183', roughness: .8}),
+    c = new T.MeshStandardMaterial({color, roughness: .5, emissive: color, emissiveIntensity: .25});
+  const box = (w, h, d, x, y, z, rx, mat = m) => { const b = new T.Mesh(new T.BoxGeometry(w, h, d), mat); b.position.set(x, y, z); b.rotation.x = rx; g.add(b); return b; };
+  box(.36, .46, .2, 0, .32, -.13, -.28);                             // torso, leaning back into the shell
+  box(.37, .07, .21, 0, .42, -.12, -.28, c);                         // colour band
+  const head = new T.Mesh(new T.SphereGeometry(.105, 14, 10), skin); head.position.set(0, .66, -.2); head.scale.set(.9, 1.1, 1); g.add(head);
+  for (const s of [-1, 1]) {
+    box(.14, .12, .44, s * .1, .1, .1, -.08);                        // thighs
+    box(.11, .4, .12, s * .1, -.02, .36, .5);                        // shins down to the pedals
+    box(.08, .08, .34, s * .2, .36, .1, -.5);                        // forearms to the wheel
+    const hand = new T.Mesh(new T.SphereGeometry(.04, 8, 6), skin); hand.position.set(s * .2, .45, .26); g.add(hand);
+  }
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
 /** A walking figure: body, head, a band in the player's colour. */
 function avatar(color) {
   const g = new T.Group(), m = new T.MeshStandardMaterial({color: '#2a2e35', roughness: .7}), c = new T.MeshStandardMaterial({color, roughness: .5, emissive: color, emissiveIntensity: .25});

@@ -94,7 +94,7 @@ export function auroraGlbBody(K, M, coarse = false) {
   // meshes tagged `userData.part`, so a build can hide or recolour them.
   const byKey = new Map(), doors = {};
   const partOf = n => /^door_[lr]/.test(n) ? 'door' + n[5].toUpperCase() : /^wing/.test(n) ? 'wing' : /^fin/.test(n) ? 'fin' : /^splitter/.test(n) ? 'splitter'
-    : /^exhaust/.test(n) ? 'exhaust' : /^(diffuser)/.test(n) ? 'diffuser' : /^skirt/.test(n) ? 'skirt' : /^lamp_r/.test(n) ? 'lampR' : /^lamp_l/.test(n) ? 'lampL' : null;
+    : /^exhaust/.test(n) ? 'exhaust' : /^(diffuser)/.test(n) ? 'diffuser' : /^skirt/.test(n) ? 'skirt' : /^lamp_r/.test(n) ? 'lampR' : /^lamp_l/.test(n) ? 'lampL' : /^wiper/.test(n) ? 'wiper' : null;
   const put = (m, part, g) => { const k = m.uuid + '|' + (part || ''); (byKey.get(k) || byKey.set(k, {m, part, gs: []}).get(k)).gs.push(g); };
   scene.traverse(o => {
     if (!o.isMesh) return;
@@ -157,7 +157,17 @@ export function auroraGlbBody(K, M, coarse = false) {
     mesh.matrixAutoUpdate = false;
     (door ? door.pivot : group).add(mesh);
   }
-  return {group, doors: Object.keys(doors).length ? doors : null, exhausts: [[-.12, .47, Z0 - .12], [.12, .47, Z0 - .12]]};
+  // The wiper (2026-10-03, rain): its blade and arm on a pivot at the driver's-side end, so it can sweep.
+  const wm = group.children.filter(m => m.userData.part === 'wiper');
+  let wiper = null;
+  if (wm.length) {
+    const piv = new T.Vector3(-1e9, 0, 0);
+    for (const m of wm) { const p = m.geometry.attributes.position; for (let i = 0; i < p.count; i++) if (p.getX(i) > piv.x) piv.set(p.getX(i), p.getY(i), p.getZ(i)); }
+    const pivot = new T.Group(); pivot.name = 'wiper'; pivot.position.copy(piv); group.add(pivot);
+    for (const m of wm) { m.geometry.translate(-piv.x, -piv.y, -piv.z); pivot.add(m); }
+    wiper = {pivot, at: piv.clone()};
+  }
+  return {group, wiper, doors: Object.keys(doors).length ? doors : null, exhausts: [[-.12, .47, Z0 - .12], [.12, .47, Z0 - .12]]};
 }
 
 /** Swing the doors: open 0 (shut) .. 1 (fully up), per side key 'L' / 'R'. */

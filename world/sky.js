@@ -15,6 +15,7 @@
 import * as T from 'three';
 import {Fn, uniform, vec2, vec3, float, positionLocal, normalize, dot, sin, fract, floor, mix, smoothstep,
   exp, pow, max, clamp, step, sRGBTransferEOTF} from 'three/tsl';
+import {weather} from './rain.js';
 
 const hash = Fn(([p]) => fract(sin(dot(p, vec2(127.1, 311.7))).mul(43758.5453)));
 const noise = Fn(([p]) => {
@@ -88,6 +89,13 @@ export class Sky {
       c.assign(mix(c, mix(belly, lit, smoothstep(.3, .85, thick)), cloud.mul(.92)));
       const wisp = smoothstep(.6, .88, fbm(p.mul(1.5).add(vec2(time.mul(.01), time.mul(.003))))).mul(smoothstep(.06, .3, d.y));
       c.assign(mix(c, lit, wisp.mul(.32)));
+      // Weather (2026-10-03): a low grey deck rolls over everything, darker
+      // bellies moving fast under it, lit from inside by lightning.
+      const oc = weather.cloud, fl = weather.flash;
+      const deck = fbm(p.mul(.55).add(vec2(time.mul(.03), time.mul(.012)))), scud = fbm(p.mul(1.6).add(vec2(time.mul(.07), time.mul(.02))));
+      const grey = mix(vec3(.018, .02, .026), vec3(.4, .43, .48), day.mul(.85).add(golden.mul(.1))).mul(deck.mul(.55).add(.62)).mul(float(1).sub(smoothstep(.55, .85, scud).mul(.28)));
+      const storm = grey.add(vec3(.75, .8, 1).mul(fl).mul(deck.mul(1.2).add(.3)));
+      c.assign(mix(c, storm, oc.mul(smoothstep(-.25, .02, d.y).mul(.15).add(.85))));
       return sRGBTransferEOTF(max(c, vec3(0)));
     });
     const mat = new T.MeshBasicNodeMaterial({side: T.BackSide, depthWrite: false, fog: false, toneMapped: false});
@@ -111,8 +119,9 @@ export class Sky {
   }
 
   refreshEnvironment(force = false) {
-    if (!force && Math.abs(this.hour - (this.envHour ?? -99)) < .15) return;
-    this.envHour = this.hour;
+    const oc = weather.cloud.value;
+    if (!force && Math.abs(this.hour - (this.envHour ?? -99)) < .15 && Math.abs(oc - (this.envCloud ?? -1)) < .08) return;
+    this.envHour = this.hour; this.envCloud = oc;
     const target = this.pmrem.fromScene(this.envScene, 0, .1, 1000);
     this.envTarget?.dispose();
     this.envTarget = target;
@@ -152,7 +161,19 @@ export class Sky {
     fog.color.copy(horizon);
     fog.density = .00005 + (1 - day) * .00005 - high * .00002;
     this.scene.environmentIntensity = mixT(.25 + day * (.85 - high * .35), .07);
-    this.night = day < .22;
+    // Overcast and rain: the sun goes in, the light goes flat and grey, the fog closes in; lightning lights it all.
+    const oc = weather.cloud.value, rain = weather.rain.value, fl = weather.flash.value;
+    if (oc > .001) {
+      sun.intensity *= 1 - oc * .9;
+      hemi.color.lerp(new T.Color('#9aa3ae'), oc * day).lerp(new T.Color('#1c2028'), oc * (1 - day) * .5);
+      hemi.groundColor.lerp(new T.Color('#2e2f31'), oc);
+      hemi.intensity = mixT(hemi.intensity * (1 - oc * .2) + oc * day * .25, .12);
+      fog.color.lerp(lin(.34, .36, .4).multiplyScalar(.12 + day * .88), oc);
+      fog.density += oc * (.00014 + rain * .00042);
+      this.scene.environmentIntensity *= 1 - oc * .25;
+    }
+    if (fl > 0) { hemi.intensity += fl * 3.2 * (1 - T0); hemi.color.lerp(new T.Color('#c9d6ff'), Math.min(1, fl)); }
+    this.night = day * (1 - oc * .6) < .22;
     this.last = {hour: this.hour, elev, day, golden, dusk, sun: sun.intensity, hemi: hemi.intensity};
   }
 }

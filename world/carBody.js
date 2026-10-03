@@ -11,6 +11,7 @@
  * The skin has no top inside the greenhouse: the cabin is open to the glass
  * and the interior (world/carInterior.js) is seen through it.
  */
+import {wetGlass} from './rain.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {positionLocal, abs, float, smoothstep, step, materialColor, uv, fract, vec3, mix, floor, mod, normalLocal, normalView, positionViewDirection, fwidth, uniform} from 'three/tsl';
@@ -146,6 +147,7 @@ export function carMaterials({paint = '#0c0d10', accent = '#1e4cff', flake = .6,
   m.glass = new T.MeshPhysicalNodeMaterial({color: glassTint, metalness: .1, roughness: .03, clearcoat: 1, clearcoatRoughness: .02, envMapIntensity: 1.8, transparent: true, depthWrite: false});
   m.glass.opacityNode = mix(float(glassOpacity), float(.97), float(1).sub(abs(normalView.dot(positionViewDirection))).pow(2.5));
   m.glass.name = 'glass';
+  wetGlass(m.glass);                       // rain on the glass (rain.js)
   m.black = new T.MeshStandardMaterial({color: '#0a0b0c', roughness: .6, metalness: .2, side: T.DoubleSide});
   m.gloss = new T.MeshPhysicalMaterial({color: '#08090a', roughness: .12, metalness: .3, clearcoat: 1, clearcoatRoughness: .05});
   m.carbon = new T.MeshPhysicalNodeMaterial({roughness: .3, metalness: .3, clearcoat: 1, clearcoatRoughness: .04});
