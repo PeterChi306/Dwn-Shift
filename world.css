@@ -185,23 +185,30 @@ body.racing .world-toast{top:178px}
 
 
 /* 2026-10-02 start switches (race cars, the Sant'Agata cover): a small box beside the dial, only for cars that need it. */
-.world-start{position:fixed;z-index:53;right:330px;bottom:96px;display:flex;align-items:center;gap:16px;padding:12px 16px;background:linear-gradient(#11171bdd,#090c0fe6);border:1px solid #ffffff17;border-radius:14px;backdrop-filter:blur(14px);box-shadow:0 14px 40px #0008}
+.world-start{position:fixed;z-index:53;right:322px;bottom:100px;display:flex;align-items:flex-end;gap:12px;padding:0;background:none;border:0;box-shadow:none;backdrop-filter:none;filter:drop-shadow(0 3px 6px #000c)}
 .world-start[hidden]{display:none}
-.world-start .ws-switches{display:none;gap:12px}.world-start.race .ws-switches{display:flex}
-.ws-sw{display:flex;flex-direction:column;align-items:center;gap:5px;background:none!important;border:0!important;padding:0!important}
-.ws-sw .ws-slot{position:relative;width:32px;height:48px;border-radius:7px;background:linear-gradient(#2a2f33,#15181b);border:1px solid #ffffff1c;box-shadow:inset 0 2px 6px #000a}
-.ws-sw .ws-slot:before{content:'';position:absolute;left:-4px;right:-4px;top:-5px;height:14px;border-radius:5px 5px 2px 2px;background:#c8281e;box-shadow:0 2px 0 #7a140f;transform-origin:50% 100%;transition:transform .2s}
-.ws-sw.on .ws-slot:before{transform:rotateX(70deg) translateY(-6px)}
-.ws-sw .ws-lever{position:absolute;left:50%;top:50%;width:9px;height:24px;margin:-20px 0 0 -4.5px;border-radius:5px;background:linear-gradient(90deg,#d9dde0,#8c9297);transform-origin:50% 100%;transform:rotate(180deg) translateY(-14px);transition:transform .14s;box-shadow:0 2px 3px #000a}
-.ws-sw.on .ws-lever{transform:none}
-.ws-sw.on .ws-slot{box-shadow:inset 0 2px 6px #000a,0 0 14px #8be8c966;border-color:#8be8c988}
-.ws-sw b,.ws-cap b{font-size:8px;letter-spacing:2px;font-weight:600;color:#dfe7df}
-.ws-sw kbd,.ws-cap kbd{font:600 9px ui-monospace,Menlo,monospace;padding:2px 6px;border-radius:4px;background:#ffffff14;color:#cfd8cf}
+.world-start .ws-switches{display:none;gap:4px}.world-start.race .ws-switches{display:flex}
+/* Aircraft-style toggles: a knurled chrome nut, a bat-handle lever (up = on),
+   a red hinged guard that swings up to let it be thrown, a status LED. */
+.ws-sw{display:flex;flex-direction:column;align-items:center;gap:3px;width:44px;background:none!important;border:0!important;padding:0!important;box-shadow:none!important}
+.ws-led{width:5px;height:5px;border-radius:50%;background:#3a1210;box-shadow:inset 0 1px 1px #0009}
+.ws-sw.on .ws-led{background:#5dff8a;box-shadow:0 0 6px #5dff8a,0 0 2px #fff}
+.ws-tog{position:relative;width:22px;height:30px}
+.ws-nut{position:absolute;left:50%;top:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#f4f6f8,#9aa1a8 45%,#4b5056 75%,#2a2d31);box-shadow:0 0 0 1.5px #16181b,0 1px 2px #000;background-size:100%}
+.ws-nut:after{content:'';position:absolute;inset:2px;border-radius:50%;border:1px dashed #ffffff40}
+.ws-bat{position:absolute;left:50%;top:50%;width:4px;height:13px;margin-left:-2px;border-radius:2px 2px 1px 1px;background:linear-gradient(90deg,#7c838a,#f2f4f6 45%,#8d949b);transform-origin:50% 0;transform:rotate(180deg) rotateX(28deg);transition:transform .12s cubic-bezier(.5,1.8,.6,1)}
+.ws-bat:before{content:'';position:absolute;left:-1.5px;right:-1.5px;top:-2px;height:5px;border-radius:3px;background:linear-gradient(90deg,#8d949b,#ffffff 45%,#9aa1a8)}
+.ws-sw.on .ws-bat{transform:rotate(0deg) rotateX(28deg) translateY(-13px)}
+.ws-guard{position:absolute;left:1px;right:1px;top:1px;bottom:1px;border-radius:3px 3px 2px 2px;background:linear-gradient(#e2372acc,#a9160ecc 70%,#7d0f09dd);border:1px solid #ff8a7a66;box-shadow:inset 0 1px 0 #ffb3a880;transform-origin:50% 100%;transition:transform .18s ease-out}
+.ws-sw.on .ws-guard{transform:perspective(60px) rotateX(-78deg) translateY(1px);filter:brightness(.75)}
+.ws-sw b{display:block;padding:2px 3px;border-radius:2px;background:#0b0c0d;border:1px solid #ffffff1f;font:700 6.5px/1 Outfit,Arial;letter-spacing:.8px;color:#e9ecee;white-space:nowrap}
+.ws-sw kbd{font:600 8px ui-monospace,Menlo,monospace;padding:1px 4px;border-radius:3px;background:#000a;color:#cfd8cf}
+.ws-sw:hover .ws-guard{filter:brightness(1.15)}
 .ws-key{display:none;flex-direction:column;gap:3px;font:600 9px Outfit,Arial;letter-spacing:2px;color:#ffffff40}.world-start.keyed:not(.race) .ws-key{display:flex}
 .ws-key span.on{color:#f0b257;text-shadow:0 0 8px #f0b25788}
 .ws-cap{display:none;flex-direction:column;align-items:center;gap:6px}.world-start.has-cap .ws-cap{display:flex}
 .ws-capbase{position:relative;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 50% 40%,#2a2620,#14110d);border:2px solid #b07a2e;box-shadow:inset 0 2px 6px #000c}
 .ws-cover{position:absolute;inset:-5px;border-radius:50%;background:radial-gradient(circle at 40% 30%,#ff6a5acc,#b5150dcc 60%,#6d0b06e6);border:2px solid #ff7b6b88;transform-origin:50% 0;transition:transform .25s cubic-bezier(.3,1.4,.6,1)}
 .world-start.cap-open .ws-cover{transform:perspective(200px) rotateX(-112deg);filter:brightness(.8)}
-.ws-hint{margin:0;max-width:170px;font-size:10px;line-height:1.45;color:#dfe7dfcc}
+.ws-hint{margin:0 0 4px;max-width:150px;font-size:10px;line-height:1.4;color:#eef2ec;text-shadow:0 1px 3px #000,0 0 8px #000}
 @media(max-width:650px){.world-start{right:12px;bottom:260px}.ws-hint{display:none}}
