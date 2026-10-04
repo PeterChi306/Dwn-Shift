@@ -11,6 +11,7 @@ and hangs the doors on their hinges. The wheels are aurora_wheel.py.
 
 Run:  Blender -b --factory-startup --python tools/blender/aurora.py -- [--export] [--lod]
           [--render out.png] [--views q34f,side,...] [--light] [--doors 1] [--no-parts]
+          [--works]  also build the DWN Works kit (aurora_works.py) -> assets/cars/aurora-works.glb
 
 Game space is +z forward, +x left, y up, ground y = 0; Blender is Z-up, so a
 game point (x, y, z) is stored at (x, -z, y) and the glTF exporter turns it back.
@@ -346,14 +347,15 @@ def render(path):
         s.render.filepath = f'{base}-{name}{ext}'
         bpy.ops.render.render(write_still=True)
 
-def export(objs):
+def export(objs, path=None):
+    path = path or GLB
     bpy.ops.object.select_all(action='DESELECT')
     for o in objs: o.select_set(True)
-    os.makedirs(os.path.dirname(GLB), exist_ok=True)
-    bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', use_selection=True, export_apply=True, export_yup=True,
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', use_selection=True, export_apply=True, export_yup=True,
                               export_materials='EXPORT', export_normals=True, export_texcoords=False, export_cameras=False,
                               export_lights=False, export_extras=True)
-    print('EXPORTED', GLB, os.path.getsize(GLB))
+    print('EXPORTED', path, os.path.getsize(path))
 
 def tri_count(objs):
     dg = bpy.context.evaluated_depsgraph_get(); n = 0
@@ -382,8 +384,18 @@ def main():
         if o.name.startswith('Door_'):
             side = 1 if o.name.startswith('Door_L') else -1
             p, a = hinge(side); o['hinge'] = list(p); o['axis'] = list(a)
+    if '--works' in ARGS:
+        # The DWN Works kit (aurora_works.py): its own GLB, fitted to these panels.
+        import aurora_works; importlib.reload(aurora_works)
+        works = aurora_works.build(parts, ends, panels)
+        print('WORKS TRIS', tri_count(works), 'OBJECTS', len(works))
+        export(works, os.path.join(ROOT, 'assets', 'cars', 'aurora-works.glb'))
+        only = arg('--show')
+        for o in works:
+            if only and not any(k in o.name for k in only.split(',')): o.hide_render = True
     print('TRIS', tri_count(objs), 'OBJECTS', len(objs))
     if '--export' in ARGS: export(objs)
+    if '--works' in ARGS: objs += works                  # (renders only: never in aurora.glb)
     if arg('--doors'):
         for s in (1, -1): open_door(objs, s, float(arg('--doors')))
     if '--wheels' in ARGS and (RENDER or arg('--blend')):

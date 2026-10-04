@@ -319,20 +319,12 @@ def nose(parts, ends, surf, out):
         Vv, F = prism([(z, y) for z, y in prof], .008)
         me.add(Vv, F, 'carbon', Matrix(((0, 0, 1, x), (0, 1, 0, 0), (1, 0, 0, 0), (0, 0, 0, 1))))
     out.append(bevel(me.obj('SplitterFences'), .002, 1))
-    # Canards: two dive planes on each bumper corner, rooted on its side face, reaching out sideways, leading edge down.
-    me = Mesh()
+    # Canards (2026-10-03): two airfoil dive planes per corner, rooted along the bumper's flank.
+    me = []
     for s in (1, -1):
-        for k, (y, zc, chord, span) in enumerate(((.26, Z1 - .32, .2, .085), (.355, Z1 - .38, .16, .065))):
-            roots = []
-            for z in (zc + chord / 2, zc - chord / 2):
-                p, n = surf.onto(Vector((s * W(z), y, z)), Vector((s, 0, 0)), -.003, .35)
-                roots.append(p)
-            rf, rb = roots
-            out_ = Vector((s, 0, 0))
-            tf = rf + out_ * span + Vector((0, -.006, -.03)); tb = rb + out_ * span * .9 + Vector((0, .028, -.01))
-            rf = rf + Vector((0, -.012, 0))                    # the front dips: they press the nose down
-            me.merge(plate([rf, rb, tb, tf], .006, 'carbon'))
-    out.append(bevel(me.obj('SplitterCanards'), .0015, 1))
+        for k, (y, zc, chord, span, rake) in enumerate(((.26, Z1 - .34, .2, .085, .22), (.35, Z1 - .41, .16, .065, .28))):
+            me.append(canard(f'SplitterCanards{s}{k}', surf, s, y, zc, chord, span, rake, thick=.09))
+    out.extend(me)
     # The coolers' honeycomb, the fins in the side intakes.
     for k, quads in enumerate(parts['noseIntake']):
         reg = Region(quads, (1, 0, 0))

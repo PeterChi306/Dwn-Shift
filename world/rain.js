@@ -120,7 +120,9 @@ export class Weather {
     })();
     const dist = length(positionWorld.sub(cameraPosition));
     mat.colorNode = U.color;
-    mat.opacityNode = float(1).sub(abs(corner.x)).mul(float(1).sub(corner.y.mul(.7))).mul(smoothstep(BOX / 2, BOX / 2 - 7, dist)).mul(smoothstep(.5, 1.6, dist)).mul(.42);
+    // Per pixel too: a streak whose drop is outside can still be stretched back into the cabin at speed.
+    mat.opacityNode = float(1).sub(abs(corner.x)).mul(float(1).sub(corner.y.mul(.7))).mul(smoothstep(BOX / 2, BOX / 2 - 7, dist)).mul(smoothstep(.5, 1.6, dist)).mul(.42)
+      .mul(float(1).sub(this.sheltered(positionWorld)));
     const m = new T.Mesh(quads(n), mat); m.frustumCulled = false; m.renderOrder = 4; m.visible = false;
     return m;
   }

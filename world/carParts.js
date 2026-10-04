@@ -313,8 +313,7 @@ function exhaustTips(build) {
 }
 
 /** The left lamp pulled: its lens becomes a dark intake, a red laser shines out of it. */
-function addLaser(P, add, group) {
-  const src = V3(.77, .52, 2.2);
+function addLaser(P, add, group, src) {
   const dot = new T.Mesh(new T.SphereGeometry(.022, 12, 8), P.glowMat('#ff1a24')); dot.position.copy(src); group.add(dot);
   const halo = new T.Mesh(new T.SphereGeometry(.05, 12, 8), new T.MeshBasicMaterial({color: '#ff1a24', transparent: true, opacity: .35, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false}));
   halo.position.copy(src); group.add(halo);
@@ -456,16 +455,34 @@ function setLivery(vehicle, build) {
   }
 }
 
+/** The kit's tailpipe mouths (aurora_works.py exhausts()) and which way they blow. */
+const Z0 = -2.19;
+const KIT_TIPS = {           // [x, y, z, direction (null: straight back), pipe radius]
+  stock: [[-.12, .47, Z0 - .12, null, .055], [.12, .47, Z0 - .12, null, .055]],
+  quad: [[.195, .47, Z0 - .15, null, .044], [.065, .47, Z0 - .15, null, .044], [-.065, .47, Z0 - .15, null, .044], [-.195, .47, Z0 - .15, null, .044]],
+  center: [[0, .45, Z0 - .15, null, .078]],
+  side: [[1.04, .17, -.79, [1, -.05, -.32], .028], [1.04, .17, -.89, [1, -.05, -.32], .028], [-1.04, .17, -.79, [-1, -.05, -.32], .028], [-1.04, .17, -.89, [-1, -.05, -.32], .028]],
+  straight: [[.12, .455, Z0 - .29, [0, -.06, -1], .062], [-.12, .455, Z0 - .29, [0, -.06, -1], .062]],
+};
+
 /** Apply a build to a player car made by makePlayerCar (the Aurora). */
 export function applyBuild(vehicle, raw) {
   const build = sanitizeBuild(raw), body = vehicle.body;
   vehicle.build = build;
+  // The Blender kit (aurora-works.glb, 2026-10-03): every option is a real
+  // model already in the body, tagged 'w:<slot>:<option>'; without it the
+  // parts below are built here.
+  const kit = !!body.works;
   // Stock pieces: hidden when the build replaces them.
   const hide = {
-    wing: build.wing !== 'stock', fin: build.wing === 'longtail', splitter: build.front === 'none' || build.front === 'lip',
+    wing: build.wing !== 'stock', fin: build.wing === 'longtail', splitter: kit ? build.front !== 'stock' : build.front === 'none' || build.front === 'lip',
     exhaust: build.exhaust !== 'stock', lampL: build.lights === 'oneeye',
   };
-  body.group.traverse(o => { if (o.isMesh && o.userData.part) o.visible = !hide[o.userData.part]; });
+  body.group.traverse(o => {
+    if (!o.isMesh || !o.userData.part) return;
+    const p = o.userData.part;
+    if (p.startsWith('w:')) { const [, slot, opt] = p.split(':'); o.visible = kit && build[slot] === opt; } else o.visible = !hide[p];
+  });
   // New pieces.
   if (vehicle.parts) { vehicle.object.remove(vehicle.parts); vehicle.parts.traverse(o => { if (o.isMesh) { o.geometry.dispose(); if (o.userData.own) o.material.dispose(); } }); }
   const group = new T.Group(); group.name = 'parts'; vehicle.parts = group;
@@ -475,15 +492,17 @@ export function applyBuild(vehicle, raw) {
   const ray = new T.Raycaster(), paintMeshes = []; body.group.traverse(o => { if (o.isMesh && o.material === body.paint && !o.userData.part) paintMeshes.push(o); });
   body.group.updateMatrixWorld(true);
   const deckY = z => { ray.set(V3(0, 3, z), V3(0, -1, 0)); const hit = ray.intersectObjects(paintMeshes, false)[0]; return hit ? 3 - hit.distance : .95; };
-  addWing(P, add, build, deckY);
-  // The nose's front face at x (raycast back along the car at splitter height).
-  const noseZ = x => { ray.set(V3(x, .24, 4), V3(0, 0, -1)); const hit = ray.intersectObjects(paintMeshes, false)[0]; return hit ? 4 - hit.distance : 2.2; };
-  addFront(P, add, build, noseZ);
-  addKit(P, add, build, vehicle.wheels);
-  addRoof(P, add, build, body._K);
-  const hoodY = (z, x = 0) => { ray.set(V3(x, 3, z), V3(0, -1, 0)); const hit = ray.intersectObjects(paintMeshes, false)[0]; return hit ? 3 - hit.distance : .9; };
-  addHood(P, add, build, hoodY);
-  const ex = exhaustTips(build);
+  if (!kit) {
+    addWing(P, add, build, deckY);
+    // The nose's front face at x (raycast back along the car at splitter height).
+    const noseZ = x => { ray.set(V3(x, .24, 4), V3(0, 0, -1)); const hit = ray.intersectObjects(paintMeshes, false)[0]; return hit ? 4 - hit.distance : 2.2; };
+    addFront(P, add, build, noseZ);
+    addKit(P, add, build, vehicle.wheels);
+    addRoof(P, add, build, body._K);
+    const hoodY = (z, x = 0) => { ray.set(V3(x, 3, z), V3(0, -1, 0)); const hit = ray.intersectObjects(paintMeshes, false)[0]; return hit ? 3 - hit.distance : .9; };
+    addHood(P, add, build, hoodY);
+  }
+  const ex = kit ? null : exhaustTips(build);
   if (ex) {
     for (const [x, y, z, r, kind] of ex.tips) {
       if (kind === 'side') { const g = tip(r, .14, 0, 0, 0); g.rotateY(Math.sign(x) * Math.PI / 2); g.translate(x - Math.sign(x) * .1, y, z); add(g, P[ex.mat]); }
@@ -491,12 +510,14 @@ export function applyBuild(vehicle, raw) {
     }
     if (build.exhaust === 'center' || build.exhaust === 'quad') add(box(build.exhaust === 'center' ? .26 : .6, .13, .02, 0, .45, -2.06), P.black);
   }
+  // Where the flames come out (carFx.flame): [x, y, z, direction].
   body.dims.exhausts.length = 0;
-  for (const t of ex ? ex.tips : [[-.11, .47, -2.17], [.11, .47, -2.17]]) body.dims.exhausts.push(t[4] === 'side' ? [t[0] + Math.sign(t[0]) * .05, t[1], t[2]] : [t[0], t[1], t[2] - (t[4] === 'long' ? .12 : 0)]);
+  if (kit) for (const t of KIT_TIPS[build.exhaust] || KIT_TIPS.stock) body.dims.exhausts.push(t);
+  else for (const t of ex ? ex.tips : [[-.11, .47, -2.17], [.11, .47, -2.17]]) body.dims.exhausts.push(t[4] === 'side' ? [t[0] + Math.sign(t[0]) * .05, t[1], t[2], [Math.sign(t[0]), 0, -.25]] : [t[0], t[1], t[2] - (t[4] === 'long' ? .12 : 0)]);
   if (build.lights === 'oneeye') {
-    // The pulled lamp's lens, re-made as a black intake mesh.
-    body.group.traverse(o => { if (o.isMesh && o.userData.part === 'lampL' && o.material === body.mats?.lamp) add(o.geometry.clone().translate(0, 0, -.012), P.grille); });
-    addLaser(P, add, group);
+    // The pulled lamp's lens, re-made as a black intake mesh (the kit has a real honeycomb intake).
+    if (!kit) body.group.traverse(o => { if (o.isMesh && o.userData.part === 'lampL' && o.material === body.mats?.lamp) add(o.geometry.clone().translate(0, 0, -.012), P.grille); });
+    addLaser(P, add, group, kit ? V3(.776, .566, 2.135) : V3(.77, .52, 2.2));
   }
   for (const [m, gs] of byMat) { const mesh = new T.Mesh(mergeGeometries(gs), m); mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); }
   if (build.glow) addGlow(group, build.glow, build.glowMode);

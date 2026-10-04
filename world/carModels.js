@@ -314,7 +314,7 @@ export function buildModel(id, {paint = null, ambient = null, coarse = false} = 
   }
   const dims = {...K.dims, exhausts: extra.exhausts, signals: extra.signals};
   const signals = K.signals.left.length ? K.signals : null;
-  return {group, doors: extra.doors || null, wiper: extra.wiper || null, wheels, wheelsSpec, mats, paint: mats.paint, head: mats.head, tail: mats.tail, reverse: mats.reverse, grille: mats.grille, glass: mats.glass, dims, signals, ambient: amb, interior, model, radius, mass: model.mass, _K: K};
+  return {group, doors: extra.doors || null, wiper: extra.wiper || null, works: !!extra.works, wheels, wheelsSpec, mats, paint: mats.paint, head: mats.head, tail: mats.tail, reverse: mats.reverse, grille: mats.grille, glass: mats.glass, dims, signals, ambient: amb, interior, model, radius, mass: model.mass, _K: K};
 }
 
 /** Rebuild a body's cabin with a trim spec (2026-10-02 interior options:

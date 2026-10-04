@@ -400,3 +400,72 @@ def wrap_polar(verts, r0, a0, scale=1.0, height_axis=1):
         r = r0 + y * scale; a = a0 - x * scale / r0
         out.append((r * math.cos(a), r * math.sin(a), z))
     return out
+
+# ------------------------------------------------------------------ airfoils
+def foil(c, t=.12, cam=.04, aoa=0.0, n=22):
+    """An inverted (downforce) section: leading edge at (0, 0), chord back along -z, camber
+    bulging down; aoa > 0 lifts the trailing edge. Closed loop of (z, y)."""
+    up, lo = [], []
+    for i in range(n + 1):
+        x = (1 - math.cos(math.pi * i / n)) / 2
+        th = 5 * t * (.2969 * math.sqrt(x) - .126 * x - .3516 * x * x + .2843 * x ** 3 - .1036 * x ** 4)
+        yc = -cam * math.sin(math.pi * x) * (1 - .25 * x)
+        up.append((-x * c, (yc + th) * c)); lo.append((-x * c, (yc - th) * c))
+    pts = up + lo[::-1][1:-1]
+    ca, sa = math.cos(aoa), math.sin(aoa)
+    return [(z * ca + y * sa, -z * sa + y * ca) for z, y in pts]
+
+def foil_y(c, t, cam, aoa, z, top=True):
+    """The section's upper (or lower) surface height at chord position z (0 .. -c, before rotation)."""
+    pts = foil(c, t, cam, aoa)
+    n = len(pts) // 2 + 1
+    side = pts[:n] if top else [pts[0]] + pts[n:][::-1] + [pts[n - 1]]
+    best = None
+    for (z0, y0), (z1, y1) in zip(side, side[1:]):
+        if min(z0, z1) - 1e-6 <= z <= max(z0, z1) + 1e-6 and abs(z1 - z0) > 1e-9:
+            best = y0 + (y1 - y0) * (z - z0) / (z1 - z0); break
+    return best if best is not None else 0.0
+
+def blade(name, stations, m='carbon', tip=True):
+    """A wing lofted through stations (origin, fwd, up, chord, thick, camber, aoa); the
+    ends are rounded off by two extra shrinking stations (no flat-cut tips)."""
+    rings = []
+    def ring(o, fwd, up, c, t, cam, aoa):
+        return [o + fwd * z + up * y for z, y in foil(c, t, cam, aoa)]
+    st = list(stations)
+    if tip:
+        def cap(a, b, k):
+            o, fwd, up, c, t, cam, aoa = a
+            d = (a[0] - b[0]).normalized()
+            return (o + d * .006 * k + fwd * (-c * .03 * k), fwd, up, c * (1 - .06 * k), t * (1 - .45 * k), cam, aoa)
+        st = [cap(st[0], st[1], 2), cap(st[0], st[1], 1)] + st + [cap(st[-1], st[-2], 1), cap(st[-1], st[-2], 2)]
+    for s_ in st: rings.append(ring(*s_))
+    Vv, F = loft(rings, True, True, True)
+    ob = Mesh().add(Vv, F, m).obj(name); fix_normals(ob)
+    return ob
+
+def straight_stations(x0, x1, n, z, y, c, t, cam, aoa, dz=lambda u: 0, dy=lambda u: 0):
+    out = []
+    for i in range(n + 1):
+        u = i / n; x = x0 + (x1 - x0) * u
+        out.append((Vector((x, y + dy(u), z + dz(u))), Vector((0, 0, 1)), Vector((0, 1, 0)), c, t, cam, aoa))
+    return out
+
+
+def canard(name, surf, s, y, zc, chord, span, rake=.25, sweep_=.04, rise=.03, m='carbon', thick=.1, cam=.03):
+    """A dive plane rooted along the bumper's flank: its root chord lies on the skin (found by ray
+    casts at both ends), it reaches straight out from it and rakes its leading edge down."""
+    zA, zB = zc + chord * .5, zc - chord * .5
+    pA, _ = surf.onto(Vector((s * 1.3, y, zA)), Vector((s, 0, 0)), -.003, .6)
+    pB, _ = surf.onto(Vector((s * 1.3, y, zB)), Vector((s, 0, 0)), -.003, .6)
+    f = Vector((pA.x - pB.x, 0, pA.z - pB.z)); c = f.length; f.normalize()
+    n = Vector((f.z, 0, -f.x))
+    if n.x * s < 0: n = -n
+    up = Vector((0, 1, 0))
+    fr = f * math.cos(rake) - up * math.sin(rake); ur = up * math.cos(rake) + f * math.sin(rake)
+    st = []
+    for i in range(7):
+        u = i / 6
+        o = pA - n * .004 + n * span * u + up * rise * u - f * sweep_ * u
+        st.append((o, fr, ur, c * (1 - .3 * u), thick, cam, 0.0))
+    return blade(name, st)

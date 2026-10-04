@@ -25,6 +25,7 @@ import {makePlayerCar} from '../world/cars.js';
 import {MODELS, preloadCars} from '../world/carModels.js';
 await preloadCars();
 import {CarFx} from '../world/carFx.js';
+import {applyBuild, PRESETS} from '../world/carParts.js';
 
 const q = new URLSearchParams(location.search);
 const renderer = new T.WebGPURenderer({canvas: document.getElementById('c'), antialias: true});
@@ -80,6 +81,10 @@ window.lab = {
   night(on) { night = on; },
   steer(v) { steer = v; },
   doors(open = true, which = 'both') { fx.setDoors(open, which); },
+  /** A DWN Works build (world/carParts.js), or a preset id; paint optional. */
+  apply(b, paint) { const pr = typeof b === 'string' ? PRESETS.find(p => p.id === b) : null; if (pr) { b = pr.build; paint ||= pr.paint; } if (paint) current.body.paint.color.set(paint); return applyBuild(current, b); },
+  flame(power = 1, kind = 'orange') { fx.flame(power, kind); },
+  freeze: false,
   lookYaw: 0, lookPitch: -8,
 };
 build(q.get('model') || 'aurora');
@@ -99,7 +104,7 @@ addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); ca
 const fakeCar = {body: {linvel: () => ({x: 0, y: 0, z: 0}), angvel: () => ({x: 0, y: 0, z: 0})}, rearSlip: 0, frontSlip: 0, handbrake: 0, wheelState: () => ({contact: false})};
 let last = performance.now();
 renderer.setAnimationLoop(now => {
-  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  const dt = lab.freeze ? 0 : Math.min(.05, (now - last) / 1000); last = now;
   const o = current.object;
   const dim = night ? .03 : 1;
   key.intensity = (studio ? 2.2 : 3) * dim; hemi.intensity = .5 * dim; scene.environmentIntensity = night ? .05 : 1;

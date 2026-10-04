@@ -12,6 +12,10 @@
  * material, the signal guides become carFx signals, and each door hangs on a
  * pivot at its hinge (`body.doors`, opened by carFx).
  *
+ * aurora-works.glb (aurora_works.py, 2026-10-03) is the DWN Works kit: every workshop
+ * option modelled and fitted to the body, merged here as hidden parts 'w:<slot>:<option>'
+ * that carParts.js applyBuild() shows.
+ *
  * aurora-lod.glb (the cage unsubdivided, no small parts) dresses the dealer fleet.
  * The GLBs load once at boot (preloadAurora); until they have, or if they fail,
  * carModels.js falls back to the lofted body in aurora.js.
@@ -30,6 +34,8 @@ export function preloadAurora() {
   return loading ||= Promise.all([
     load('aurora.glb', 'full'), load('aurora-lod.glb', 'lod'),
     load('aurora-wheel.glb', 'wheel').then(() => setWheelParts(scenes.wheel)).catch(e => console.warn('aurora-wheel.glb failed, procedural wheels', e)),
+    // The DWN Works kit (tools/blender/aurora_works.py); without it carParts.js builds its own parts.
+    load('aurora-works.glb', 'works').catch(e => console.warn('aurora-works.glb failed, procedural workshop parts', e)),
   ]).catch(e => console.warn('aurora.glb failed, using the lofted body', e));
 }
 /** Ready for the player car (full) or the dealer fleet (lod). */
@@ -96,10 +102,21 @@ export function auroraGlbBody(K, M, coarse = false) {
   const partOf = n => /^door_[lr]/.test(n) ? 'door' + n[5].toUpperCase() : /^wing/.test(n) ? 'wing' : /^fin/.test(n) ? 'fin' : /^splitter/.test(n) ? 'splitter'
     : /^exhaust/.test(n) ? 'exhaust' : /^(diffuser)/.test(n) ? 'diffuser' : /^skirt/.test(n) ? 'skirt' : /^lamp_r/.test(n) ? 'lampR' : /^lamp_l/.test(n) ? 'lampL' : /^wiper/.test(n) ? 'wiper' : null;
   const put = (m, part, g) => { const k = m.uuid + '|' + (part || ''); (byKey.get(k) || byKey.set(k, {m, part, gs: []}).get(k)).gs.push(g); };
-  scene.traverse(o => {
+  // Workshop parts (aurora-works.glb): Works_<slot>_<option>_* -> part 'w:<slot>:<option>', hidden until a build picks it.
+  const works = !coarse && scenes.works;
+  const visit = (root, isWorks) => root.traverse(o => {
     if (!o.isMesh) return;
     const node = o.userData.hinge ? o : o.parent?.userData?.hinge ? o.parent : null;
-    const lower = (o.parent && o.parent !== scene ? o.parent.name : o.name).toLowerCase();
+    const lower = (o.parent && o.parent !== root ? o.parent.name : o.name).toLowerCase();
+    if (isWorks) {
+      const w = lower.match(/^works_([a-z]+)_([a-z0-9]+)_/); if (!w) return;
+      let g = o.geometry.clone().applyMatrix4(o.matrixWorld); g = g.index ? g.toNonIndexed() : g;
+      for (const k of Object.keys(g.attributes)) if (!['position', 'normal'].includes(k)) g.deleteAttribute(k);
+      const name = o.material.name, m = M[name] || X[name] || M.black;
+      if (m === M.ti) tiTint(g, Z0);
+      put(m, `w:${w[1]}:${w[2]}`, g);
+      return;
+    }
     let g = o.geometry.clone().applyMatrix4(o.matrixWorld);
     g = g.index ? g.toNonIndexed() : g;
     for (const k of Object.keys(g.attributes)) if (!['position', 'normal'].includes(k)) g.deleteAttribute(k);
@@ -125,12 +142,7 @@ export function auroraGlbBody(K, M, coarse = false) {
     // The dealer fleet has no cabin: tinted glass, so nobody sees the empty tub.
     let m = coarse && (name === 'glass' || name === 'glassE') ? M.gloss : M[name] || X[name] || M.black;
     if (name === 'head' && lower.startsWith('lamp_')) m = M.head;
-    if (m === M.ti) {
-      // The titanium tint runs along the tip (uv.y), from the body out.
-      const p = g.attributes.position, a = new Float32Array(p.count * 2);
-      for (let i = 0; i < p.count; i++) a[i * 2 + 1] = Math.min(1, Math.max(0, (Z0 + .06 - p.getZ(i)) / .19));
-      g.setAttribute('uv', new T.BufferAttribute(a, 2));
-    }
+    if (m === M.ti) tiTint(g, Z0);
     // The headlamp lens splits down the middle, one per side.
     if (!coarse && lower === 'lens') {
       for (const [pt, keep] of [['lampL', x => x > 0], ['lampR', x => x <= 0]]) { const h = splitTris(g, keep); if (h) put(m, pt, h); }
@@ -138,6 +150,8 @@ export function auroraGlbBody(K, M, coarse = false) {
     }
     put(m, part, g);
   });
+  visit(scene, false);
+  if (works) visit(works, true);
   const group = new T.Group();
   // Each door swings on a pivot at its hinge: its meshes are moved into the pivot's frame.
   for (const [k, d] of Object.entries(doors)) {
@@ -154,6 +168,7 @@ export function auroraGlbBody(K, M, coarse = false) {
     // Only the big surfaces cast shadows (the small dressings would only cost shadow-pass draws).
     mesh.castShadow = !clear && [M.paint, M.carbon, M.black, M.gloss, X.carbonM].includes(m) && !part?.startsWith('lamp'); mesh.receiveShadow = true;
     if (clear) mesh.renderOrder = 1;
+    if (part?.startsWith('w:')) mesh.visible = false;
     mesh.matrixAutoUpdate = false;
     (door ? door.pivot : group).add(mesh);
   }
@@ -167,7 +182,14 @@ export function auroraGlbBody(K, M, coarse = false) {
     for (const m of wm) { m.geometry.translate(-piv.x, -piv.y, -piv.z); pivot.add(m); }
     wiper = {pivot, at: piv.clone()};
   }
-  return {group, wiper, doors: Object.keys(doors).length ? doors : null, exhausts: [[-.12, .47, Z0 - .12], [.12, .47, Z0 - .12]]};
+  return {group, wiper, works: !!works, doors: Object.keys(doors).length ? doors : null, exhausts: [[-.12, .47, Z0 - .12], [.12, .47, Z0 - .12]]};
+}
+
+/** The titanium tint runs along a tip (uv.y), from the body out. */
+function tiTint(g, Z0) {
+  const p = g.attributes.position, a = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) a[i * 2 + 1] = Math.min(1, Math.max(0, (Z0 + .06 - p.getZ(i)) / .19));
+  g.setAttribute('uv', new T.BufferAttribute(a, 2));
 }
 
 /** Swing the doors: open 0 (shut) .. 1 (fully up), per side key 'L' / 'R'. */
