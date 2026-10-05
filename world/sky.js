@@ -17,6 +17,7 @@ import {Fn, uniform, vec2, vec3, float, positionLocal, normalize, dot, sin, frac
   exp, pow, max, clamp, step, sRGBTransferEOTF} from 'three/tsl';
 import {weather} from './rain.js';
 
+const _c = new T.Vector3(), _x = new T.Vector3(), _y = new T.Vector3(), _z = new T.Vector3(), _up = new T.Vector3(0, 1, 0);
 const hash = Fn(([p]) => fract(sin(dot(p, vec2(127.1, 311.7))).mul(43758.5453)));
 const noise = Fn(([p]) => {
   const i = floor(p), f = fract(p), u = f.mul(f).mul(float(3).sub(f.mul(2)));
@@ -142,8 +143,18 @@ export class Sky {
     // fades in and out over a second instead of switching at the portal).
     const T0 = +tunnel, mixT = (open, dark) => open + (dark - open) * T0;
     const dir = this.sunDirection(this.hour), elev = dir.y, {day, golden, dusk} = skyState(elev);
-    sun.position.copy(position).addScaledVector(dir, 300);
-    sun.target.position.copy(position);
+    // (2026-10-04) The shadow map moves in whole texels: centred anywhere, it slid by fractions of
+    // one with every wobble of the parked car's suspension, and every edge the low sun grazes
+    // (roofs from the Sky Deck, the lobby floor) shimmered. Snapped to its grid in the light's frame, it holds still.
+    const S = sun.shadow?.camera, texel = S ? (S.right - S.left) / (sun.shadow.mapSize.x || 2048) : 0;
+    const c = _c.copy(position);
+    if (texel > 0) {
+      _z.copy(dir).negate(); _x.crossVectors(_up, _z); if (_x.lengthSq() < 1e-6) _x.set(1, 0, 0); _x.normalize(); _y.crossVectors(_z, _x);
+      const a = Math.round(c.dot(_x) / texel) * texel, b = Math.round(c.dot(_y) / texel) * texel, d = c.dot(_z);
+      c.copy(_x).multiplyScalar(a).addScaledVector(_y, b).addScaledVector(_z, d);
+    }
+    sun.position.copy(c).addScaledVector(dir, 300);
+    sun.target.position.copy(c);
     // Low sun: deep gold light, long shadows; gone below the horizon.
     const warm = new T.Color('#fff4e6').lerp(new T.Color('#ff9a4a'), Math.min(1, golden * 1.1)).lerp(new T.Color('#ff6a3a'), dusk * .6);
     sun.color.copy(warm);

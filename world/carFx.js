@@ -24,34 +24,38 @@ import {instancedDynamicBufferAttribute, uv, vec3, vec4, float, smoothstep, mix,
 
 const SMOKE = 700, FIRE = 160;
 
-/** The flame jet's shape: a cone along +z from the nozzle (z 0) to its tip (z 1), radius 1 at its
- *  widest, swelling just past the nozzle and burning down to a point. */
-const FLAME_GEO = (() => {
-  const pts = [];
-  for (let i = 0; i <= 28; i++) {
-    const t = i / 28, r = (.62 + .38 * Math.min(1, t / .16)) * Math.pow(1 - t, .62) * (1 + .18 * Math.sin(Math.PI * Math.min(1, t * 1.7)));
-    pts.push(new T.Vector2(Math.max(r, 1e-3) * .9, t));
-  }
-  const g = new T.LatheGeometry(pts, 20); g.rotateX(Math.PI / 2);
-  return g;
-})();
-function flameMaterial() {
+/** The flame jet's shape (2026-10-04 redo, "make sure it actually comes out of the exhaust"): a
+ *  lathe along +z from the nozzle (z 0) to its tip (z 1). It leaves the pipe at the pipe's own
+ *  width (radius .55 of the scale, which flame() sets from the pipe), swells a little, and burns
+ *  down to a ragged point; the core is a short, narrow, hotter cone inside it. */
+const lathe = (prof, n = 24) => { const pts = []; for (let i = 0; i <= n; i++) { const t = i / n; pts.push(new T.Vector2(Math.max(prof(t), 1e-3), t)); } const g = new T.LatheGeometry(pts, 22); g.rotateX(Math.PI / 2); return g; };
+const FLAME_GEO = lathe(t => (.55 + .45 * Math.min(1, t / .22)) * Math.pow(1 - t, .7));
+const CORE_GEO = lathe(t => .5 * Math.pow(1 - t, 1.1) * (1 - .25 * t));
+function flameMaterial(core = false) {
   const k = uniform(0), heat = uniform(0), seed = uniform(0);
-  const m = new T.MeshBasicNodeMaterial({transparent: true, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide});
+  const m = new T.MeshBasicNodeMaterial({transparent: true, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide, fog: false});
   const P = positionLocal, t = P.z;
-  // Turbulence rolling down the jet; the silhouette fades so the cone reads as a volume, not a shell.
-  const n = mx_noise_float(vec3(P.x.mul(2.4), P.y.mul(2.4), t.mul(5).sub(time.mul(16)).add(seed)));
-  const n2 = mx_noise_float(vec3(P.x.mul(6), P.y.mul(6), t.mul(11).sub(time.mul(31)).add(seed.mul(1.7))));
-  const face = pow(abs(normalView.dot(positionViewDirection)), 1.6);
-  const body = smoothstep(1, float(.42).add(n.mul(.22)).add(n2.mul(.08)), t).mul(smoothstep(0, .03, t));
-  // Blue-white at the nozzle, yellow, then deep orange and red as it burns out (a hot core down the middle).
-  const core = mix(vec3(.5, .62, 1), vec3(1, .86, .55), smoothstep(.0, .07, t));
-  const hot = mix(core, vec3(1, .45, .08), smoothstep(.05, .26, t));
-  const orange = mix(hot, vec3(.8, .1, .015), smoothstep(.28, .8, t.add(n.mul(.12))));
-  const flame = mix(orange, vec3(1, .78, .4), face.mul(float(1).sub(smoothstep(.1, .6, t))).mul(.55));
-  const lean = mix(vec3(.35, .5, 1), vec3(.7, .78, 1), face.mul(.6));
-  m.colorNode = mix(flame, lean, heat).mul(float(1.7).add(n2.mul(.4)));
-  m.opacityNode = body.mul(face.mul(.8).add(.2)).mul(k);
+  // Turbulence racing down the jet; the edge of the cone fades so it reads as fire, not a shell.
+  const n = mx_noise_float(vec3(P.x.mul(3), P.y.mul(3), t.mul(6).sub(time.mul(22)).add(seed)));
+  const n2 = mx_noise_float(vec3(P.x.mul(8), P.y.mul(8), t.mul(14).sub(time.mul(40)).add(seed.mul(1.7))));
+  const face = pow(abs(normalView.dot(positionViewDirection)), 1.4);
+  if (core) {
+    // The core: blue-white at the nozzle, gone by a third of the way out.
+    const len = smoothstep(1, .25, t).mul(smoothstep(0, .02, t));
+    m.colorNode = mix(vec3(.45, .62, 1), vec3(1, .78, .5), smoothstep(.1, .7, t)).mul(.75);
+    m.opacityNode = len.mul(face.mul(.7).add(.3)).mul(k);
+  } else {
+    // The flame: yellow-orange near the pipe, deep orange to red at the tip, ragged where it burns out.
+    const tip = float(.55).add(n.mul(.3)).add(n2.mul(.12));
+    const body = smoothstep(1, tip, t).mul(smoothstep(0, .04, t));
+    const near = mix(vec3(1, .62, .22), vec3(1, .42, .08), smoothstep(.05, .35, t));
+    const far = mix(near, vec3(.75, .12, .02), smoothstep(.35, .9, t.add(n.mul(.15))));
+    const lean = mix(vec3(.3, .45, 1), vec3(.6, .7, 1), face.mul(.5));
+    m.colorNode = mix(far, lean, heat).mul(float(.62).add(n2.mul(.2)));
+    // Licks: the noise breaks it up so it burns in tongues, not a smooth cone (thinner toward the tip).
+    const licks = smoothstep(.15, .65, n.mul(.5).add(.5).add(float(1).sub(t).mul(.45)));
+    m.opacityNode = body.mul(face.mul(.85).add(.15)).mul(licks).mul(k);
+  }
   m.userData = {k, heat, seed};
   return m;
 }
@@ -144,14 +148,11 @@ export class CarFx {
   syncFlames() {
     const ex = this.dims?.exhausts || [], key = JSON.stringify(ex);
     if (this.flameKey === key) return;
-    for (const f of this.flames || []) { f.mesh.removeFromParent(); f.mesh.material.dispose(); }
+    for (const f of this.flames || []) for (const m of [f.mesh, f.core]) { m.removeFromParent(); m.material.dispose(); }
     this.flames = ex.map(([x, y, z, dir, r]) => {
-      const mesh = new T.Mesh(FLAME_GEO, flameMaterial());
-      mesh.position.set(x, y, z);
-      mesh.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), new T.Vector3(...(dir || [0, 0, -1])).normalize());
-      mesh.visible = false; mesh.frustumCulled = false; mesh.renderOrder = 3; mesh.castShadow = false;
-      this.vehicle.object.add(mesh);
-      return {mesh, r: r || .05, dir: new T.Vector3(...(dir || [0, 0, -1])).normalize(), age: 1, life: 0, len: 0, power: 0};
+      const q = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 0, 1), new T.Vector3(...(dir || [0, 0, -1])).normalize());
+      const mk = (geo, core) => { const m = new T.Mesh(geo, flameMaterial(core)); m.position.set(x, y, z); m.quaternion.copy(q); m.visible = false; m.frustumCulled = false; m.renderOrder = core ? 4 : 3; m.castShadow = false; this.vehicle.object.add(m); return m; };
+      return {mesh: mk(FLAME_GEO, false), core: mk(CORE_GEO, true), r: r || .05, dir: new T.Vector3(...(dir || [0, 0, -1])).normalize(), age: 1, life: 0, len: 0, power: 0};
     });
     this.flameKey = key;
   }
@@ -162,9 +163,10 @@ export class CarFx {
     const o = this.vehicle.object, heat = kind === 'blue' ? .85 : kind === 'white' ? .4 : 0;
     for (const f of this.flames) {
       // The jet: longer and fatter with a bigger bang, a little different every time.
-      f.age = 0; f.life = .07 + power * .14 + Math.random() * .05; f.power = power;
-      f.len = (.22 + power * .78) * (.8 + Math.random() * .45); f.rad = f.r * (1.25 + power * 1.35);
-      const u = f.mesh.material.userData; u.heat.value = heat; u.seed.value = Math.random() * 100;
+      f.age = 0; f.life = .07 + power * .16 + Math.random() * .05; f.power = power;
+      // Long and narrow: it leaves the pipe at the pipe's width (radius .55 of rad) and flares only a little.
+      f.len = (.35 + power * 1.05) * (.8 + Math.random() * .45); f.rad = f.r / .55 * (1 + power * .25);
+      for (const m of [f.mesh, f.core]) { const u = m.material.userData; u.heat.value = heat; u.seed.value = Math.random() * 100; }
       // Embers and a burst of flame thrown out of the jet's end.
       const p = o.localToWorld(this.tmp.copy(f.mesh.position)), d = this.tmp2.copy(f.dir).transformDirection(o.matrixWorld);
       const n = 2 + Math.round(power * 5);
@@ -174,20 +176,21 @@ export class CarFx {
           age: 0, life: .08 + Math.random() * .22, size: .025 + Math.random() * .045, alpha: 1, rot: Math.random() * 6, spin: 0, heat});
       }
       if (power > .55) this.emit(this.fire, {x: p.x + d.x * f.len * .8, y: p.y + d.y * f.len * .8, z: p.z + d.z * f.len * .8, vx: d.x * 6, vy: .4, vz: d.z * 6,
-        age: 0, life: .06 + power * .06, size: .18 + power * .2, alpha: .55, rot: Math.random() * 6, spin: 0, heat});
+        age: 0, life: .05 + power * .05, size: .09 + power * .11, alpha: .35, rot: Math.random() * 6, spin: 0, heat});
     }
     this.flashT = .07 + power * .07; this.flashPower = power;
   }
   updateFlames(dt) {
     for (const f of this.flames || []) {
-      if (f.age >= f.life) { f.mesh.visible = false; continue; }
+      if (f.age >= f.life) { f.mesh.visible = f.core.visible = false; continue; }
       f.age += dt;
-      const k = Math.max(0, 1 - f.age / f.life), u = f.mesh.material.userData;
-      f.mesh.visible = k > 0;
+      const k = Math.max(0, 1 - f.age / f.life);
+      f.mesh.visible = f.core.visible = k > 0;
       // It shoots out fast, then shrinks back into the pipe as it dies; flickers every frame.
-      const grow = Math.min(1, f.age / .025), fl = .85 + Math.random() * .3;
-      f.mesh.scale.set(f.rad * fl * (.7 + .3 * k), f.rad * fl * (.7 + .3 * k), f.len * grow * (.55 + .45 * k) * (.9 + Math.random() * .2));
-      u.k.value = Math.pow(k, .55) * (.55 + .45 * Math.min(1, f.power * 1.4));
+      const grow = Math.min(1, f.age / .025), fl = .9 + Math.random() * .2, w = f.rad * fl * (.8 + .2 * k), L = f.len * grow * (.55 + .45 * k) * (.88 + Math.random() * .24);
+      f.mesh.scale.set(w, w, L); f.core.scale.set(w, w, L * (.35 + .1 * f.power));
+      const a = Math.pow(k, .55) * (.6 + .4 * Math.min(1, f.power * 1.4));
+      f.mesh.material.userData.k.value = a; f.core.material.userData.k.value = a;
     }
   }
 
@@ -224,7 +227,7 @@ export class CarFx {
   }
   dispose() {
     for (const sys of [this.smoke, this.fire]) { this.scene.remove(sys.mesh); sys.mesh.geometry.dispose(); sys.mesh.material.dispose(); }
-    for (const f of this.flames || []) { f.mesh.removeFromParent(); f.mesh.material.dispose(); }
+    for (const f of this.flames || []) for (const m of [f.mesh, f.core]) { m.removeFromParent(); m.material.dispose(); }
     this.scene.remove(this.flash);
     for (const m of this.sigMeshes || []) m.removeFromParent();
   }

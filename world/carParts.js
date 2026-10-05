@@ -512,7 +512,25 @@ export function applyBuild(vehicle, raw) {
   }
   // Where the flames come out (carFx.flame): [x, y, z, direction].
   body.dims.exhausts.length = 0;
-  if (kit) for (const t of KIT_TIPS[build.exhaust] || KIT_TIPS.stock) body.dims.exhausts.push(t);
+  if (kit) for (const t of KIT_TIPS[build.exhaust] || KIT_TIPS.stock) body.dims.exhausts.push([...t]);
+  // (2026-10-04) Seat each flame on the real pipe's mouth: a ray back up the pipe from behind, just
+  // inside its rim, finds where the metal ends (the table's guesses were 15-26 cm out in the air).
+  if (kit) {
+    const pipes = []; body.group.traverse(o => { const p = o.userData.part; if (o.isMesh && (p === 'w:exhaust:' + build.exhaust || (build.exhaust === 'stock' && p === 'exhaust'))) pipes.push(o); });
+    vehicle.object.updateMatrixWorld(true);
+    const M = vehicle.object.matrixWorld, inv = M.clone().invert();
+    for (const t of body.dims.exhausts) {
+      const d = V3(...(t[3] || [0, 0, -1])).normalize(), r = t[4] || .05, side = Math.abs(d.x) > .5 ? V3(0, 1, 0) : V3(1, 0, 0);
+      let best = null;
+      for (const s of [1, -1]) {
+        const o = V3(t[0], t[1], t[2]).addScaledVector(d, .8).addScaledVector(side, s * r * .8);
+        ray.set(o.clone().applyMatrix4(M), d.clone().negate().transformDirection(M));
+        const hit = ray.intersectObjects(pipes, false)[0];
+        if (hit) { const q = hit.point.clone().applyMatrix4(inv).addScaledVector(side, -s * r * .8); if (!best || q.dot(d) > best.dot(d)) best = q; }
+      }
+      if (best) { best.addScaledVector(d, .004); t[0] = best.x; t[1] = best.y; t[2] = best.z; }
+    }
+  }
   else for (const t of ex ? ex.tips : [[-.11, .47, -2.17], [.11, .47, -2.17]]) body.dims.exhausts.push(t[4] === 'side' ? [t[0] + Math.sign(t[0]) * .05, t[1], t[2], [Math.sign(t[0]), 0, -.25]] : [t[0], t[1], t[2] - (t[4] === 'long' ? .12 : 0)]);
   if (build.lights === 'oneeye') {
     // The pulled lamp's lens, re-made as a black intake mesh (the kit has a real honeycomb intake).

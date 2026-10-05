@@ -96,15 +96,14 @@ export class SkyDeck {
     /* ---------------------------------------------------------- the lobby */
     const pz = Wd / 2 - 2, fx = 2.1, dz = 2.4;
     kit.indoor = 1;
-    box('gloss', D / 2, -.15, 0, D - 4.2, .3, Wd - 4.6, STONE, true);
-    box('gloss', (fx + cx) / 2 + 1, .004, 0, cx - fx + 2, .01, 2.2, '#3a3d42');                 // a dark runner from the door in
-    along('gloss', [cx, 1], [cx, zc + 2.4], .004, .01, 2.2, '#3a3d42');
+    box('gloss', D / 2, -.11, 0, D - 4.2, .3, Wd - 4.6, STONE, true);                 // top 4 cm over the foundation's (they fought)
+    box('gloss', (fx + cx) / 2 + 1, .046, 0, cx - fx + 2, .01, 2.2, '#3a3d42');                 // a dark runner from the door in
+    along('gloss', [cx, 1], [cx, zc + 2.4], .047, .01, 2.2, '#3a3d42');
     // Ceiling: warm panels under the podium roof, light strips, the slot for the elevator.
     const hz0 = zc - 1.85, hx0 = cx - 1.85, hx1 = cx + 1.85;
     const ceil = (xa, xb, za, zb) => { if (xb - xa > .1 && zb - za > .1) box('room', (xa + xb) / 2, P - .2, (za + zb) / 2, xb - xa, .3, zb - za, '#d9cfbf'); };
     ceil(fx, D - 2.5, z0, pz - .5); ceil(fx, D - 2.5, -pz + .5, hz0); ceil(fx, hx0, hz0, z0); ceil(hx1, D - 2.5, hz0, z0);
     for (let z = -pz + 4; z < pz - 2; z += 6) if (z > z0 + 1 || z < hz0 - 1) box('glow', D / 2, P - .37, z, D - 8, .04, .25, '#fff1da');
-    for (const x of [10, 22, 34, 44]) for (const z of [-18, -6, 6, 18]) if (x < D - 3) pool(x, 0, z, 4.2, .35);
     // Columns at the tower's corners and mid-faces.
     for (const x of [x0 + 2, x1 - 2]) for (const z of [-15, 0, 15]) { cyl('stone', x, 0, z, .6, P - .35, '#e2ddd3', true, 16); box('glow', x, P - .5, z, 1.5, .1, 1.5, '#ffe9c9'); }
     // Reception desk, a long bench, planters.
@@ -120,7 +119,7 @@ export class SkyDeck {
     for (let z = -pz; z <= pz + .01; z += 3) if (Math.abs(z) > dz + .2 || Math.abs(z) < .01) box('metal', fx, P / 2, z, .16, P, .14, DARK);
     for (const s of [-1, 1]) box('metal', fx, P / 2, s * dz, .2, P, .2, DARK);
     box('metal', fx, 3.28, 0, .2, .16, dz * 2, DARK);
-    box('metal', fx - 1.6, 4.3, 0, 3.4, .25, 7, '#2b2e33'); for (const z of [-2.6, 2.6]) box('glow', fx - 1.6, 4.16, z, 2.6, .03, .12, '#fff1da'); pool(fx - 1.8, 0, 0, 4, .4);
+    box('metal', fx - 1.6, 4.3, 0, 3.4, .25, 7, '#2b2e33'); for (const z of [-2.6, 2.6]) box('glow', fx - 1.6, 4.16, z, 2.6, .03, .12, '#fff1da');
     for (const z of [-3.1, -1.6, 0, 1.6, 3.1]) cyl('metal', -1.6, 0, z, .14, 1, '#2b2e33', true, 10);
     // Podium walls and roof (the builder draws them; these make them solid).
     solid(D - 2.25, P / 2, 0, .5, P, Wd - 4); for (const s of [-1, 1]) solid(D / 2, P / 2, s * (pz - .25), D - 4, P, .5);

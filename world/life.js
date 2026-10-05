@@ -69,7 +69,8 @@ export class Life {
     p.dur = len / rnd(70, 95); p.t = t0 * p.dur;
     p.g.position.copy(p.from); p.g.lookAt(p.to);
   }
-  update(dt, {camera, day, night}) {
+  update(dt, {camera, day, night, indoor = false}) {
+    this.indoor = !!indoor;
     this.t += dt;
     const cam = camera.position, M = this.M, Q = this.Q, E = this.E, S = this.S, P = this.P;
     // ---- birds: by day, fading out at dusk; gulls near the sea.
@@ -83,7 +84,7 @@ export class Life {
         // The flock's centre loops round the camera, drifting so it is not a fixed orbit.
         f.drift += dt * .03;
         const r = f.r * (1 + .25 * Math.sin(f.drift * 1.7)), cx = cam.x + Math.cos(f.a) * r + Math.sin(f.drift) * 40, cz = cam.z + Math.sin(f.a) * r;
-        const gy = this.ground.height(cx, cz), cy = Math.max(gy + f.h, cam.y + f.h * .35);
+        const gy = this.ground.height(cx, cz), cy = Math.max(gy + f.h, cam.y + f.h * .35) + (this.indoor ? 42 : 0);   // indoors: up over the roof, never through the room
         const hx = -Math.sin(f.a) * Math.sign(f.w), hz = Math.cos(f.a) * Math.sign(f.w), yaw = Math.atan2(hx, hz);
         for (const b of f.birds) {
           const bank = -f.w * 4;
