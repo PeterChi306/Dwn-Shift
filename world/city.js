@@ -172,6 +172,40 @@ function splitAt(pts, zm) {
   }
   return out;
 }
+/** walls() with doorways: holes [{z, a, b, h}] cut from the bottom of any
+ *  edge that runs along x at that z (from x = a to b, h tall). */
+function wallsOpen(b, mat, f, pts, y0, topOf, color, info, holes) {
+  let cx = 0, cz = 0; pts.forEach(q => { cx += q[0] / pts.length; cz += q[1] / pts.length; });
+  let run = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], c = pts[(i + 1) % pts.length], len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    if (len < 1e-3) continue;
+    let n = [c[1] - a[1], 0, -(c[0] - a[0])]; const l = Math.hypot(n[0], n[2]); n = [n[0] / l, 0, n[2] / l];
+    if (((a[0] + c[0]) / 2 - cx) * n[0] + ((a[1] + c[1]) / 2 - cz) * n[2] < 0) n = [-n[0], 0, -n[2]];
+    const quad = (p, q, ya) => {
+      const up = run + Math.hypot(p[0] - a[0], p[1] - a[1]), uq = run + Math.hypot(q[0] - a[0], q[1] - a[1]);
+      b.poly(mat, f, [[p[0], ya, p[1]], [q[0], ya, q[1]], [q[0], topOf(q), q[1]], [p[0], topOf(p), p[1]]], [[up, ya], [uq, ya], [uq, topOf(q)], [up, topOf(p)]], n, color, info);
+    };
+    const h = holes.find(o => Math.abs(a[1] - o.z) < 1e-6 && Math.abs(c[1] - o.z) < 1e-6);
+    if (!h) quad(a, c, y0);
+    else {
+      const [u, v] = c[0] > a[0] ? [h.a, h.b] : [h.b, h.a], p1 = [u, a[1]], p2 = [v, a[1]];
+      quad(a, p1, y0); quad(p1, p2, y0 + h.h); quad(p2, c, y0);
+    }
+    run += len;
+  }
+}
+/** The Meridian Bank Tower's plan, in its lot frame (x away from the street,
+ *  z along it): shared by its builder and by skydeck.js, which fits the
+ *  lobby, the elevator and the Sky Deck into it. */
+export function bankGeom(lot) {
+  const D = lot.depth, Wd = lot.width, Tx = D * .52, Lz = Wd * .78, x0 = D / 2 - Tx / 2, x1 = D / 2 + Tx / 2, z0 = -Lz / 2, z1 = Lz / 2, c = Tx * .3;
+  const P = 14, H = 212, zm = z0 + Lz * .34, pts = octagon(x0, x1, z0, z1, c);
+  return {D, Wd, x0, x1, z0, z1, c, P, H, zm, pts, crown: splitAt(pts, zm),
+    cx: D / 2, zc: z0 - 2.05,                       // the elevator car's centre, outside the south face
+    door: 1.6, doorH: 2.9, ledge: 2.2, ledgeH: 3,   // half-widths and heights of the openings in the crown
+    top: q => H + 4 + Math.max(0, q[1] - zm) / (z1 - zm) * 34};
+}
 /** Elongated octagon: long along z, chamfered corners. */
 function octagon(x0, x1, z0, z1, c) {
   return [[x0, z0 + c], [x0 + c, z0], [x1 - c, z0], [x1, z0 + c], [x1, z1 - c], [x1 - c, z1], [x0 + c, z1], [x0, z1 - c]];
@@ -229,17 +263,25 @@ export const CITY_BUILD = {
     // Dark reflective glass on an elongated octagon, white ribs up the broad
     // faces, a crown that slants up along its length, a red logo high on both
     // broad faces, a helipad on the low end of the roof.
-    const base = baseOf(lot), f = lotFrame(lot, base), D = lot.depth, Wd = lot.width;
-    const Tx = D * .52, Lz = Wd * .78, x0 = D / 2 - Tx / 2, x1 = D / 2 + Tx / 2, z0 = -Lz / 2, z1 = Lz / 2, c = Tx * .3;
-    const P = 14, H = 212, glass = '#1c2836', glassInfo = [W.tinted, 4.2, 3.2, 48];
-    b.box('wall', f, D / 2, P / 2, 0, D - 4, P, Wd - 4, '#2a2d31', [W.mixed, 7, 5, 17]);            // podium: two-storey glass lobby
-    b.box('trim', f, D / 2, P + .4, 0, D - 3, .8, Wd - 3, '#3a3d42');
-    const pts = octagon(x0, x1, z0, z1, c);
+    // 2026-10-04 (Peter: "take an elevator and go to the top floor, where
+    // there's a viewing area"): you can walk in. The podium is a real lobby
+    // (its glass front, the doors and the elevator are skydeck.js's), a glass
+    // elevator rides up the narrow south face, and the crown is the Sky Deck,
+    // with a glass-floored ledge out of the far end. skydeck.js builds the
+    // insides and EVERY collider (a hollow lobby, the shaft, the deck), so no
+    // box is pushed here.
+    const base = baseOf(lot), f = lotFrame(lot, base), G = bankGeom(lot), {D, Wd, x0, x1, z0, z1, c, P, H, zm, top, pts, crown} = G;
+    const Lz = z1 - z0, glass = '#1c2836', glassInfo = [W.tinted, 4.2, 3.2, 48], pod = '#2a2d31', podInfo = [W.mixed, 7, 5, 17], pz = Wd / 2 - 2;
+    // The podium: back and side walls of the two-storey lobby, and its roof with a slot for the elevator.
+    b.box('wall', f, D - 2.25, P / 2, 0, .5, P, Wd - 4, pod, podInfo);
+    for (const s of [-1, 1]) b.box('wall', f, D / 2, P / 2, s * (pz - .25), D - 4, P, .5, pod, podInfo);
+    const hx0 = G.cx - 1.85, hx1 = G.cx + 1.85, hz0 = G.zc - 1.85, hz1 = z0, rz = Wd / 2 - 1.5;
+    const roof = (xa, xb, za, zb) => { if (xb - xa > .05 && zb - za > .05) b.box('trim', f, (xa + xb) / 2, P + .4, (za + zb) / 2, xb - xa, .8, zb - za, '#3a3d42'); };
+    roof(1.5, D - 1.5, hz1, rz); roof(1.5, D - 1.5, -rz, hz0); roof(1.5, hx0, hz0, hz1); roof(hx1, D - 1.5, hz0, hz1);
     walls(b, 'wall', f, pts, P, () => H, glass, glassInfo);
-    // Crown: flat over the helipad end, then rising 34 m along the length.
-    const zm = z0 + Lz * .34, top = q => H + 4 + Math.max(0, q[1] - zm) / (z1 - zm) * 34;
-    const crown = splitAt(pts, zm);
-    walls(b, 'wall', f, crown, H, top, glass, glassInfo);
+    // Crown: flat over the helipad end, then rising 34 m along the length;
+    // open where the elevator lands (south) and onto the ledge (north).
+    wallsOpen(b, 'wall', f, crown, H, top, glass, glassInfo, [{z: z0, a: G.cx - G.door, b: G.cx + G.door, h: G.doorH}, {z: z1, a: G.cx - G.ledge, b: G.cx + G.ledge, h: G.ledgeH}]);
     const flat = crown.filter(q => q[1] <= zm + 1e-6), slope = crown.filter(q => q[1] >= zm - 1e-6);
     const k = 34 / (z1 - zm), nl = Math.hypot(1, k);
     b.poly('trim', f, flat.map(q => [q[0], H + 4, q[1]]), flat.map(q => [q[0], q[1]]), [0, 1, 0], '#2b2e33', [0, 0, 0, 0]);
@@ -260,16 +302,15 @@ export const CITY_BUILD = {
     b.sign('signs', f, x0 - .55, ly, 0, lw, lh, 48, [-1, 0, 0]);
     b.sign('signs', f, x1 + .55, ly, 0, lw, lh, 48, [1, 0, 0]);
     // Helipad on the flat end: a dark deck with a pale ring and an H.
-    const hz = (z0 + zm) / 2 + 2, hx = D / 2;
+    const hz = (z0 + zm) / 2 + 2, hx = D / 2, Tx = x1 - x0;
     b.prism('trim', f, circle(hx, hz, Math.min(Tx * .42, 10), 20), H + 4, H + 4.35, '#34373b');
     b.prism('trim', f, circle(hx, hz, Math.min(Tx * .42, 10) - .8, 20), H + 4.35, H + 4.4, '#e9e4d6');
     b.prism('trim', f, circle(hx, hz, Math.min(Tx * .42, 10) - 1.6, 20), H + 4.4, H + 4.45, '#34373b');
     for (const s of [-1, 1]) b.box('trim', f, hx + s * 2, H + 4.5, hz, .8, .1, 5, '#e9e4d6');
     b.box('trim', f, hx, H + 4.5, hz, 4, .1, .8, '#e9e4d6');
-    beacon(b, f, D / 2, top([0, z1]) + .3, z1 - c * .5); beacon(b, f, x0 + 1, H + 4, z0 + 1); beacon(b, f, x1 - 1, H + 4, z0 + 1);
+    beacon(b, f, D / 2, top([0, z1]) + .3, z1 - c * .5); beacon(b, f, x0 + c * .7, H + 4, z0 + c * .7); beacon(b, f, x1 - c * .7, H + 4, z0 + c * .7);   // on the roof's corners, not in the air off them
     plaza(b, f, lot, -lot.spec.setback + .5, 2);
     foundation(b, f, lot, '#44474c');
-    boxes.push({lot, h: H + 30});
   },
   sailTower(b, lot, boxes) {
     // Pale blue glass on a stadium plan, tapering in three steps, a crown

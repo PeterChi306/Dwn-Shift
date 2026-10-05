@@ -9,6 +9,7 @@
 import * as T from 'three';
 import {vec3, attribute, float, uniform, positionWorld, mx_noise_float, fract, floor, smoothstep, min, max, abs, mix, time, pow, sin, cos, normalWorld, cameraPosition, transformNormalToView, dot, clamp} from 'three/tsl';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {wetWindow} from './rain.js';
 
 const M4 = new T.Matrix4(), Q = new T.Quaternion(), UP = new T.Vector3(0, 1, 0), S1 = new T.Vector3(1, 1, 1);
 
@@ -125,7 +126,7 @@ export function kitMaterials(night) {
   const line = new T.MeshStandardNodeMaterial({roughness: .8, metalness: 0}); line.colorNode = vc;
   line.polygonOffset = true; line.polygonOffsetFactor = -2; line.polygonOffsetUnits = -2;
   const glass = new T.MeshPhysicalNodeMaterial({roughness: .04, metalness: 0, transparent: true, opacity: .32, side: T.DoubleSide, depthWrite: false});
-  glass.colorNode = vc;
+  glass.colorNode = vc; wetWindow(glass);           // rain beads and runs down the panes
   const glow = new T.MeshStandardNodeMaterial({roughness: .5, metalness: 0}); glow.colorNode = vc.mul(.35);
   glow.emissiveNode = vc.mul(float(.25).add(night.mul(3.2)));
   const lit = new T.MeshStandardNodeMaterial({roughness: .55, metalness: 0}); lit.colorNode = vc;

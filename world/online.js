@@ -159,7 +159,7 @@ export class Online {
   rebuild(peer) {
     const old = peer.vehicle;
     peer.vehicle = this.h.makeCar(peer.info || {});
-    peer.vehicle.object.visible = false; this.h.scene.add(peer.vehicle.object);
+    peer.vehicle.object.visible = false; peer.vehicle.object.userData.noRain = true; this.h.scene.add(peer.vehicle.object);
     if (old) { peer.vehicle.object.position.copy(old.object.position); peer.vehicle.object.quaternion.copy(old.object.quaternion); peer.vehicle.object.visible = old.object.visible; this.h.scene.remove(old.object); this.h.disposeCar(old); }
     peer.tag.querySelector('i').style.background = this.color(peer.id);
   }

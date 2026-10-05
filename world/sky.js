@@ -94,7 +94,7 @@ export class Sky {
       const oc = weather.cloud, fl = weather.flash;
       const deck = fbm(p.mul(.55).add(vec2(time.mul(.03), time.mul(.012)))), scud = fbm(p.mul(1.6).add(vec2(time.mul(.07), time.mul(.02))));
       const grey = mix(vec3(.018, .02, .026), vec3(.4, .43, .48), day.mul(.85).add(golden.mul(.1))).mul(deck.mul(.55).add(.62)).mul(float(1).sub(smoothstep(.55, .85, scud).mul(.28)));
-      const storm = grey.add(vec3(.75, .8, 1).mul(fl).mul(deck.mul(1.2).add(.3)));
+      const bolt = pow(max(dot(d, weather.flashDir), 0), 4), storm = grey.add(vec3(.75, .8, 1).mul(fl).mul(deck.mul(1.2).add(.3)).mul(bolt.mul(1.6).add(.35)));
       c.assign(mix(c, storm, oc.mul(smoothstep(-.25, .02, d.y).mul(.15).add(.85))));
       return sRGBTransferEOTF(max(c, vec3(0)));
     });

@@ -37,6 +37,13 @@ export class Walker {
     this.pos.set(x, y, z);
     this.mesh.visible = true;
   }
+  /** Set down at a point (feet), keeping the way you face: the sky-deck elevator carries you this way. */
+  place(x, y, z) {
+    const t = {x, y: y + HALF + RAD + .02, z};
+    this.body.setTranslation(t, true); this.body.setNextKinematicTranslation(t);
+    this.pos.set(x, y, z); this.vy = 0; this.speed = 0; this.grounded = true;
+    this.mesh.position.set(x, y, z);
+  }
   leave() {
     this.active = false; this.mesh.visible = false;
     this.collider.setEnabled(false);
