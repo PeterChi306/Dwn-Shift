@@ -75,7 +75,11 @@ export class Designs {
     return true;
   }
   /** Where the parked ones stand (all of them: on load). */
-  spawnParked() { for (const d of this.list) if (d.park && d.id !== this.s.active) this.place(d); this.parkAll(); }
+  spawnParked() {
+    // (2026-10-04) Bays used to stand a car 0.52 m up (its origin is where the tyres touch): re-park those.
+    for (const d of this.list) if (d.park && !d.park.wy && d.park.stall && !d.park.v2) d.park = null;
+    for (const d of this.list) if (d.park && d.id !== this.s.active) this.place(d); this.parkAll();
+  }
   /** Every design you are not driving stands in a bay (2026-10-04: "the more designs you spawn, it will park at each space"). */
   parkAll() {
     if (!this.io.freeBay) return;

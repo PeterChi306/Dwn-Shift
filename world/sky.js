@@ -18,6 +18,7 @@ import {Fn, uniform, vec2, vec3, float, positionLocal, normalize, dot, sin, frac
 import {weather} from './rain.js';
 
 const _c = new T.Vector3(), _x = new T.Vector3(), _y = new T.Vector3(), _z = new T.Vector3(), _up = new T.Vector3(0, 1, 0);
+const _hemiDeep = new T.Color('#8e99aa'), _groundDeep = new T.Color('#25272b');
 const hash = Fn(([p]) => fract(sin(dot(p, vec2(127.1, 311.7))).mul(43758.5453)));
 const noise = Fn(([p]) => {
   const i = floor(p), f = fract(p), u = f.mul(f).mul(float(3).sub(f.mul(2)));
@@ -138,7 +139,7 @@ export class Sky {
   }
 
   /** Sun, hemisphere bounce and fog follow the same clock as the sky. */
-  applyLighting({sun, hemi, fog, position, tunnel = 0}) {
+  applyLighting({sun, hemi, fog, position, tunnel = 0, deep = 0}) {
     // tunnel: 0 open air .. 1 deep in a bore (eased by the caller, so the light
     // fades in and out over a second instead of switching at the portal).
     const T0 = +tunnel, mixT = (open, dark) => open + (dark - open) * T0;
@@ -166,12 +167,14 @@ export class Sky {
     hemi.color.copy(new T.Color('#2a3350').lerp(new T.Color('#b58ea6'), Math.min(1, golden + dusk * .6)).lerp(new T.Color('#bcd4ec'), day * (1 - golden * .7)));
     hemi.groundColor.copy(new T.Color('#1d1a1c').lerp(new T.Color('#7a5a48'), golden).lerp(new T.Color('#8d7f6b'), day * (1 - golden)));
     hemi.intensity = mixT(.25 + day * (1.05 - high * .5), .12);
+    // (2026-10-04) Underground the sunset's colours do not follow you down: the little fill left is a neutral grey.
+    hemi.color.lerp(_hemiDeep, T0 * .8); hemi.groundColor.lerp(_groundDeep, T0 * .8);
     // Fog lands on the horizon colour the sky shader paints (its average across bearings).
     const lin = (r, g, b) => new T.Color().setRGB(r, g, b, T.SRGBColorSpace);
     const horizon = lin(.05, .06, .12).lerp(lin(.82, .5, .42), Math.min(1, dusk + golden)).lerp(lin(.72, .81, .9), day * (1 - golden * .85));
     fog.color.copy(horizon);
     fog.density = .00005 + (1 - day) * .00005 - high * .00002;
-    this.scene.environmentIntensity = mixT(.25 + day * (.85 - high * .35), .07);
+    this.scene.environmentIntensity = mixT(.25 + day * (.85 - high * .35), .07) * (1 - deep * .85);     // deep: the cave under the Mulholland basement
     // Overcast and rain: the sun goes in, the light goes flat and grey, the fog closes in; lightning lights it all.
     const oc = weather.cloud.value, rain = weather.rain.value, fl = weather.flash.value;
     if (oc > .001) {

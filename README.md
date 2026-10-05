@@ -6,6 +6,12 @@ The supplied Los Santerra map now drives a connected street graph, replacing the
 
 Run `python3 -m http.server 8080 --bind 127.0.0.1` and open `http://127.0.0.1:8080`. See [WORLD.md](WORLD.md) for controls, the reference-map tracing method, Blender sources, validation and current limits. **Drive → Original simulator** returns to the full existing interface.
 
+## DWN Works furnished, demo builds out front (2026-10-04)
+
+**DWN Works** has a working left bay (a GT3 R up on the two-post lift, a workbench and pegboard, a V8 on an engine stand, a tool cart, drums, a compressor) and a showroom right bay (the Absolut turning on a lit plinth, a lounge, a reception counter, a wall of rims, a parts shelf), with a lit sign and posters inside. Six demo builds stand in the stalls out front, each with its card: Drift Missile, 2,000 HP One-Eye, Track Day, Midnight Run, Rally Raid and Rosso Longtail. Designs parked in the basement's bays now stand on the floor (they were half a metre up).
+
+The cave's rock is Poly Haven's *Cliff Side* texture (CC0), in `assets/world/textures/`.
+
 ## Your cars, and the basement garage at the Mulholland Estate (2026-10-04)
 
 **Designs.** Every design is its own car, with its own name, workshop build, paint, cabin light, engine and handling. Every design you are not driving waits in its own bay of the basement garage, in order. **Menu → Garage → My cars** lists them (up to 10): drive, rename, copy or delete one, or start a new one from the factory car. In DWN Works the row under the name picks which design is on the ring (**+ New from this one** branches a variant). Click the name to rename it.
