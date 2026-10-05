@@ -266,3 +266,14 @@ body.racing .world-toast{top:178px}
 #world #dwnWorks .dw-design.add{padding:6px 12px;color:#cfe0ff;border-style:dashed}
 #dwnWorks .dw-top h2 [contenteditable]{outline:none;border-bottom:1px dashed transparent;cursor:text}
 #dwnWorks .dw-top h2 [contenteditable]:hover,#dwnWorks .dw-top h2 [contenteditable]:focus{border-bottom-color:#9fc0ff88}
+/* (no comment) */
+.bc-pad{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:radial-gradient(circle at 50% 50%,#000a,#000d)}
+.bc-box{display:flex;flex-direction:column;align-items:center;gap:12px;padding:30px 38px;border:1px solid #3fa9ff55;border-radius:10px;background:#04080ce6;box-shadow:0 0 60px #3fa9ff22;font-family:"Courier New",monospace;color:#9fdcff}
+.bc-box span{font-size:10px;letter-spacing:4px;opacity:.6}
+.bc-box b{font-size:20px;letter-spacing:5px;font-weight:600}
+.bc-box input{font:inherit;font-size:26px;letter-spacing:10px;text-align:center;width:220px;background:#000;border:1px solid #3fa9ff66;border-radius:5px;color:#d9f1ff;padding:8px;outline:none}
+.bc-box input:focus{border-color:#3fa9ff;box-shadow:0 0 18px #3fa9ff44}
+.bc-box small{font-size:9px;letter-spacing:2px;opacity:.45}
+.bc-box.ok{border-color:#4dff9a;color:#7dffb4;box-shadow:0 0 60px #4dff9a33}
+.bc-box.no{border-color:#ff4d4d;color:#ff9a9a;animation:bcShake .4s}
+@keyframes bcShake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}

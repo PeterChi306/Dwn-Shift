@@ -3,7 +3,7 @@
  * work on inside the workshop").
  *
  * A design is one car of yours: its name, the workshop build, paint, cabin
- * light, engine sound and handling. One is ACTIVE: the car you drive and the
+ * light, engine sound and handling (ten at most). One is ACTIVE: the car you drive and the
  * one DWN Works dresses; its values are mirrored to the old per-browser keys
  * (dwnBuild, dwnPaint:aurora, ...) so everything that read them still works,
  * and every change is captured back into it. The others are either STORED (a
@@ -16,12 +16,14 @@
  */
 import * as T from 'three';
 
-const KEY = 'dwnDesigns', MAX = 12;
+export const MAX_DESIGNS = 10;
+const KEY = 'dwnDesigns', MAX = MAX_DESIGNS;
 const uid = () => 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 export class Designs {
   /** io: {capture(): the active car's {build, paint, ambient, sound, handling}, apply(d): put a design on the
-   *  player car, factory(): a fresh design's values, makeCar(d): a vehicle (makePlayerCar + build), scene, physics} */
+   *  player car, factory(): a fresh design's values, makeCar(d): a vehicle (makePlayerCar + build), scene, physics,
+   *  freeBay(taken): a park pose in an empty bay of the basement garage, or null} */
   constructor(io) {
     this.io = io; this.models = new Map(); this.applying = false;
     let s = null; try { s = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch {}
@@ -50,7 +52,7 @@ export class Designs {
     let n = this.list.length + 1, name = src ? src.name + ' II' : 'Design ' + n;
     while (this.list.some(d => d.name === name)) name = src ? name + 'I' : 'Design ' + (++n);
     const d = {id: uid(), name, ...base, park: null};
-    this.list.push(d); this.save();
+    this.list.push(d); this.save(); this.parkAll();
     return d;
   }
   remove(id) {
@@ -58,7 +60,7 @@ export class Designs {
     this.unpark(id); this.s.list = this.list.filter(d => d.id !== id); this.save();
     return true;
   }
-  /** Make `id` the car you drive. The current one is parked at `leave` (a pose) or stored. */
+  /** Make `id` the car you drive. The current one is parked at `leave` (a pose), else in a free bay. */
   use(id, leave = null) {
     const next = this.get(id), prev = this.active;
     if (!next || next === prev) return false;
@@ -66,13 +68,25 @@ export class Designs {
     prev.park = leave; if (leave) this.place(prev);
     this.unpark(next.id); next.park = null;
     this.s.active = id;
+    if (!leave) this.parkAll();                 // the one you left goes to a free bay
     this.applying = true;
     try { this.io.apply(next); } finally { this.applying = false; }
     this.capture();
     return true;
   }
   /** Where the parked ones stand (all of them: on load). */
-  spawnParked() { for (const d of this.list) if (d.park && d.id !== this.s.active) this.place(d); }
+  spawnParked() { for (const d of this.list) if (d.park && d.id !== this.s.active) this.place(d); this.parkAll(); }
+  /** Every design you are not driving stands in a bay (2026-10-04: "the more designs you spawn, it will park at each space"). */
+  parkAll() {
+    if (!this.io.freeBay) return;
+    const taken = (x, z) => [...this.models.values()].some(m => Math.hypot(m.v.object.position.x - x, m.v.object.position.z - z) < 2.2);
+    for (const d of this.list) {
+      if (d.id === this.s.active || d.park) continue;
+      const P = this.io.freeBay(taken); if (!P) break;
+      d.park = P; this.place(d);
+    }
+    this.save();
+  }
   place(d) {
     this.unpark(d.id, false);
     const P = d.park, v = this.io.makeCar(d);

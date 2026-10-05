@@ -44,7 +44,7 @@ export class WorkshopUI {
     if (document.activeElement !== this.el.querySelector('#dwName')) this.el.querySelector('#dwName').textContent = D.active.name;
     this.el.querySelector('#dwBuildName').textContent = this.api.label?.() || 'Custom';
     bar.innerHTML = D.list.map(d => `<button class="dw-design${d === D.active ? ' on' : ''}" data-design="${d.id}" title="${d === D.active ? 'On the ring' : 'Put this one on the ring'}"><i style="--c:${esc(d.paint || this.api.defaultPaint || '#5d6670')}"></i>${esc(d.name)}</button>`).join('')
-      + (D.list.length < 12 ? `<button class="dw-design add" data-new="1">+ NEW FROM THIS ONE</button>` : '');
+      + (D.list.length < 10 ? `<button class="dw-design add" data-new="1">+ NEW FROM THIS ONE</button>` : '');
     bar.querySelectorAll('[data-design]').forEach(b => b.onclick = () => { if (b.dataset.design !== D.active.id) { this.api.useDesign(b.dataset.design); this.show(); } });
     bar.querySelector('[data-new]')?.addEventListener('click', () => { this.api.newDesign(); this.show(); });
   }

@@ -25,16 +25,17 @@
  */
 import * as T from 'three';
 import {Kit} from './kit.js';
+import {buildBatcave, SECRET} from './batcave.js';
 
 export const BASEMENT = {
   floor: -6, ceil: -.55, lane: 2.7,
   trench: {u: 24.5, v0: 11, v1: 30}, turn: {cu: 18, cv: 30, r: 6.5}, low: {u: 11.5, v0: 30, v1: 12},
   hall: {u0: 8.8, u1: 33.5, v0: -20, v1: 15},
-  lid: {u0: 21.5, u1: 27.5, v0: 11.2, v1: 30, lift: 3.4},
+  lid: {u0: 21.4, u1: 27.6, v0: 11, v1: 30.05, lift: 3.4},
   button: {u: 29.2, v: 10.3}, button2: {u: 16, v: 14.75},
   // Dug out under the lawn (frame rects, the pit floor's height): kept 2.5 m clear of every wall so the
   // terrain's 2 m grid never slopes up inside.
-  pits: [{u0: 6.3, u1: 36, v0: -22.5, v1: 17.5}, {u0: 6.3, u1: 30, v0: 15, v1: 41.7}, {u0: 19.3, u1: 29.7, v0: 8.5, v1: 32}],
+  pits: [{u0: 6.3, u1: 36, v0: -22.5, v1: 17.5}, {u0: 26, u1: 36, v0: -26.5, v1: -18}, {u0: 6.3, u1: 30, v0: 15, v1: 41.7}, {u0: 19.3, u1: 29.7, v0: 8.5, v1: 32}],
   pitY: -6.6,
 };
 const B = BASEMENT, A_LEN = B.trench.v1 - B.trench.v0, B_LEN = Math.PI * B.turn.r, C_LEN = B.low.v0 - B.low.v1, LEN = A_LEN + B_LEN + C_LEN;
@@ -50,7 +51,7 @@ function route(s) {
 /* Heights: from the court (.09) to 2.65 m down at the portal (headroom under
  * the lawn), then a gentler fall to the hall floor; corners rounded so a low
  * car never grounds at a change of grade. */
-const KNOTS = [[0, .09], [2, .04], [A_LEN, -2.65], [LEN - 4, B.floor], [LEN + 10, B.floor]];
+const KNOTS = [[0, .03], [2, -.06], [A_LEN, -2.65], [LEN - 4, B.floor], [LEN + 10, B.floor]];
 function lin(s) { for (let i = 1; i < KNOTS.length; i++) if (s <= KNOTS[i][0]) { const [a, ya] = KNOTS[i - 1], [b, yb] = KNOTS[i]; return ya + (yb - ya) * (s - a) / (b - a); } return B.floor; }
 function height(s) { if (s <= 0) return .09; let t = 0; for (let k = -6; k <= 6; k++) t += lin(Math.max(0, s + k * .4)); return t / 13; }
 
@@ -71,7 +72,9 @@ export function buildBasement(F, H, places) {
     }
   }
   kit.sheet('flood', grid, '#3a3c41', true);
-  for (const e of edges) kit.ribbon('glow', e, .08, '#eef5ff', .004);
+  // Light lines only where they are well under the closed lid: nothing shows on the lawn when it is down.
+  const deep = (pts, k) => pts.filter((q, i) => route(Math.min(LEN, i * step)).y < k);
+  for (const e of edges) kit.ribbon('glow', deep(e, -.5), .08, '#eef5ff', .004);
   for (let i = 0; i < n; i++) {
     const s0 = i * step, s1 = Math.min(LEN, s0 + step), a = route(s0), b = route(s1), covered = s0 >= A_LEN - .01;
     for (const o of [-1, 1]) {
@@ -86,20 +89,16 @@ export function buildBasement(F, H, places) {
     }
   }
   for (let k = 0; k < 2; k++) for (let i = 0; i < n; i++) {
-    kit.rod('glow', coves[k][i], coves[k][i + 1], .025, COOL, 4);
+    if (route(i * step).y < -.8) kit.rod('glow', coves[k][i], coves[k][i + 1], .025, COOL, 4);
     if (i * step >= A_LEN) kit.rod('glow', tops[k][i], tops[k][i + 1], .02, WARM, 4);
   }
   // A line of light down the middle of the covered ceiling, and the portal's lit header.
   for (let i = Math.ceil(A_LEN / step); i < n; i++) { const a = route(i * step), b = route(Math.min(LEN, (i + 1) * step)); kit.rod('glow', wp(a.u, a.v, CE - .02), wp(b.u, b.v, CE - .02), .03, '#f4f8ff', 4); }
-  F.rect('stone', B.trench.u - LW - .34, B.trench.v1, B.trench.u + LW + .34, B.trench.v1 + .4, CE, .04, BASALT, true);
+  // The portal's header stays under the lawn; its lip is lit.
+  F.rect('stone', B.trench.u - LW - .34, B.trench.v1, B.trench.u + LW + .34, B.trench.v1 + .4, CE, -.27, BASALT, true);
   F.rect('glow', B.trench.u - LW, B.trench.v1 - .02, B.trench.u + LW, B.trench.v1, CE + .02, CE + .1, WARM);
-  F.rect('metal', B.trench.u - LW - .34, B.trench.v1 - .05, B.trench.u + LW + .34, B.trench.v1 + .42, .02, .07, '#1b1c1e');
-  // Glass balustrades along the trench's long sides and its far end (the lid rises between them).
-  F.balustrade(B.lid.u0 - .17, 12.6, B.lid.u0 - .17, B.lid.v1 + .3, .04);
-  F.balustrade(B.lid.u1 + .17, 12.6, B.lid.u1 + .17, B.lid.v1 + .3, .04);
-  F.balustrade(B.lid.u0 - .17, B.lid.v1 + .3, B.lid.u1 + .17, B.lid.v1 + .3, .04);
-  // The rams' housings in the wall tops.
-  for (const u of [B.lid.u0 + .15, B.lid.u1 - .15]) for (const v of [14, 26]) F.cyl('metal', u, v, -.3, .2, .36, '#2a2b2e', 14);
+  // The rams' housings, under the lid's edge.
+  for (const u of [B.lid.u0 + .2, B.lid.u1 - .2]) for (const v of [14, 26]) F.cyl('metal', u, v, -.32, .2, .27, '#2a2b2e', 14);
   // The button post at the court's corner, and the one by the ramp's foot.
   const post = (u, v, y0) => { F.cyl('metal', u, v, y0, .13, 1.05, '#202124', 14, true); F.cyl('gloss', u, v, y0 + 1.05, .135, .05, '#0d0e10', 14); F.cyl('glow', u, v, y0 + 1.1, .07, .02, '#7fd0ff', 14); F.pool(u, v, y0 + .03, 1.5, .5); };
   post(B.button.u, B.button.v, .09);
@@ -111,14 +110,14 @@ export function buildBasement(F, H, places) {
   F.rect('gloss', u0, v0, u1, v1, FL - .4, FL, '#141518', true);
   F.wall(u0, v0, u0, v1, HT + .4, .4, CHAR, [], 'paint', FL - .4);
   F.wall(u1, v0, u1, v1, HT + .4, .4, CHAR, [], 'paint', FL - .4);
-  F.wall(u0, v0, u1, v0, HT + .4, .4, CHAR, [], 'paint', FL - .4);
+  F.wall(u0, v0, u1, v0, HT + .4, .4, CHAR, [[SECRET.u - SECRET.hw - u0, SECRET.u + SECRET.hw - u0, SECRET.h + .4]], 'paint', FL - .4);   // (one panel is not wall)
   F.wall(B.low.u + LW + .17, v1, u1, v1, HT + .4, .4, CHAR, [], 'paint', FL - .4);
   F.rect('paint', u0, v0, u1, v1, CE, CE + .2, '#0f1012');
   // Ceiling: lines of light across the hall, a cove all round.
   for (let v = v0 + 2.2; v < v1 - 1; v += 2.9) F.rect('glow', u0 + 1.2, v - .05, u1 - 1.2, v + .05, CE - .03, CE, '#eef4ff');
   for (const [a, b, c, d] of [[u0 + .2, v0 + .2, u1 - .2, v0 + .3], [u0 + .2, v1 - .3, u1 - .2, v1 - .2], [u0 + .2, v0 + .2, u0 + .3, v1 - .2], [u1 - .3, v0 + .2, u1 - .2, v1 - .2]]) F.rect('glow', a, b, c, d, CE - .12, CE - .06, WARM);
   // The far wall: warm lit fins, floor to ceiling.
-  for (let u = u0 + 1.4; u < u1 - 1; u += 1.15) { F.rect('wood', u - .09, v0 + .2, u + .09, v0 + .45, FL, CE - .2, '#4a3324'); F.rect('glow', u - .02, v0 + .45, u + .02, v0 + .47, FL + .3, CE - .4, WARM); }
+  for (let u = u0 + 1.4; u < u1 - 1; u += 1.15) { const y0 = Math.abs(u - SECRET.u) < SECRET.hw + .1 ? SECRET.h : 0; F.rect('wood', u - .09, v0 + .2, u + .09, v0 + .45, FL + y0, CE - .2, '#4a3324'); F.rect('glow', u - .02, v0 + .45, u + .02, v0 + .47, FL + Math.max(.3, y0 + .1), CE - .4, WARM); }
   // Wall washes: light fans up the long walls.
   for (let v = v0 + 2; v < v1 - 1; v += 3.7) { F.scallop(u0 + .2, v, FL, [1, 0], 2.6, HT * .9, .5); F.scallop(u1 - .2, v, FL, [-1, 0], 2.6, HT * .9, .5); }
   // Bays: luminous lines, a wheel stop, a pool of light, a number.
@@ -163,14 +162,23 @@ export function buildBasement(F, H, places) {
   lid.position.set(lx, F.y, lz); places.scene.add(lid);
   const chrome = new T.MeshStandardMaterial({color: '#d9dde2', metalness: 1, roughness: .12}), ramGeo = new T.CylinderGeometry(.09, .09, 1, 14).translate(0, .5, 0);
   const rams = [];
-  for (const u of [L.u0 + .15, L.u1 - .15]) for (const v of [14, 26]) { const m = new T.Mesh(ramGeo, chrome); const [x, z] = F.w(u, v); m.position.set(x, F.y + .06, z); m.scale.y = .01; m.castShadow = true; places.scene.add(m); rams.push(m); }
-  H.basement = new Basement({F, lid, rams, stalls, scene: places.scene});
+  for (const u of [L.u0 + .2, L.u1 - .2]) for (const v of [14, 26]) { const m = new T.Mesh(ramGeo, chrome); const [x, z] = F.w(u, v); m.position.set(x, F.y - .06, z); m.scale.y = .01; m.castShadow = true; places.scene.add(m); rams.push(m); }
+  // Glass rails round the open trench: they rise out of the lawn with the lid and sink away under it.
+  const rk = new Kit(), rail = (a, b, c, d) => { const L2 = Math.hypot(c - a, d - b), cu = (a + c) / 2 - (L.u0 + L.u1) / 2, cv = (b + d) / 2 - (L.v0 + L.v1) / 2, along = Math.abs(d - b) > Math.abs(c - a);
+    rk.box('glass', cu, .55, cv, along ? .03 : L2, 1.05, along ? L2 : .03, 0, '#b8d3dc'); rk.box('metal', cu, 1.08, cv, along ? .06 : L2, .05, along ? L2 : .06, 0, '#2a2b2e'); };
+  const ru0 = L.u0 - .12, ru1 = L.u1 + .12, rv0 = 12.6, rv1 = L.v1 + .15;
+  rail(ru0, rv0, ru0, rv1); rail(ru1, rv0, ru1, rv1); rail(ru0, rv1, ru1, rv1);
+  const rails = new T.Group(); rails.rotation.y = F.yaw; rk.build(rails, places.mats, {shadows: false}); rails.position.set(lx, F.y - 1.2, lz); places.scene.add(rails);
+  const railCols = [[ru0, rv0, ru0, rv1], [ru1, rv0, ru1, rv1], [ru0, rv1, ru1, rv1]].map(([a, b, c, d]) => { const [x, z] = F.w((a + c) / 2, (b + d) / 2), along = Math.abs(d - b) > Math.abs(c - a), L2 = Math.hypot(c - a, d - b);
+    return {x, y: F.y + .6, z, hx: along ? .1 : L2 / 2, hy: .6, hz: along ? L2 / 2 : .1, yaw: F.yaw, tag: 'stone'}; });
+  H.basement = new Basement({F, lid, rams, rails, railCols, stalls, scene: places.scene});
+  H.basement.cave = buildBatcave(F, places, B);
 }
 
 /* ------------------------------------------------------------------ runtime */
 export class Basement {
-  constructor({F, lid, rams, stalls, scene}) {
-    this.F = F; this.lid = lid; this.rams = rams; this.stalls = stalls; this.scene = scene;
+  constructor({F, lid, rams, rails, railCols, stalls, scene}) {
+    this.F = F; this.lid = lid; this.rams = rams; this.rails = rails; this.railCols = railCols; this.railsOn = null; this.stalls = stalls; this.scene = scene;
     this.lift = 0; this.want = 0; this.physics = null; this.lidOn = null; this.prompt = ''; this.underground = 0; this.audio = null; this.moving = false;
     this.boards();
   }
@@ -179,6 +187,7 @@ export class Basement {
   /** Inside the hall or the covered ramp (0..1, for the light)? */
   inside(p) {
     const q = this.local(p), h = B.hall;
+    if (this.cave?.inside(q)) return true;
     if (q.y > -.2 || q.y < B.floor - 2) return false;
     if (q.u > h.u0 && q.u < h.u1 && q.v > h.v0 && q.v < h.v1) return true;
     const s = this.along(q); return s !== null && s > A_LEN - 1;
@@ -215,8 +224,7 @@ export class Basement {
       const m = mk(1.1, .55, (c, w, h) => { c.clearRect(0, 0, w, h); c.fillStyle = '#eaf2ff'; c.font = '300 210px Outfit, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(s.label, w / 2, h / 2 + 8); });
       const u = s.u + s.nose * 2.95, [x, z] = F.w(u, s.v); m.position.set(x, F.y + B.floor + 2.6, z); m.rotation.y = F.yaw - s.nose * Math.PI / 2; this.scene.add(m);
     }
-    const name = mk(9, 1.3, (c, w, h) => { c.clearRect(0, 0, w, h); c.fillStyle = '#ffe9c9'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '200 76px Outfit, Arial'; c.fillText('M U L H O L L A N D   ·   9 1 6 1', w / 2, h * .42); c.font = '500 24px Outfit, Arial'; c.fillStyle = '#c9b49a'; c.fillText('P R I V A T E   C O L L E C T I O N', w / 2, h * .8); }, 1400);
-    const [x, z] = F.w((B.hall.u0 + B.hall.u1) / 2 + 2.5, B.hall.v0 + .5); name.position.set(x, F.y + B.floor + 4.1, z); name.rotation.y = F.yaw; this.scene.add(name);
+
   }
   setLidCollider(on) {
     if (!this.physics || this.lidOn === on) return; this.lidOn = on;
@@ -232,14 +240,19 @@ export class Basement {
     return this.want ? 'The ground rises' : 'The ground comes down';
   }
   /** o: {dt, camera, walker (pos) | null, onFoot, car: position, carSpeed, audio}. Returns the prompt. */
-  update({dt, camera, walker, onFoot, car, audio}) {
+  update({dt, camera, walker, walkerObj, onFoot, car, audio}) {
+    this.walkerObj = walkerObj;
     if (audio && !this.audio) this.audio = new LidAudio(audio.ctx, audio.out);
     // The lid: it races up (fast, easing in at the top), comes down slower.
     const was = this.lift, k = this.want ? Math.min(1, this.lift + dt / 1.7) : Math.max(0, this.lift - dt / 3.2);
     this.lift = k;
     const e = this.want ? 1 - Math.pow(1 - k, 2.4) : k * k * (3 - 2 * k), y = e * B.lid.lift;
     this.lid.position.y = this.F.y + y;
-    for (const r of this.rams) r.scale.y = Math.max(.01, y + .02);
+    for (const r of this.rams) r.scale.y = Math.max(.01, y + .1);
+    // The rails come up in the first half of the lift and go down in the last half of the close.
+    const ry = Math.min(1, e * 2.2); this.rails.position.y = this.F.y - 1.2 + ry * 1.2; this.rails.visible = ry > .01;
+    const railsOn = ry > .9;
+    if (this.physics && railsOn !== this.railsOn) { this.railsOn = railsOn; if (railsOn) this.physics.setBoxes('basementRails', this.railCols); else this.physics.remove('basementRails'); }
     const moving = was !== k; if (this.moving && !moving) this.audio?.stop(); this.moving = moving;
     this.setLidCollider(k === 0);
     // Driving up from below with it shut: the sensor opens it.
@@ -247,11 +260,13 @@ export class Basement {
     // The light: underground the day is shut out.
     const ug = this.inside(camera.position) ? 1 : 0;
     this.underground += (ug - this.underground) * (1 - Math.exp(-dt * 3));
+    // The cave (batcave.js): its lift carries you; its prompt wins.
+    this.carrying = this.cave ? this.cave.update({dt, walker: this.walkerObj, onFoot, camera, audio}) : false;
     // Buttons.
-    this.prompt = ''; this.at = null;
+    this.prompt = this.cave?.prompt || ''; this.at = null;
     if (onFoot && walker) {
       const q = this.local(walker);
-      for (const [b, y0] of [[B.button, 0], [B.button2, B.floor]]) if (Math.hypot(q.u - b.u, q.v - b.v) < 1.9 && Math.abs(q.y - y0) < 1.6) { this.at = b; this.prompt = '<kbd>E</kbd> ' + (this.want ? 'LOWER THE GROUND' : 'RAISE THE GROUND · THE GARAGE BELOW'); }
+      for (const [b, y0] of [[B.button, 0], [B.button2, B.floor]]) if (!this.prompt && Math.hypot(q.u - b.u, q.v - b.v) < 1.9 && Math.abs(q.y - y0) < 1.6) { this.at = b; this.prompt = '<kbd>E</kbd> ' + (this.want ? 'LOWER THE GROUND' : 'RAISE THE GROUND · THE GARAGE BELOW'); }
     }
     return this.prompt;
   }
