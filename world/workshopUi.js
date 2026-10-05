@@ -20,21 +20,37 @@ export class WorkshopUI {
   constructor(root, api) {
     this.api = api; this.cat = 'presets'; this.open = false; this.t = 0;
     const el = document.createElement('section'); el.id = 'dwnWorks'; el.hidden = true;
-    el.innerHTML = `<header class="dw-top"><div><span class="world-eyebrow">DWN WORKS · SUNSET BOULEVARD</span><h2>Aurora <small id="dwBuildName">Factory</small></h2></div>
+    el.innerHTML = `<header class="dw-top"><div><span class="world-eyebrow">DWN WORKS · SUNSET BOULEVARD</span><h2><span id="dwName" contenteditable="plaintext-only" spellcheck="false" title="Rename this design">Aurora</span> <small id="dwBuildName">Factory</small></h2><div class="dw-designs" id="dwDesigns"></div></div>
       <button class="dw-exit" id="dwExit">DRIVE OUT <kbd>ESC</kbd></button></header>
       <nav class="dw-cats" id="dwCats">${CATS.map(([k, n]) => `<button data-cat="${k}">${n}</button>`).join('')}</nav>
       <aside class="dw-panel" id="dwPanel"></aside>
       <footer class="dw-foot"><span>DRAG TO TURN THE CAR</span><span>CHANGES APPLY LIVE · SAVED WHEN YOU DRIVE OUT</span></footer>`;
     root.append(el); this.el = el;
     el.querySelector('#dwExit').onclick = () => api.close();
+    // The design's name: click it and type; Enter keeps it.
+    const nm = el.querySelector('#dwName');
+    nm.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); nm.blur(); } if (e.key === 'Escape') { e.preventDefault(); nm.textContent = this.api.designs?.().active.name; nm.blur(); } });
+    nm.addEventListener('blur', () => { const t = nm.textContent.trim(); if (t && this.api.renameDesign) this.api.renameDesign(t); this.designs(); });
     el.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => this.show(b.dataset.cat));
     this.spin = 0; this.drag = null;
     el.addEventListener('pointerdown', e => { if (e.target === el) { this.drag = e.clientX; el.setPointerCapture(e.pointerId); } });
     el.addEventListener('pointermove', e => { if (this.drag !== null) { this.spin -= (e.clientX - this.drag) * .006; this.drag = e.clientX; this.idle = 0; } });
     el.addEventListener('pointerup', () => this.drag = null);
   }
+  /** The designs bar: which of your cars is on the ring (2026-10-04). */
+  designs() {
+    const D = this.api.designs?.(); if (!D) return;
+    const bar = this.el.querySelector('#dwDesigns'), esc = v => String(v).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+    if (document.activeElement !== this.el.querySelector('#dwName')) this.el.querySelector('#dwName').textContent = D.active.name;
+    this.el.querySelector('#dwBuildName').textContent = this.api.label?.() || 'Custom';
+    bar.innerHTML = D.list.map(d => `<button class="dw-design${d === D.active ? ' on' : ''}" data-design="${d.id}" title="${d === D.active ? 'On the ring' : 'Put this one on the ring'}"><i style="--c:${esc(d.paint || this.api.defaultPaint || '#5d6670')}"></i>${esc(d.name)}</button>`).join('')
+      + (D.list.length < 12 ? `<button class="dw-design add" data-new="1">+ NEW FROM THIS ONE</button>` : '');
+    bar.querySelectorAll('[data-design]').forEach(b => b.onclick = () => { if (b.dataset.design !== D.active.id) { this.api.useDesign(b.dataset.design); this.show(); } });
+    bar.querySelector('[data-new]')?.addEventListener('click', () => { this.api.newDesign(); this.show(); });
+  }
   show(cat = this.cat) {
     if (cat !== this.cat) this.spin = 0;
+    this.designs();
     this.cat = cat; this.open = true; this.el.hidden = false; this.idle = 0;
     this.el.querySelectorAll('[data-cat]').forEach(b => b.classList.toggle('on', b.dataset.cat === cat));
     const p = this.el.querySelector('#dwPanel'), b = this.api.build(), title = CATS.find(c => c[0] === cat)[1];
@@ -70,7 +86,8 @@ export class WorkshopUI {
     p.querySelectorAll('[data-sound]').forEach(btn => btn.onclick = () => { this.api.setSound(btn.dataset.sound); this.show(cat); });
     p.querySelectorAll('[data-handling]').forEach(btn => btn.onclick = () => { this.api.setHandling(btn.dataset.handling); this.show(cat); });
   }
-  name(n) { try { localStorage.setItem('dwnBuildName', n); } catch {} this.el.querySelector('#dwBuildName').textContent = n; }
+  /** The build's style label (a preset's name, or Custom); the design keeps its own name. */
+  name(n) { this.api.setLabel?.(n); this.el.querySelector('#dwBuildName').textContent = n; }
   hide() { this.open = false; this.el.hidden = true; }
   /** The camera for this frame: {from, to} in the car's frame. */
   camera(dt) {

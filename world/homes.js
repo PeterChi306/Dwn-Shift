@@ -32,6 +32,7 @@
 import * as T from 'three';
 import {RESERVED} from './places.js';
 import {washDisc, washFan, washTrunk} from './kit.js';
+import {BASEMENT, buildBasement} from './basement.js';
 
 export const HOMES = [
   {id: 'mansion', name: 'Mulholland Estate', kind: 'home', road: [-587, -3320], f: [.246, .969], y: 499.3, depth: 74, width: 84, setback: 5, build: mansion,
@@ -40,7 +41,9 @@ export const HOMES = [
     // cutting or bank rises into it) up to its street wall; the gate mouth and
     // the pool are dug below it. Frame coordinates, heights from the pad.
     hard: [{u0: .1, u1: 78.6, v0: -46.6, v1: 46.6, y: 0, cap: true}, {u0: .6, u1: 6.2, v0: -3.8, v1: 3.8, y: -1.3},
-      {u0: 61.4, u1: 75.6, v0: -33.6, v1: -.4, y: -2.25}]},
+      {u0: 61.4, u1: 75.6, v0: -33.6, v1: -.4, y: -2.25},
+      // The basement garage's pit (basement.js), under the court, the drive and the lawn by the garage.
+      ...BASEMENT.pits.map(p => ({...p, y: BASEMENT.pitY}))]},
   {id: 'sanmarino', name: 'Rubio Drive House', kind: 'home', road: [4339, -1665], f: [.999, .035], y: 54.3, depth: 62, width: 60, setback: 4, build: colonial,
     blurb: 'San Marino · colonial revival', margin: 10, dig: [{u: 45, v: -8, hl: 3, hw: 5.5, y: -1.75, margin: 2}]},
   {id: 'ktown', name: 'Catalina Street Bungalow', kind: 'home', road: [-546, 955], f: [.013, -1], y: 35.2, depth: 24, width: 13, setback: 2.5, build: bungalow,
@@ -542,7 +545,10 @@ function mansion(F, H, places) {
   const roadY = v => { const [x, z] = F.w(-1.2, v), r = places.model.nearest(x, z); return r ? r.y - F.y : 0; };
   const gw = 7, gv = 0, mouth = gw / 2 + .3;
   // ---- the ground: solid lawn everywhere but the gate mouth, then the podium stepping down three sides.
-  for (const [a, b, c, d] of [[.6, -hw, u1Lawn, -mouth], [6.2, -mouth, u1Lawn, mouth], [.6, mouth, u1Lawn, hw], [u1Lawn, -hw, D, -41.5], [u1Lawn, 30, D, hw]]) F.rect('grass', a, b, c, d, -.25, .04, lawn, true);
+  // (2026-10-04) Round the basement's lid (basement.js), next to the garage: the lid IS the lawn there.
+  const Ld = BASEMENT.lid;
+  for (const [a, b, c, d] of [[.6, -hw, u1Lawn, -mouth], [6.2, -mouth, u1Lawn, mouth], [.6, mouth, Ld.u0, hw], [Ld.u1, mouth, u1Lawn, hw], [Ld.u0, mouth, Ld.u1, Ld.v0], [Ld.u0, Ld.v1, Ld.u1, hw],
+    [u1Lawn, -hw, D, -41.5], [u1Lawn, 30, D, hw]]) F.rect('grass', a, b, c, d, -.25, .04, lawn, true);
   podium(F, g, {u: D, v: -hw, t: [0, 1], n: [1, 0], L: Wd, seed: 5, ext: k => [first + k * tw, first + k * tw]}, {first, tw});
   podium(F, g, {u: 0, v: -hw, t: [1, 0], n: [0, -1], L: D + first, seed: 7, plant0: 'hedge', ext: k => [0, (k - 1) * tw]}, {first, tw, parapet: 'wall'});
   podium(F, g, {u: 0, v: hw, t: [1, 0], n: [0, 1], L: D + first, seed: 9, plant0: 'hedge', ext: k => [0, (k - 1) * tw]}, {first, tw, parapet: 'wall'});
@@ -645,7 +651,7 @@ function mansion(F, H, places) {
     for (let u = 7.4; u < 17; u += 2.6) { F.rect('glow', u - .16, v + .175, u + .16, v + .185, .26, .34, '#ffe6bd'); F.pool(u, v + .45, .09, 1.1, .45); }
     for (let u = 5; u <= 17; u += 6) F.palm(u, v - 2.5, 13 + (u % 5), 0, true);
   }
-  for (const [u, v] of [[21.5, 12.5], [21.5, 27.5]]) F.palm(u, v, 14, 0, true);
+  for (const [u, v] of [[29.8, 14.2], [30.2, 27.5]]) F.palm(u, v, 14, 0, true);
   // Planting in the west garden: a cypress screen inside the street wall, olives, lavender and grasses.
   for (let v = -40; v < -6; v += 3.3) F.cypress(1.8, v, 7 + (Math.abs(v) % 3));
   for (let u = 4; u < 17; u += 2.2) { F.lavender(u, -mouth - 1.2); F.grassTuft(u + 1.1, -mouth - 1.4, .9); }
@@ -976,12 +982,13 @@ function mansion(F, H, places) {
   for (let t = .1; t < 1; t += .2) { const u = 32 + t * 26, v = 11 + t * 20 + Math.sin(t * 3.1) * 3; F.bollard(u + 1, v - 1.2); }
   for (let v = -28.5; v < -14; v += 1.6) F.grassTuft(u0 - .9, v, .7, .04);
   for (let v = -2.5; v < 17; v += 1.8) F.lavender(u0 - .9, v, .04);
-  F.olive(26, 24, 4.6, 0, 8); F.olive(45, 33, 4.3, 0, 9); F.olive(22, 36, 3.9, 0, 10);
+  F.olive(31.4, 21, 4.6, 0, 8); F.olive(45, 33, 4.3, 0, 9); F.olive(22, 36, 3.9, 0, 10);
   for (const [u, v] of [[36, 26], [52, 38], [30, 40]]) F.shrub(u, v, 1.1, 0, '#4f6d36', u);
   F.palm(73, -40, 14, fl, true); F.palm(72.6, 29, 13, fl, true); F.palm(71, 40, 15, 0, true); F.palm(58, -40, 12, fl, true);
   for (const [u, v] of [[58.6, -33.5], [58.6, 21.5]]) { F.rect('stucco', u - .7, v - .7, u + .7, v + .7, fl, fl + .8, '#e5e1d9'); F.olive(u, v, 3, fl + .8, u + v); }
   H.park = {u: 25, v: -1, face: -1};         // the car waits in the court, nose to the gate
   H.door = {u: u0 - 2, v: v0 + 21.6};
+  buildBasement(F, H, places);
 }
 /* ------------------------------------------------------------ San Marino colonial */
 /** A broad shade tree (oak, sycamore): a stout trunk, a spreading crown. */
